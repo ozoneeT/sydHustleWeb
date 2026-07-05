@@ -674,6 +674,7 @@ export function SurveyForm() {
   const [emailSendError, setEmailSendError] = useState("");
   const [codeVerifying, setCodeVerifying] = useState(false);
   const [codeVerifyError, setCodeVerifyError] = useState("");
+  const [emailNotice, setEmailNotice] = useState("");
 
   const update = <K extends keyof Answers>(key: K, value: Answers[K]) => {
     setAnswers((prev) => ({ ...prev, [key]: value }));
@@ -696,19 +697,23 @@ export function SurveyForm() {
   const canProceed = !currentStep.required || currentStep.validate(answers);
   const progressPct = ((currentIndex + 1) / visibleSteps.length) * 100;
 
-  const goToIndex = (index: number) => {
-    const target = visibleSteps[index];
+  const goToIndex = (index: number, steps: StepMeta[] = visibleSteps) => {
+    const target = steps[index];
     if (!target) return;
     setLastKnownIndex(index);
     setCurrentStepId(target.id);
   };
 
+  type GateResult = { ok: boolean; patch?: Partial<Answers> };
+
   // Runs any async check gating the *current* step (moderator PIN lookup,
   // sending the email code, verifying the email code) without navigating.
-  // Shared by handleNext and handleSubmit, since the email verification
-  // step can end up being either a middle step or the very last one
-  // depending on the "join the waitlist?" answer.
-  const runStepGate = async (): Promise<boolean> => {
+  // Returns a patch instead of applying it directly so callers can compute
+  // the *next* set of visible steps synchronously (setAnswers is async, so
+  // reading `answers` again right after wouldn't reflect it yet) — this
+  // matters because e.g. a verified email can make the "enter the code"
+  // step disappear entirely, changing what "next" even means.
+  const runStepGate = async (): Promise<GateResult> => {
     if (currentStep.id === "moderatorPin" && !answers.surveyorId) {
       setPinError("");
       setPinChecking(true);
@@ -717,33 +722,41 @@ export function SurveyForm() {
 
       if (!result.valid || !result.surveyorId) {
         setPinError("Invalid moderator PIN. Please check and try again.");
-        return false;
+        return { ok: false };
       }
 
-      update("surveyorId", result.surveyorId);
-      return true;
+      return { ok: true, patch: { surveyorId: result.surveyorId } };
     }
 
     if (currentStep.id === "email" && !answers.emailVerified) {
       const email = answers.email.trim().toLowerCase();
       setEmailSendError("");
+      setEmailNotice("");
 
       // Already sent a code for this exact email (e.g. user went back
       // without changing it) — no need to send another one.
-      if (answers.emailCodeSentFor !== email) {
-        setEmailSending(true);
-        const result = await sendEmailVerificationCode(email);
-        setEmailSending(false);
-
-        if (!result.success) {
-          setEmailSendError(result.message);
-          return false;
-        }
-
-        update("emailCodeSentFor", email);
+      if (answers.emailCodeSentFor === email) {
+        return { ok: true };
       }
 
-      return true;
+      setEmailSending(true);
+      const result = await sendEmailVerificationCode(email);
+      setEmailSending(false);
+
+      if (!result.success) {
+        setEmailSendError(result.message);
+        return { ok: false };
+      }
+
+      if (result.alreadyVerified) {
+        setEmailNotice(result.message);
+        return {
+          ok: true,
+          patch: { emailVerified: true, emailCodeSentFor: email },
+        };
+      }
+
+      return { ok: true, patch: { emailCodeSentFor: email } };
     }
 
     if (currentStep.id === "verifyEmail") {
@@ -754,24 +767,38 @@ export function SurveyForm() {
 
       if (!result.valid) {
         setCodeVerifyError(result.message ?? "Invalid code. Please try again.");
-        return false;
+        return { ok: false };
       }
 
-      update("emailVerified", true);
-      return true;
+      return { ok: true, patch: { emailVerified: true } };
     }
 
-    return true;
+    return { ok: true };
+  };
+
+  // Applies a gate's patch (if any) and advances to whatever step comes
+  // after the current one in the freshly recomputed step list — recomputed
+  // rather than using the (possibly now-stale) `visibleSteps`/`currentIndex`
+  // from this render, since a patch like emailVerified can remove steps.
+  const applyPatchAndAdvance = (patch?: Partial<Answers>) => {
+    const nextAnswers = patch ? { ...answers, ...patch } : answers;
+    if (patch) setAnswers(nextAnswers);
+
+    const freshSteps = buildVisibleSteps(nextAnswers);
+    const freshIndex = freshSteps.findIndex((s) => s.id === currentStep.id);
+    const nextIndex = (freshIndex === -1 ? currentIndex : freshIndex) + 1;
+
+    setDirection(1);
+    goToIndex(nextIndex, freshSteps);
   };
 
   const handleNext = async () => {
     if (!canProceed || isLastStep) return;
 
-    const ok = await runStepGate();
-    if (!ok) return;
+    const gate = await runStepGate();
+    if (!gate.ok) return;
 
-    setDirection(1);
-    goToIndex(currentIndex + 1);
+    applyPatchAndAdvance(gate.patch);
   };
 
   const handleResendCode = async () => {
@@ -783,6 +810,17 @@ export function SurveyForm() {
 
     if (!result.success) {
       setCodeVerifyError(result.message);
+      return;
+    }
+
+    if (result.alreadyVerified) {
+      // The email became a confirmed waitlist member while they were
+      // sitting on this step (rare) — the "enter the code" step disappears
+      // once emailVerified flips true, and the existing step-recovery
+      // fallback (see currentIndex above) lands them on the next sensible
+      // step automatically.
+      setEmailNotice(result.message);
+      update("emailVerified", true);
       return;
     }
 
@@ -799,11 +837,14 @@ export function SurveyForm() {
   const handleSubmit = async () => {
     if (!canProceed) return;
 
-    const ok = await runStepGate();
-    if (!ok) return;
+    const gate = await runStepGate();
+    if (!gate.ok) return;
+
+    const nextAnswers = gate.patch ? { ...answers, ...gate.patch } : answers;
+    if (gate.patch) setAnswers(nextAnswers);
 
     startTransition(() => {
-      formAction(buildFormData(answers));
+      formAction(buildFormData(nextAnswers));
     });
   };
 
@@ -1139,6 +1180,7 @@ export function SurveyForm() {
                 onChange={(e) => {
                   const value = e.target.value;
                   setEmailSendError("");
+                  setEmailNotice("");
                   setAnswers((prev) => ({
                     ...prev,
                     email: value,
@@ -1174,6 +1216,7 @@ export function SurveyForm() {
                 required
               />
             </div>
+            {emailNotice && <p className="text-sm text-accent">{emailNotice}</p>}
             {emailSendError && (
               <p className="text-sm text-red-400">{emailSendError}</p>
             )}

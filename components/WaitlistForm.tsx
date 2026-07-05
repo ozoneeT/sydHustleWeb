@@ -53,6 +53,20 @@ export function WaitlistForm() {
       return;
     }
 
+    // Already a confirmed waitlist member — no code was sent, so skip
+    // straight to (re-)joining rather than asking them to enter one.
+    if (result.alreadyVerified) {
+      const fd = new FormData();
+      fd.set("email", normalized);
+      fd.set("name", name.trim());
+      fd.set("school", school.trim());
+      fd.set("source", "landing");
+      startTransition(() => {
+        formAction(fd);
+      });
+      return;
+    }
+
     setEmailCodeSentFor(normalized);
     setStep("verify");
   };
@@ -66,6 +80,18 @@ export function WaitlistForm() {
 
     if (!result.success) {
       setCodeVerifyError(result.message);
+      return;
+    }
+
+    if (result.alreadyVerified) {
+      const fd = new FormData();
+      fd.set("email", normalized);
+      fd.set("name", name.trim());
+      fd.set("school", school.trim());
+      fd.set("source", "landing");
+      startTransition(() => {
+        formAction(fd);
+      });
       return;
     }
 

@@ -13,6 +13,28 @@ const VERIFIED_WINDOW_MS = 2 * 60 * 60 * 1000; // 2 hours — long enough to fin
 export interface SendCodeResult {
   success: boolean;
   message: string;
+  // True when no code was actually sent because this email is already a
+  // confirmed waitlist member — callers should treat the email as verified
+  // immediately instead of showing a "enter the code" step.
+  alreadyVerified?: boolean;
+}
+
+async function isAlreadyOnWaitlist(
+  supabase: ReturnType<typeof createServerSupabaseClient>,
+  email: string
+): Promise<boolean> {
+  const { data, error } = await supabase
+    .from("waitlist")
+    .select("email")
+    .eq("email", email)
+    .maybeSingle();
+
+  if (error) {
+    console.error("failed to check waitlist membership:", error);
+    return false;
+  }
+
+  return Boolean(data);
 }
 
 export async function createAndSendVerificationCode(
@@ -32,6 +54,16 @@ export async function createAndSendVerificationCode(
   }
 
   const supabase = createServerSupabaseClient();
+
+  // Already a confirmed waitlist member — no need to make them verify (and
+  // us send) another code for the same address.
+  if (await isAlreadyOnWaitlist(supabase, email)) {
+    return {
+      success: true,
+      message: "You're already on the waitlist — no need to verify again!",
+      alreadyVerified: true,
+    };
+  }
 
   const { data: recent, error: recentError } = await supabase
     .from("email_verifications")
@@ -164,6 +196,10 @@ export async function verifyCode(
 export async function isEmailVerified(rawEmail: string): Promise<boolean> {
   const email = rawEmail.trim().toLowerCase();
   const supabase = createServerSupabaseClient();
+
+  if (await isAlreadyOnWaitlist(supabase, email)) {
+    return true;
+  }
 
   const { data, error } = await supabase
     .from("email_verifications")
