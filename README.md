@@ -15,7 +15,7 @@ Built with Next.js, Tailwind CSS, and Supabase.
 2. **Set up Supabase**
 
    - Create a project at [supabase.com](https://supabase.com)
-   - Open the SQL Editor and run the migrations in order: [`001_initial.sql`](supabase/migrations/001_initial.sql), [`002_survey_redesign.sql`](supabase/migrations/002_survey_redesign.sql), [`003_marketing_team_and_waitlist_fields.sql`](supabase/migrations/003_marketing_team_and_waitlist_fields.sql), then [`004_surveyors.sql`](supabase/migrations/004_surveyors.sql)
+   - Open the SQL Editor and run the migrations in order: [`001_initial.sql`](supabase/migrations/001_initial.sql), [`002_survey_redesign.sql`](supabase/migrations/002_survey_redesign.sql), [`003_marketing_team_and_waitlist_fields.sql`](supabase/migrations/003_marketing_team_and_waitlist_fields.sql), [`004_surveyors.sql`](supabase/migrations/004_surveyors.sql), then [`005_email_verifications.sql`](supabase/migrations/005_email_verifications.sql)
    - Copy your project URL, anon key, and service role key from **Project Settings → API**
    - **Seed your admin account** — surveyors sign themselves up, but the first admin has to be inserted manually. Run this in the SQL editor with your own name and a PIN you choose:
      ```sql
@@ -36,6 +36,8 @@ Built with Next.js, Tailwind CSS, and Supabase.
    ```
 
    Paste the output as `SESSION_SECRET` in `.env.local`.
+
+   Then set up email sending for the survey's email verification step (see [Email verification](#email-verification) below) and fill in `RESEND_API_KEY` / `EMAIL_FROM`.
 
 4. **Run the dev server**
 
@@ -63,6 +65,7 @@ Responses are stored in Supabase tables:
 - **`waitlist`** — email signups from the landing page (and optional emails from the survey)
 - **`survey_responses`** — full survey answers, each linked to the surveyor (`surveyor_id`) who collected it
 - **`surveyors`** — surveyor/admin accounts (name, unique PIN, role)
+- **`email_verifications`** — short-lived 6-digit codes used to confirm a respondent owns the email they entered (see below)
 
 Review responses in the Supabase **Table Editor**, or via the `/admin` dashboard.
 
@@ -78,6 +81,22 @@ There are no passwords or email-based accounts for surveyors — this is intenti
 
 **Known trade-off:** a 6-digit PIN is a small guess-space (there's no rate-limiting yet). This is fine for a small, trusted team of surveyors, but isn't meant to scale to a public-facing login.
 
+## Email verification
+
+The survey confirms respondents actually own the email address they enter, using two free layers (no paid third-party service required):
+
+1. **MX record check** (`lib/email/mx.ts`) — a plain DNS lookup (Node's built-in `dns` module, zero cost, zero signup) confirming the email's domain can receive mail at all. This runs on every email collected (landing-page waitlist and survey) and catches typos/fake domains instantly.
+2. **Emailed 6-digit code** (`lib/email/verification.ts`) — after the "Get early access" step, the survey sends a code via [Resend](https://resend.com) and won't let the respondent continue until they enter it correctly. This proves they can actually access that inbox. `submitSurvey` also re-checks server-side that the email was verified recently, so the check can't be bypassed by tampering with form data client-side.
+
+Resend's free tier covers 3,000 emails/month at no cost — there's no paid plan required for this project's volume:
+
+1. Create a free account at [resend.com](https://resend.com)
+2. **Verify your domain** (`sydhustle.com`) under **Domains** — required to send to arbitrary respondents. Without domain verification, Resend's sandbox mode only lets you send to your own account email, which is fine for local testing but won't work for real respondents.
+3. Create an API key under **API Keys** and set it as `RESEND_API_KEY`
+4. Set `EMAIL_FROM` to an address on your verified domain, e.g. `"sydHustle <noreply@sydhustle.com>"`
+
+Verification codes expire after 10 minutes, are rate-limited per email (30s between sends, max 8/day), and rows in `email_verifications` can be pruned periodically (see the comment at the bottom of [`005_email_verifications.sql`](supabase/migrations/005_email_verifications.sql)).
+
 ## Deploy to Vercel
 
 1. Push this repo to GitHub
@@ -87,6 +106,8 @@ There are no passwords or email-based accounts for surveyors — this is intenti
    - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
    - `SUPABASE_SERVICE_ROLE_KEY`
    - `SESSION_SECRET` (generate with `openssl rand -base64 32` — use a different value than local dev)
+   - `RESEND_API_KEY`
+   - `EMAIL_FROM`
 4. Deploy
 
 ## Connect sydhustle.com

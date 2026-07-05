@@ -6,6 +6,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import { CheckCircle2 } from "lucide-react";
 import { submitSurvey, type ActionResult } from "@/lib/actions";
 import { verifyModeratorPin } from "@/lib/moderator/actions";
+import { sendEmailVerificationCode, verifyEmailCode } from "@/lib/email/actions";
 import { allHustlesRated, hustleTaskOptions } from "@/lib/hustle-tasks";
 import {
   concernOptions,
@@ -56,6 +57,9 @@ interface Answers {
   email: string;
   name: string;
   school: string;
+  emailVerified: boolean;
+  emailCodeSentFor: string;
+  verificationCode: string;
   additionalFeedback: string;
   joinMarketingTeam: string;
   marketingWhatsapp: string;
@@ -92,6 +96,9 @@ const initialAnswers: Answers = {
   email: "",
   name: "",
   school: "",
+  emailVerified: false,
+  emailCodeSentFor: "",
+  verificationCode: "",
   additionalFeedback: "",
   joinMarketingTeam: "",
   marketingWhatsapp: "",
@@ -119,6 +126,7 @@ type StepId =
   | "paymentPreference"
   | "commissionWillingness"
   | "email"
+  | "verifyEmail"
   | "additionalFeedback"
   | "joinMarketingTeam"
   | "marketingWhatsapp";
@@ -238,13 +246,27 @@ const STEP_COMMISSION_WILLINGNESS: StepMeta = {
   validate: (a) => a.commissionWillingness !== "",
 };
 
+const EMAIL_FORMAT_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
 const STEP_EMAIL: StepMeta = {
   id: "email",
   title: "Get early access",
   description: "Join the waitlist while you're here",
   required: true,
   validate: (a) =>
-    a.email.trim() !== "" && a.name.trim() !== "" && a.school.trim() !== "",
+    EMAIL_FORMAT_RE.test(a.email.trim()) &&
+    a.name.trim() !== "" &&
+    a.school.trim() !== "",
+};
+
+const STEP_VERIFY_EMAIL: StepMeta = {
+  id: "verifyEmail",
+  title: "Verify your email",
+  description: "Enter the 6-digit code we just sent to confirm it's really you",
+  required: true,
+  // Only checks the code's shape so "Next" becomes clickable; the actual
+  // verification happens asynchronously in handleNext via verifyEmailCode.
+  validate: (a) => /^\d{6}$/.test(a.verificationCode.trim()),
 };
 
 const STEP_ADDITIONAL_FEEDBACK: StepMeta = {
@@ -399,10 +421,17 @@ function buildVisibleSteps(a: Answers): StepMeta[] {
     STEP_TRUST_FACTORS,
     STEP_PAYMENT_PREFERENCE,
     STEP_COMMISSION_WILLINGNESS,
-    STEP_EMAIL,
-    STEP_ADDITIONAL_FEEDBACK,
-    STEP_JOIN_MARKETING_TEAM
+    STEP_EMAIL
   );
+
+  // Skip the verification step once the email has been confirmed — if the
+  // user goes back and edits the email, emailVerified is reset (see the
+  // email input's onChange below), so this step reappears automatically.
+  if (!a.emailVerified) {
+    order.push(STEP_VERIFY_EMAIL);
+  }
+
+  order.push(STEP_ADDITIONAL_FEEDBACK, STEP_JOIN_MARKETING_TEAM);
 
   if (a.joinMarketingTeam === "yes") {
     order.push(STEP_MARKETING_WHATSAPP);
@@ -651,6 +680,10 @@ export function SurveyForm() {
   const [direction, setDirection] = useState(1);
   const [pinChecking, setPinChecking] = useState(false);
   const [pinError, setPinError] = useState("");
+  const [emailSending, setEmailSending] = useState(false);
+  const [emailSendError, setEmailSendError] = useState("");
+  const [codeVerifying, setCodeVerifying] = useState(false);
+  const [codeVerifyError, setCodeVerifyError] = useState("");
 
   const update = <K extends keyof Answers>(key: K, value: Answers[K]) => {
     setAnswers((prev) => ({ ...prev, [key]: value }));
@@ -700,8 +733,65 @@ export function SurveyForm() {
       return;
     }
 
+    if (currentStep.id === "email" && !answers.emailVerified) {
+      const email = answers.email.trim().toLowerCase();
+      setEmailSendError("");
+
+      // Already sent a code for this exact email (e.g. user went back
+      // without changing it) — no need to send another one.
+      if (answers.emailCodeSentFor !== email) {
+        setEmailSending(true);
+        const result = await sendEmailVerificationCode(email);
+        setEmailSending(false);
+
+        if (!result.success) {
+          setEmailSendError(result.message);
+          return;
+        }
+
+        update("emailCodeSentFor", email);
+      }
+
+      setDirection(1);
+      goToIndex(currentIndex + 1);
+      return;
+    }
+
+    if (currentStep.id === "verifyEmail") {
+      setCodeVerifyError("");
+      setCodeVerifying(true);
+      const result = await verifyEmailCode(answers.email, answers.verificationCode);
+      setCodeVerifying(false);
+
+      if (!result.valid) {
+        setCodeVerifyError(result.message ?? "Invalid code. Please try again.");
+        return;
+      }
+
+      update("emailVerified", true);
+      setDirection(1);
+      goToIndex(currentIndex + 1);
+      return;
+    }
+
     setDirection(1);
     goToIndex(currentIndex + 1);
+  };
+
+  const handleResendCode = async () => {
+    const email = answers.email.trim().toLowerCase();
+    setCodeVerifyError("");
+    setEmailSending(true);
+    const result = await sendEmailVerificationCode(email);
+    setEmailSending(false);
+
+    if (!result.success) {
+      setCodeVerifyError(result.message);
+      return;
+    }
+
+    update("emailCodeSentFor", email);
+    update("verificationCode", "");
   };
 
   const handleBack = () => {
@@ -741,12 +831,11 @@ export function SurveyForm() {
               <p className="text-sm text-muted-foreground">
                 Your responses directly shape whether we build sydHustle, and
                 whether we prioritise hustlers, task posters, or both.
+                You&apos;re already on the waitlist — we&apos;ll email you
+                when sydHustle launches.
               </p>
-              <div className="flex flex-col items-center gap-3 sm:flex-row sm:justify-center">
+              <div className="flex justify-center">
                 <Button asChild>
-                  <Link href="/#waitlist">Join the waitlist</Link>
-                </Button>
-                <Button asChild variant="secondary">
                   <Link href="/">Back to home</Link>
                 </Button>
               </div>
@@ -1041,7 +1130,19 @@ export function SurveyForm() {
                 type="email"
                 placeholder="you@university.edu"
                 value={answers.email}
-                onChange={(e) => update("email", e.target.value)}
+                onChange={(e) => {
+                  const value = e.target.value;
+                  setEmailSendError("");
+                  setAnswers((prev) => ({
+                    ...prev,
+                    email: value,
+                    // Editing the email after verifying (or after a code was
+                    // already sent) invalidates that verification.
+                    emailVerified: false,
+                    emailCodeSentFor: "",
+                    verificationCode: "",
+                  }));
+                }}
                 required
               />
             </div>
@@ -1067,6 +1168,44 @@ export function SurveyForm() {
                 required
               />
             </div>
+            {emailSendError && (
+              <p className="text-sm text-red-400">{emailSendError}</p>
+            )}
+          </div>
+        );
+      case "verifyEmail":
+        return (
+          <div className="space-y-4">
+            <p className="text-sm text-muted-foreground">
+              We sent a 6-digit code to{" "}
+              <span className="text-foreground">{answers.email}</span>.
+            </p>
+            <Input
+              id="survey-verification-code"
+              inputMode="numeric"
+              pattern="\d{6}"
+              maxLength={6}
+              placeholder="6-digit code"
+              className="text-center text-lg tracking-[0.3em]"
+              value={answers.verificationCode}
+              onChange={(e) =>
+                update(
+                  "verificationCode",
+                  e.target.value.replace(/\D/g, "").slice(0, 6)
+                )
+              }
+            />
+            {codeVerifyError && (
+              <p className="text-sm text-red-400">{codeVerifyError}</p>
+            )}
+            <button
+              type="button"
+              onClick={handleResendCode}
+              disabled={emailSending}
+              className="text-sm text-accent hover:underline disabled:opacity-50 disabled:no-underline"
+            >
+              {emailSending ? "Sending..." : "Resend code"}
+            </button>
           </div>
         );
       case "additionalFeedback":
@@ -1204,11 +1343,15 @@ export function SurveyForm() {
               <Button
                 type="button"
                 onClick={handleNext}
-                disabled={!canProceed || pinChecking}
+                disabled={!canProceed || pinChecking || emailSending || codeVerifying}
               >
                 {currentStep.id === "moderatorPin" && pinChecking
                   ? "Verifying..."
-                  : "Next"}
+                  : currentStep.id === "email" && emailSending
+                    ? "Sending code..."
+                    : currentStep.id === "verifyEmail" && codeVerifying
+                      ? "Verifying..."
+                      : "Next"}
               </Button>
             )}
           </div>

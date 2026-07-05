@@ -4,6 +4,11 @@ import { z } from "zod";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { allHustlesRated } from "@/lib/hustle-tasks";
 import { broadcastNewResponse } from "@/lib/moderator/realtime";
+import { hasValidMxRecord } from "@/lib/email/mx";
+import { isEmailVerified } from "@/lib/email/verification";
+
+const INVALID_EMAIL_DOMAIN_MESSAGE =
+  "This email address looks invalid — please check for typos.";
 
 const waitlistSchema = z.object({
   email: z.string().email("Please enter a valid email address."),
@@ -251,6 +256,14 @@ export async function submitWaitlist(
     };
   }
 
+  if (!(await hasValidMxRecord(parsed.data.email))) {
+    return {
+      success: false,
+      message: INVALID_EMAIL_DOMAIN_MESSAGE,
+      fieldErrors: { email: [INVALID_EMAIL_DOMAIN_MESSAGE] },
+    };
+  }
+
   try {
     const supabase = createServerSupabaseClient();
     const { error } = await supabase.from("waitlist").insert({
@@ -371,6 +384,25 @@ export async function submitSurvey(
       success: false,
       message: firstError ?? "Please complete all required fields.",
       fieldErrors,
+    };
+  }
+
+  if (!(await hasValidMxRecord(parsed.data.email))) {
+    return {
+      success: false,
+      message: INVALID_EMAIL_DOMAIN_MESSAGE,
+      fieldErrors: { email: [INVALID_EMAIL_DOMAIN_MESSAGE] },
+    };
+  }
+
+  // Belt-and-suspenders: the wizard already gates progress on a verified
+  // email, but form data can be tampered with client-side, so re-check here
+  // against the server-recorded verification before writing to the DB.
+  if (!(await isEmailVerified(parsed.data.email))) {
+    return {
+      success: false,
+      message: "Please verify your email before submitting.",
+      fieldErrors: { email: ["Please verify your email before submitting."] },
     };
   }
 
