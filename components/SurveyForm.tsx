@@ -8,7 +8,7 @@ import { submitSurvey, type ActionResult } from "@/lib/actions";
 import { verifyModeratorPin } from "@/lib/moderator/actions";
 import { sendEmailVerificationCode, verifyEmailCode } from "@/lib/email/actions";
 import { MarketingInterestPrompt } from "@/components/MarketingInterestPrompt";
-import { allHustlesRated, hustleTaskOptions } from "@/lib/hustle-tasks";
+import { allHustlesRated, hustleTaskOptions, taskHelpOptions } from "@/lib/hustle-tasks";
 import {
   concernOptions,
   skillOptions,
@@ -41,6 +41,7 @@ interface Answers {
   skillsOther: string;
   willingDifferentHustle: string;
   hustleCapability: Record<string, HustleCapability>;
+  customHustles: string[];
   needsTaskHelp: string;
   taskHelpTypes: string[];
   taskHelpOther: string;
@@ -79,6 +80,7 @@ const initialAnswers: Answers = {
   skillsOther: "",
   willingDifferentHustle: "",
   hustleCapability: {},
+  customHustles: [],
   needsTaskHelp: "",
   taskHelpTypes: [],
   taskHelpOther: "",
@@ -334,7 +336,7 @@ function getHustlerGroupSteps(a: Answers): StepMeta[] {
       title: "Which of these hustles could you do?",
       description: "Mark every hustle as Can do or Can't do before continuing",
       required: true,
-      validate: (ans) => allHustlesRated(ans.hustleCapability),
+      validate: (ans) => allHustlesRated(ans.hustleCapability, ans.customHustles),
     });
   }
 
@@ -480,6 +482,7 @@ function CheckboxGroup({
   otherValue,
   onOtherChange,
   otherPlaceholder,
+  otherMode = "single",
 }: {
   value: string[];
   onChange: (value: string[]) => void;
@@ -487,11 +490,30 @@ function CheckboxGroup({
   otherValue?: string;
   onOtherChange?: (value: string) => void;
   otherPlaceholder?: string;
+  // "single": one free-text "Other" field (original behaviour).
+  // "tags": an add-one-at-a-time input — each entry gets appended directly
+  // to `value` as its own tag, so respondents can list several custom
+  // entries instead of being limited to a single line of text.
+  otherMode?: "single" | "tags";
 }) {
   const toggle = (val: string) => {
     onChange(
       value.includes(val) ? value.filter((v) => v !== val) : [...value, val]
     );
+  };
+
+  const [draft, setDraft] = useState("");
+
+  const customTags =
+    otherMode === "tags"
+      ? value.filter((v) => !options.some((o) => o.value === v))
+      : [];
+
+  const addCustomTag = () => {
+    const trimmed = draft.trim();
+    if (!trimmed) return;
+    if (!value.includes(trimmed)) onChange([...value, trimmed]);
+    setDraft("");
   };
 
   return (
@@ -512,13 +534,114 @@ function CheckboxGroup({
           </label>
         ))}
       </div>
-      {onOtherChange && (
-        <Input
-          value={otherValue ?? ""}
-          onChange={(e) => onOtherChange(e.target.value)}
-          placeholder={otherPlaceholder ?? "Other (optional)"}
-        />
+
+      {otherMode === "tags" ? (
+        <div className="space-y-2">
+          <div className="flex gap-2">
+            <Input
+              value={draft}
+              onChange={(e) => setDraft(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  e.preventDefault();
+                  addCustomTag();
+                }
+              }}
+              placeholder={otherPlaceholder ?? "Not listed? Type it and add it (optional)"}
+            />
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={addCustomTag}
+              disabled={!draft.trim()}
+            >
+              Add
+            </Button>
+          </div>
+          {customTags.length > 0 && (
+            <div className="flex flex-wrap gap-2">
+              {customTags.map((tag) => (
+                <span
+                  key={tag}
+                  className="inline-flex items-center gap-1.5 rounded-full bg-accent/10 px-3 py-1 text-xs text-accent"
+                >
+                  {tag}
+                  <button
+                    type="button"
+                    onClick={() => onChange(value.filter((v) => v !== tag))}
+                    className="text-accent/70 hover:text-accent"
+                    aria-label={`Remove ${tag}`}
+                  >
+                    ×
+                  </button>
+                </span>
+              ))}
+            </div>
+          )}
+        </div>
+      ) : (
+        onOtherChange && (
+          <Input
+            value={otherValue ?? ""}
+            onChange={(e) => onOtherChange(e.target.value)}
+            placeholder={otherPlaceholder ?? "Other (optional)"}
+          />
+        )
       )}
+    </div>
+  );
+}
+
+function HustleCapabilityRow({
+  hustleKey,
+  label,
+  capability,
+  onChange,
+  onRemove,
+}: {
+  hustleKey: string;
+  label: string;
+  capability?: HustleCapability;
+  onChange: (capability: HustleCapability) => void;
+  onRemove?: () => void;
+}) {
+  return (
+    <div className="flex flex-col gap-3 rounded-xl border border-white/10 bg-white/5 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+      <span className="flex items-center gap-2 text-sm">
+        {label}
+        {onRemove && (
+          <button
+            type="button"
+            onClick={onRemove}
+            className="text-muted-foreground hover:text-red-400"
+            aria-label={`Remove ${label}`}
+          >
+            ×
+          </button>
+        )}
+      </span>
+      <div className="flex shrink-0 gap-2">
+        <label className="cursor-pointer rounded-full border border-white/10 px-3 py-1 text-xs font-medium text-muted-foreground transition-colors has-[:checked]:border-accent has-[:checked]:bg-accent has-[:checked]:text-accent-foreground">
+          <input
+            type="radio"
+            name={`hustleCapability_${hustleKey}`}
+            checked={capability === "can_do"}
+            onChange={() => onChange("can_do")}
+            className="sr-only"
+          />
+          Can do
+        </label>
+        <label className="cursor-pointer rounded-full border border-white/10 px-3 py-1 text-xs font-medium text-muted-foreground transition-colors has-[:checked]:border-rose-400/60 has-[:checked]:bg-rose-400/10 has-[:checked]:text-rose-300">
+          <input
+            type="radio"
+            name={`hustleCapability_${hustleKey}`}
+            checked={capability === "cannot_do"}
+            onChange={() => onChange("cannot_do")}
+            className="sr-only"
+          />
+          Can&apos;t do
+        </label>
+      </div>
     </div>
   );
 }
@@ -526,42 +649,69 @@ function CheckboxGroup({
 function HustleCapabilityGrid({
   value,
   onChange,
+  customHustles,
+  onAddCustomHustle,
+  onRemoveCustomHustle,
 }: {
   value: Record<string, HustleCapability>;
   onChange: (hustleKey: string, capability: HustleCapability) => void;
+  customHustles: string[];
+  onAddCustomHustle: (label: string) => void;
+  onRemoveCustomHustle: (label: string) => void;
 }) {
+  const [draft, setDraft] = useState("");
+
+  const addHustle = () => {
+    const trimmed = draft.trim();
+    if (!trimmed) return;
+    onAddCustomHustle(trimmed);
+    setDraft("");
+  };
+
   return (
-    <div className="max-h-[28rem] space-y-2 overflow-y-auto pr-1">
-      {hustleTaskOptions.map((hustle) => (
-        <div
-          key={hustle.value}
-          className="flex flex-col gap-3 rounded-xl border border-white/10 bg-white/5 px-4 py-3 sm:flex-row sm:items-center sm:justify-between"
+    <div className="space-y-3">
+      <div className="max-h-[24rem] space-y-2 overflow-y-auto pr-1">
+        {hustleTaskOptions.map((hustle) => (
+          <HustleCapabilityRow
+            key={hustle.value}
+            hustleKey={hustle.value}
+            label={hustle.label}
+            capability={value[hustle.value]}
+            onChange={(cap) => onChange(hustle.value, cap)}
+          />
+        ))}
+        {customHustles.map((hustle) => (
+          <HustleCapabilityRow
+            key={hustle}
+            hustleKey={hustle}
+            label={hustle}
+            capability={value[hustle]}
+            onChange={(cap) => onChange(hustle, cap)}
+            onRemove={() => onRemoveCustomHustle(hustle)}
+          />
+        ))}
+      </div>
+      <div className="flex gap-2">
+        <Input
+          value={draft}
+          onChange={(e) => setDraft(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") {
+              e.preventDefault();
+              addHustle();
+            }
+          }}
+          placeholder="Know another hustle? Type it and add it (optional)"
+        />
+        <Button
+          type="button"
+          variant="secondary"
+          onClick={addHustle}
+          disabled={!draft.trim()}
         >
-          <span className="text-sm">{hustle.label}</span>
-          <div className="flex shrink-0 gap-2">
-            <label className="cursor-pointer rounded-full border border-white/10 px-3 py-1 text-xs font-medium text-muted-foreground transition-colors has-[:checked]:border-accent has-[:checked]:bg-accent has-[:checked]:text-accent-foreground">
-              <input
-                type="radio"
-                name={`hustleCapability_${hustle.value}`}
-                checked={value[hustle.value] === "can_do"}
-                onChange={() => onChange(hustle.value, "can_do")}
-                className="sr-only"
-              />
-              Can do
-            </label>
-            <label className="cursor-pointer rounded-full border border-white/10 px-3 py-1 text-xs font-medium text-muted-foreground transition-colors has-[:checked]:border-rose-400/60 has-[:checked]:bg-rose-400/10 has-[:checked]:text-rose-300">
-              <input
-                type="radio"
-                name={`hustleCapability_${hustle.value}`}
-                checked={value[hustle.value] === "cannot_do"}
-                onChange={() => onChange(hustle.value, "cannot_do")}
-                className="sr-only"
-              />
-              Can&apos;t do
-            </label>
-          </div>
-        </div>
-      ))}
+          Add
+        </Button>
+      </div>
     </div>
   );
 }
@@ -976,10 +1126,9 @@ export function SurveyForm() {
           <CheckboxGroup
             value={answers.taskHelpTypes}
             onChange={(v) => update("taskHelpTypes", v)}
-            options={hustleTaskOptions}
-            otherValue={answers.taskHelpOther}
-            onOtherChange={(v) => update("taskHelpOther", v)}
-            otherPlaceholder="Other task (optional)"
+            options={taskHelpOptions}
+            otherMode="tags"
+            otherPlaceholder="Not listed? Type the task and add it (optional)"
           />
         );
       case "hustleFrequency":
@@ -1027,9 +1176,8 @@ export function SurveyForm() {
             value={answers.skills}
             onChange={(v) => update("skills", v)}
             options={skillOptions}
-            otherValue={answers.skillsOther}
-            onOtherChange={(v) => update("skillsOther", v)}
-            otherPlaceholder="Other skill (optional)"
+            otherMode="tags"
+            otherPlaceholder="Not listed? Type your skill and add it (optional)"
           />
         );
       case "willingDifferentHustle":
@@ -1052,6 +1200,17 @@ export function SurveyForm() {
             onChange={(key, val) =>
               update("hustleCapability", { ...answers.hustleCapability, [key]: val })
             }
+            customHustles={answers.customHustles}
+            onAddCustomHustle={(label) => {
+              if (answers.customHustles.includes(label)) return;
+              update("customHustles", [...answers.customHustles, label]);
+            }}
+            onRemoveCustomHustle={(label) => {
+              update("customHustles", answers.customHustles.filter((h) => h !== label));
+              const rest = { ...answers.hustleCapability };
+              delete rest[label];
+              update("hustleCapability", rest);
+            }}
           />
         );
       case "wouldUseApp":

@@ -1,5 +1,5 @@
 import type { FullResponse } from "@/lib/moderator/data";
-import { hustleTaskOptions } from "@/lib/hustle-tasks";
+import { hustleTaskOptions, taskHelpOptions } from "@/lib/hustle-tasks";
 import {
   appUsageRoleLabels,
   concernOptions,
@@ -131,7 +131,7 @@ export function ResponseDetail({
           <Field title="Has needed task help" value={label(yesNoLabels, r.needs_task_help)} />
           <TagField
             title="Task types needed"
-            values={labelsFor(hustleTaskOptions, r.task_help_types)}
+            values={labelsFor(taskHelpOptions, r.task_help_types)}
           />
           <Field title="Other task" value={r.task_help_other} />
         </Section>
