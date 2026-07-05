@@ -7,6 +7,7 @@ import { CheckCircle2 } from "lucide-react";
 import { submitSurvey, type ActionResult } from "@/lib/actions";
 import { verifyModeratorPin } from "@/lib/moderator/actions";
 import { sendEmailVerificationCode, verifyEmailCode } from "@/lib/email/actions";
+import { MarketingInterestPrompt } from "@/components/MarketingInterestPrompt";
 import { allHustlesRated, hustleTaskOptions } from "@/lib/hustle-tasks";
 import {
   concernOptions,
@@ -54,15 +55,14 @@ interface Answers {
   trustFactorsOther: string;
   paymentPreference: string;
   commissionWillingness: string;
+  additionalFeedback: string;
+  joinWaitlist: string;
   email: string;
   name: string;
   school: string;
   emailVerified: boolean;
   emailCodeSentFor: string;
   verificationCode: string;
-  additionalFeedback: string;
-  joinMarketingTeam: string;
-  marketingWhatsapp: string;
 }
 
 const initialAnswers: Answers = {
@@ -93,15 +93,14 @@ const initialAnswers: Answers = {
   trustFactorsOther: "",
   paymentPreference: "",
   commissionWillingness: "",
+  additionalFeedback: "",
+  joinWaitlist: "",
   email: "",
   name: "",
   school: "",
   emailVerified: false,
   emailCodeSentFor: "",
   verificationCode: "",
-  additionalFeedback: "",
-  joinMarketingTeam: "",
-  marketingWhatsapp: "",
 };
 
 type StepId =
@@ -125,11 +124,10 @@ type StepId =
   | "trustFactors"
   | "paymentPreference"
   | "commissionWillingness"
-  | "email"
-  | "verifyEmail"
   | "additionalFeedback"
-  | "joinMarketingTeam"
-  | "marketingWhatsapp";
+  | "joinWaitlist"
+  | "email"
+  | "verifyEmail";
 
 interface StepMeta {
   id: StepId;
@@ -248,10 +246,26 @@ const STEP_COMMISSION_WILLINGNESS: StepMeta = {
 
 const EMAIL_FORMAT_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
+const STEP_ADDITIONAL_FEEDBACK: StepMeta = {
+  id: "additionalFeedback",
+  title: "Anything else you'd like to share?",
+  description: "Optional",
+  required: false,
+  validate: () => true,
+};
+
+const STEP_JOIN_WAITLIST: StepMeta = {
+  id: "joinWaitlist",
+  title: "Would you like to join the sydHustle waitlist?",
+  description: "The very last question — we'll email you the moment we launch",
+  required: true,
+  validate: (a) => a.joinWaitlist !== "",
+};
+
 const STEP_EMAIL: StepMeta = {
   id: "email",
-  title: "Get early access",
-  description: "Join the waitlist while you're here",
+  title: "Where should we notify you?",
+  description: "Your details for the waitlist",
   required: true,
   validate: (a) =>
     EMAIL_FORMAT_RE.test(a.email.trim()) &&
@@ -264,31 +278,9 @@ const STEP_VERIFY_EMAIL: StepMeta = {
   title: "Verify your email",
   description: "Enter the 6-digit code we just sent to confirm it's really you",
   required: true,
-  // Only checks the code's shape so "Next" becomes clickable; the actual
-  // verification happens asynchronously in handleNext via verifyEmailCode.
+  // Only checks the code's shape so "Next"/"Submit" becomes clickable; the
+  // actual verification happens asynchronously via runStepGate/verifyEmailCode.
   validate: (a) => /^\d{6}$/.test(a.verificationCode.trim()),
-};
-
-const STEP_ADDITIONAL_FEEDBACK: StepMeta = {
-  id: "additionalFeedback",
-  title: "Anything else you'd like to share?",
-  description: "Optional",
-  required: false,
-  validate: () => true,
-};
-
-const STEP_JOIN_MARKETING_TEAM: StepMeta = {
-  id: "joinMarketingTeam",
-  title: "Would you be willing to join the sydHustle marketing team when the app launches?",
-  required: true,
-  validate: (a) => a.joinMarketingTeam !== "",
-};
-
-const STEP_MARKETING_WHATSAPP: StepMeta = {
-  id: "marketingWhatsapp",
-  title: "Great! What's your WhatsApp number so we can reach you?",
-  required: true,
-  validate: (a) => a.marketingWhatsapp.trim() !== "",
 };
 
 // All "hustler" (service-provider) questions, grouped together. Shown either
@@ -421,20 +413,20 @@ function buildVisibleSteps(a: Answers): StepMeta[] {
     STEP_TRUST_FACTORS,
     STEP_PAYMENT_PREFERENCE,
     STEP_COMMISSION_WILLINGNESS,
-    STEP_EMAIL
+    STEP_ADDITIONAL_FEEDBACK,
+    STEP_JOIN_WAITLIST
   );
 
-  // Skip the verification step once the email has been confirmed — if the
-  // user goes back and edits the email, emailVerified is reset (see the
-  // email input's onChange below), so this step reappears automatically.
-  if (!a.emailVerified) {
-    order.push(STEP_VERIFY_EMAIL);
-  }
-
-  order.push(STEP_ADDITIONAL_FEEDBACK, STEP_JOIN_MARKETING_TEAM);
-
-  if (a.joinMarketingTeam === "yes") {
-    order.push(STEP_MARKETING_WHATSAPP);
+  // Contact details (and verifying them) are only asked if the respondent
+  // opts into the waitlist — this is intentionally the very last thing
+  // before submission. Skip the verification step once the email has been
+  // confirmed — if the user goes back and edits the email, emailVerified is
+  // reset (see the email input's onChange below), so it reappears.
+  if (a.joinWaitlist === "yes") {
+    order.push(STEP_EMAIL);
+    if (!a.emailVerified) {
+      order.push(STEP_VERIFY_EMAIL);
+    }
   }
 
   return order;
@@ -649,15 +641,13 @@ function buildFormData(a: Answers): FormData {
   if (a.trustFactorsOther) fd.set("trustFactorsOther", a.trustFactorsOther);
   fd.set("paymentPreference", a.paymentPreference);
   fd.set("commissionWillingness", a.commissionWillingness);
-
-  fd.set("email", a.email);
-  fd.set("name", a.name);
-  fd.set("school", a.school);
   if (a.additionalFeedback) fd.set("additionalFeedback", a.additionalFeedback);
 
-  fd.set("joinMarketingTeam", a.joinMarketingTeam);
-  if (a.joinMarketingTeam === "yes") {
-    fd.set("marketingWhatsapp", a.marketingWhatsapp.trim());
+  fd.set("joinWaitlist", a.joinWaitlist);
+  if (a.joinWaitlist === "yes") {
+    fd.set("email", a.email.trim());
+    fd.set("name", a.name.trim());
+    fd.set("school", a.school.trim());
   }
 
   return fd;
@@ -713,9 +703,12 @@ export function SurveyForm() {
     setCurrentStepId(target.id);
   };
 
-  const handleNext = async () => {
-    if (!canProceed || isLastStep) return;
-
+  // Runs any async check gating the *current* step (moderator PIN lookup,
+  // sending the email code, verifying the email code) without navigating.
+  // Shared by handleNext and handleSubmit, since the email verification
+  // step can end up being either a middle step or the very last one
+  // depending on the "join the waitlist?" answer.
+  const runStepGate = async (): Promise<boolean> => {
     if (currentStep.id === "moderatorPin" && !answers.surveyorId) {
       setPinError("");
       setPinChecking(true);
@@ -724,13 +717,11 @@ export function SurveyForm() {
 
       if (!result.valid || !result.surveyorId) {
         setPinError("Invalid moderator PIN. Please check and try again.");
-        return;
+        return false;
       }
 
       update("surveyorId", result.surveyorId);
-      setDirection(1);
-      goToIndex(currentIndex + 1);
-      return;
+      return true;
     }
 
     if (currentStep.id === "email" && !answers.emailVerified) {
@@ -746,15 +737,13 @@ export function SurveyForm() {
 
         if (!result.success) {
           setEmailSendError(result.message);
-          return;
+          return false;
         }
 
         update("emailCodeSentFor", email);
       }
 
-      setDirection(1);
-      goToIndex(currentIndex + 1);
-      return;
+      return true;
     }
 
     if (currentStep.id === "verifyEmail") {
@@ -765,14 +754,21 @@ export function SurveyForm() {
 
       if (!result.valid) {
         setCodeVerifyError(result.message ?? "Invalid code. Please try again.");
-        return;
+        return false;
       }
 
       update("emailVerified", true);
-      setDirection(1);
-      goToIndex(currentIndex + 1);
-      return;
+      return true;
     }
+
+    return true;
+  };
+
+  const handleNext = async () => {
+    if (!canProceed || isLastStep) return;
+
+    const ok = await runStepGate();
+    if (!ok) return;
 
     setDirection(1);
     goToIndex(currentIndex + 1);
@@ -800,7 +796,12 @@ export function SurveyForm() {
     goToIndex(currentIndex - 1);
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
+    if (!canProceed) return;
+
+    const ok = await runStepGate();
+    if (!ok) return;
+
     startTransition(() => {
       formAction(buildFormData(answers));
     });
@@ -827,13 +828,18 @@ export function SurveyForm() {
               <CardTitle className="text-3xl text-accent">Thank you!</CardTitle>
               <CardDescription className="text-base">{state.message}</CardDescription>
             </CardHeader>
-            <CardContent className="space-y-4 text-center">
+            <CardContent className="space-y-5 text-center">
               <p className="text-sm text-muted-foreground">
                 Your responses directly shape whether we build sydHustle, and
                 whether we prioritise hustlers, task posters, or both.
-                You&apos;re already on the waitlist — we&apos;ll email you
-                when sydHustle launches.
+                {answers.joinWaitlist === "yes" &&
+                  " You're on the waitlist — we'll email you when sydHustle launches."}
               </p>
+
+              {state.responseId && (
+                <MarketingInterestPrompt responseId={state.responseId} />
+              )}
+
               <div className="flex justify-center">
                 <Button asChild>
                   <Link href="/">Back to home</Link>
@@ -1217,31 +1223,18 @@ export function SurveyForm() {
             onChange={(e) => update("additionalFeedback", e.target.value)}
           />
         );
-      case "joinMarketingTeam":
+      case "joinWaitlist":
         return (
           <RadioGroup
-            name="joinMarketingTeam"
+            name="joinWaitlist"
             columns={2}
-            value={answers.joinMarketingTeam}
-            onChange={(v) => update("joinMarketingTeam", v)}
+            value={answers.joinWaitlist}
+            onChange={(v) => update("joinWaitlist", v)}
             options={[
               { value: "yes", label: "Yes" },
               { value: "no", label: "No" },
             ]}
           />
-        );
-      case "marketingWhatsapp":
-        return (
-          <div className="space-y-2">
-            <Label htmlFor="survey-whatsapp">WhatsApp number</Label>
-            <Input
-              id="survey-whatsapp"
-              type="tel"
-              placeholder="e.g. +234 801 234 5678"
-              value={answers.marketingWhatsapp}
-              onChange={(e) => update("marketingWhatsapp", e.target.value)}
-            />
-          </div>
         );
       default:
         return null;
@@ -1325,7 +1318,13 @@ export function SurveyForm() {
               type="button"
               variant="secondary"
               onClick={handleBack}
-              disabled={isFirstStep}
+              disabled={
+                isFirstStep ||
+                answers.emailVerified ||
+                pinChecking ||
+                emailSending ||
+                codeVerifying
+              }
             >
               Back
             </Button>
@@ -1335,9 +1334,15 @@ export function SurveyForm() {
                 type="button"
                 size="lg"
                 onClick={handleSubmit}
-                disabled={isPending}
+                disabled={!canProceed || isPending || emailSending || codeVerifying}
               >
-                {isPending ? "Submitting..." : "Submit survey"}
+                {isPending
+                  ? "Submitting..."
+                  : codeVerifying
+                    ? "Verifying..."
+                    : emailSending
+                      ? "Sending code..."
+                      : "Submit survey"}
               </Button>
             ) : (
               <Button

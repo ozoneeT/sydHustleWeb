@@ -35,6 +35,7 @@ export interface FullResponse {
   payment_preference: string;
   commission_willingness: string;
 
+  join_waitlist: string | null;
   email: string | null;
   name: string | null;
   school: string | null;
@@ -55,7 +56,7 @@ const FULL_COLUMNS = `
   would_use_app, embarrassed_with_mate, app_usage_role,
   uninstall_reasons, uninstall_other, concerns, concerns_other, trust_factors, trust_factors_other,
   payment_preference, commission_willingness,
-  email, name, school, additional_feedback,
+  join_waitlist, email, name, school, additional_feedback,
   join_marketing_team, marketing_whatsapp,
   surveyor_id
 `;

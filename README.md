@@ -15,7 +15,7 @@ Built with Next.js, Tailwind CSS, and Supabase.
 2. **Set up Supabase**
 
    - Create a project at [supabase.com](https://supabase.com)
-   - Open the SQL Editor and run the migrations in order: [`001_initial.sql`](supabase/migrations/001_initial.sql), [`002_survey_redesign.sql`](supabase/migrations/002_survey_redesign.sql), [`003_marketing_team_and_waitlist_fields.sql`](supabase/migrations/003_marketing_team_and_waitlist_fields.sql), [`004_surveyors.sql`](supabase/migrations/004_surveyors.sql), then [`005_email_verifications.sql`](supabase/migrations/005_email_verifications.sql)
+   - Open the SQL Editor and run the migrations in order: [`001_initial.sql`](supabase/migrations/001_initial.sql), [`002_survey_redesign.sql`](supabase/migrations/002_survey_redesign.sql), [`003_marketing_team_and_waitlist_fields.sql`](supabase/migrations/003_marketing_team_and_waitlist_fields.sql), [`004_surveyors.sql`](supabase/migrations/004_surveyors.sql), [`005_email_verifications.sql`](supabase/migrations/005_email_verifications.sql), then [`006_join_waitlist_question.sql`](supabase/migrations/006_join_waitlist_question.sql)
    - Copy your project URL, anon key, and service role key from **Project Settings → API**
    - **Seed your admin account** — surveyors sign themselves up, but the first admin has to be inserted manually. Run this in the SQL editor with your own name and a PIN you choose:
      ```sql
@@ -62,7 +62,7 @@ Built with Next.js, Tailwind CSS, and Supabase.
 
 Responses are stored in Supabase tables:
 
-- **`waitlist`** — email signups from the landing page (and optional emails from the survey)
+- **`waitlist`** — verified email signups from the landing page's standalone form, and from survey respondents who opted in
 - **`survey_responses`** — full survey answers, each linked to the surveyor (`surveyor_id`) who collected it
 - **`surveyors`** — surveyor/admin accounts (name, unique PIN, role)
 - **`email_verifications`** — short-lived 6-digit codes used to confirm a respondent owns the email they entered (see below)
@@ -83,10 +83,12 @@ There are no passwords or email-based accounts for surveyors — this is intenti
 
 ## Email verification
 
-The survey confirms respondents actually own the email address they enter, using two free layers (no paid third-party service required):
+Both the survey and the landing page's standalone waitlist form confirm respondents actually own the email address they enter, using two free layers (no paid third-party service required):
 
-1. **MX record check** (`lib/email/mx.ts`) — a plain DNS lookup (Node's built-in `dns` module, zero cost, zero signup) confirming the email's domain can receive mail at all. This runs on every email collected (landing-page waitlist and survey) and catches typos/fake domains instantly.
-2. **Emailed 6-digit code** (`lib/email/verification.ts`) — after the "Get early access" step, the survey sends a code via [Resend](https://resend.com) and won't let the respondent continue until they enter it correctly. This proves they can actually access that inbox. `submitSurvey` also re-checks server-side that the email was verified recently, so the check can't be bypassed by tampering with form data client-side.
+1. **MX record check** (`lib/email/mx.ts`) — a plain DNS lookup (Node's built-in `dns` module, zero cost, zero signup) confirming the email's domain can receive mail at all. Catches typos/fake domains instantly.
+2. **Emailed 6-digit code** (`lib/email/verification.ts`) — sent via [Resend](https://resend.com); nothing proceeds until the respondent enters it correctly. This proves they can actually access that inbox. `submitSurvey`/`submitWaitlist` also re-check server-side that the email was verified recently, so the check can't be bypassed by tampering with form data client-side.
+
+In the survey, this only happens if the respondent opts in — see [Survey design](#survey-design) below.
 
 Resend's free tier covers 3,000 emails/month at no cost — there's no paid plan required for this project's volume:
 
@@ -132,11 +134,14 @@ The question flow branches based on `needs_extra_income`:
 - **Yes** → hustler track: side hustle interest, availability (`hustle_frequency`, `hours_per_day`), skills (`skills`), and task capability (`hustle_capability` — a can-do/can't-do map keyed by task type)
 - **No** → task-poster track: whether they've needed help before (`needs_task_help`) and what type (`task_help_types`)
 
-Every respondent then answers a shared set of validation questions covering trust, payment preference, commission tolerance, and churn risk.
+Every respondent then answers a shared set of validation questions covering trust, payment preference, commission tolerance, and churn risk, followed by an optional "anything else?" field.
 
-The survey's "Get early access" step collects email, name, and school — these are stored on the `survey_responses` row itself and, when an email is provided, are also mirrored into the `waitlist` table so respondent details aren't lost even if the waitlist row already exists.
+The survey's very last question is "Would you like to join the sydHustle waitlist?" (`join_waitlist`):
 
-The very last question asks whether the respondent would join the sydHustle marketing team at launch (`join_marketing_team`). Answering "yes" prompts for a WhatsApp number (`marketing_whatsapp`); answering "no" skips straight to submission.
+- **Yes** → asks for email, name, and school, then requires verifying the email (see [Email verification](#email-verification)) before the survey can be submitted. These are stored on the `survey_responses` row and mirrored into the `waitlist` table.
+- **No** → skips straight to submission with no contact details collected.
+
+After submission, the "thank you" screen separately asks "Do you want to join the marketing team for sydHustle when the app launches?" — this is intentionally decoupled from the survey itself so it never blocks submission. Answering updates the just-created `survey_responses` row via `submitMarketingInterest` (see `responseId` returned by `submitSurvey`): "yes" prompts for a WhatsApp number (`marketing_whatsapp`), "no" just records the answer (`join_marketing_team`).
 
 ## Survey metrics
 
@@ -147,4 +152,5 @@ Key signals to track in Supabase:
 - Most common `hustle_capability` entries marked `can_do` vs. most common `task_help_types` — supply/demand match by task category
 - Most common `concerns`, `uninstall_reasons`, and `trust_factors` — what to fix before launch
 - Average `hours_per_day` and distribution of `hustle_frequency` — expected hustler availability
+- % of `join_waitlist` = "yes" — how many respondents want to be notified at launch
 - % of `join_marketing_team` = "yes" — pool of respondents interested in helping market the app at launch

@@ -85,6 +85,7 @@ export function ResponsesList({
             >
               Would use: {r.would_use_app}
             </Badge>
+            {r.join_waitlist === "yes" && <Badge tone="accent">Waitlist ✓</Badge>}
             {r.join_marketing_team === "yes" && <Badge tone="accent">Marketing ✓</Badge>}
             {surveyorNames && (
               <span className="ml-auto text-xs text-muted-foreground">

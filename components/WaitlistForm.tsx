@@ -1,10 +1,11 @@
 "use client";
 
-import { useActionState } from "react";
+import { startTransition, useActionState, useState } from "react";
 import Link from "next/link";
 import { AnimatePresence, motion } from "framer-motion";
 import { CheckCircle2 } from "lucide-react";
 import { submitWaitlist, type ActionResult } from "@/lib/actions";
+import { sendEmailVerificationCode, verifyEmailCode } from "@/lib/email/actions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -13,11 +14,90 @@ import { Reveal } from "@/components/motion/Reveal";
 
 const initialState: ActionResult = { success: false, message: "" };
 
+const EMAIL_FORMAT_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+type Step = "details" | "verify";
+
 export function WaitlistForm() {
   const [state, formAction, isPending] = useActionState(
     async (_prev: ActionResult, formData: FormData) => submitWaitlist(formData),
     initialState
   );
+
+  const [step, setStep] = useState<Step>("details");
+  const [email, setEmail] = useState("");
+  const [name, setName] = useState("");
+  const [school, setSchool] = useState("");
+  const [code, setCode] = useState("");
+
+  const [emailCodeSentFor, setEmailCodeSentFor] = useState("");
+  const [emailSending, setEmailSending] = useState(false);
+  const [emailSendError, setEmailSendError] = useState("");
+  const [codeVerifying, setCodeVerifying] = useState(false);
+  const [codeVerifyError, setCodeVerifyError] = useState("");
+
+  const handleSendCode = async () => {
+    const normalized = email.trim().toLowerCase();
+    if (!EMAIL_FORMAT_RE.test(normalized)) {
+      setEmailSendError("Please enter a valid email address.");
+      return;
+    }
+
+    setEmailSendError("");
+    setEmailSending(true);
+    const result = await sendEmailVerificationCode(normalized);
+    setEmailSending(false);
+
+    if (!result.success) {
+      setEmailSendError(result.message);
+      return;
+    }
+
+    setEmailCodeSentFor(normalized);
+    setStep("verify");
+  };
+
+  const handleResendCode = async () => {
+    const normalized = email.trim().toLowerCase();
+    setCodeVerifyError("");
+    setEmailSending(true);
+    const result = await sendEmailVerificationCode(normalized);
+    setEmailSending(false);
+
+    if (!result.success) {
+      setCodeVerifyError(result.message);
+      return;
+    }
+
+    setEmailCodeSentFor(normalized);
+    setCode("");
+  };
+
+  const handleVerifyAndJoin = async () => {
+    if (!/^\d{6}$/.test(code.trim())) {
+      setCodeVerifyError("Please enter the 6-digit code.");
+      return;
+    }
+
+    setCodeVerifyError("");
+    setCodeVerifying(true);
+    const result = await verifyEmailCode(email.trim().toLowerCase(), code.trim());
+    setCodeVerifying(false);
+
+    if (!result.valid) {
+      setCodeVerifyError(result.message ?? "Invalid code. Please try again.");
+      return;
+    }
+
+    const fd = new FormData();
+    fd.set("email", email.trim());
+    fd.set("name", name.trim());
+    fd.set("school", school.trim());
+    fd.set("source", "landing");
+    startTransition(() => {
+      formAction(fd);
+    });
+  };
 
   return (
     <Reveal className="mx-auto max-w-lg">
@@ -69,58 +149,137 @@ export function WaitlistForm() {
               <CardHeader className="text-center">
                 <CardTitle className="text-2xl">Join the waitlist</CardTitle>
                 <CardDescription>
-                  Be first to know when sydHustle launches. No spam, ever.
+                  {step === "details"
+                    ? "Be first to know when sydHustle launches. No spam, ever."
+                    : "Enter the 6-digit code we just sent to confirm it's really you."}
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <form action={formAction} className="space-y-4">
-                  <input type="hidden" name="source" value="landing" />
+                {step === "details" ? (
+                  <div className="space-y-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="email">Email *</Label>
+                      <Input
+                        id="email"
+                        name="email"
+                        type="email"
+                        placeholder="you@university.edu"
+                        value={email}
+                        onChange={(e) => {
+                          setEmail(e.target.value);
+                          setEmailSendError("");
+                        }}
+                        required
+                      />
+                    </div>
 
-                  <div className="space-y-2">
-                    <Label htmlFor="email">Email *</Label>
-                    <Input
-                      id="email"
-                      name="email"
-                      type="email"
-                      placeholder="you@university.edu"
-                      required
-                    />
-                  </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="name">Name</Label>
+                      <Input
+                        id="name"
+                        name="name"
+                        type="text"
+                        placeholder="Optional"
+                        value={name}
+                        onChange={(e) => setName(e.target.value)}
+                      />
+                    </div>
 
-                  <div className="space-y-2">
-                    <Label htmlFor="name">Name</Label>
-                    <Input
-                      id="name"
-                      name="name"
-                      type="text"
-                      placeholder="Optional"
-                    />
-                  </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="school">School / University</Label>
+                      <Input
+                        id="school"
+                        name="school"
+                        type="text"
+                        placeholder="Optional"
+                        value={school}
+                        onChange={(e) => setSchool(e.target.value)}
+                      />
+                    </div>
 
-                  <div className="space-y-2">
-                    <Label htmlFor="school">School / University</Label>
-                    <Input
-                      id="school"
-                      name="school"
-                      type="text"
-                      placeholder="Optional"
-                    />
-                  </div>
+                    {emailSendError && (
+                      <motion.p
+                        initial={{ opacity: 0, y: -4 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        className="text-sm text-red-400"
+                      >
+                        {emailSendError}
+                      </motion.p>
+                    )}
 
-                  {state.message && !state.success && (
-                    <motion.p
-                      initial={{ opacity: 0, y: -4 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      className="text-sm text-red-400"
+                    <Button
+                      type="button"
+                      className="w-full"
+                      disabled={emailSending}
+                      onClick={handleSendCode}
                     >
-                      {state.message}
-                    </motion.p>
-                  )}
+                      {emailSending ? "Sending code..." : "Send verification code"}
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    <p className="text-sm text-muted-foreground">
+                      We sent a 6-digit code to{" "}
+                      <span className="text-foreground">
+                        {emailCodeSentFor}
+                      </span>
+                      .
+                    </p>
+                    <Input
+                      id="waitlist-verification-code"
+                      inputMode="numeric"
+                      pattern="\d{6}"
+                      maxLength={6}
+                      placeholder="6-digit code"
+                      className="text-center text-lg tracking-[0.3em]"
+                      value={code}
+                      onChange={(e) =>
+                        setCode(e.target.value.replace(/\D/g, "").slice(0, 6))
+                      }
+                    />
 
-                  <Button type="submit" className="w-full" disabled={isPending}>
-                    {isPending ? "Joining..." : "Join the waitlist"}
-                  </Button>
-                </form>
+                    {(codeVerifyError || (state.message && !state.success)) && (
+                      <motion.p
+                        initial={{ opacity: 0, y: -4 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        className="text-sm text-red-400"
+                      >
+                        {codeVerifyError || state.message}
+                      </motion.p>
+                    )}
+
+                    <Button
+                      type="button"
+                      className="w-full"
+                      disabled={codeVerifying || isPending}
+                      onClick={handleVerifyAndJoin}
+                    >
+                      {codeVerifying
+                        ? "Verifying..."
+                        : isPending
+                          ? "Joining..."
+                          : "Verify & join waitlist"}
+                    </Button>
+
+                    <div className="flex items-center justify-between text-sm">
+                      <button
+                        type="button"
+                        onClick={() => setStep("details")}
+                        className="text-muted-foreground hover:underline"
+                      >
+                        Edit email
+                      </button>
+                      <button
+                        type="button"
+                        onClick={handleResendCode}
+                        disabled={emailSending}
+                        className="text-accent hover:underline disabled:opacity-50 disabled:no-underline"
+                      >
+                        {emailSending ? "Sending..." : "Resend code"}
+                      </button>
+                    </div>
+                  </div>
+                )}
               </CardContent>
             </Card>
           </motion.div>

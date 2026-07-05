@@ -10,6 +10,8 @@ import { isEmailVerified } from "@/lib/email/verification";
 const INVALID_EMAIL_DOMAIN_MESSAGE =
   "This email address looks invalid — please check for typos.";
 
+const EMAIL_FORMAT_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
 const waitlistSchema = z.object({
   email: z.string().email("Please enter a valid email address."),
   name: z.string().trim().max(100).optional(),
@@ -94,17 +96,12 @@ const surveySchema = z
     ]),
     commissionWillingness: z.enum(["yes", "no", "maybe"]),
 
-    email: z.string().trim().email("Please enter a valid email address."),
-    name: z.string().trim().min(1, "Please enter your name.").max(100),
-    school: z
-      .string()
-      .trim()
-      .min(1, "Please enter your school or university.")
-      .max(150),
     additionalFeedback: z.string().trim().max(1000).optional(),
 
-    joinMarketingTeam: z.enum(["yes", "no"]),
-    marketingWhatsapp: z.string().trim().max(30).optional(),
+    joinWaitlist: z.enum(["yes", "no"]),
+    email: z.string().trim().optional(),
+    name: z.string().trim().max(100).optional(),
+    school: z.string().trim().max(150).optional(),
 
     surveyorId: z.string().uuid("Please enter a valid moderator PIN before continuing."),
   })
@@ -117,12 +114,28 @@ const surveySchema = z
       });
     }
 
-    if (data.joinMarketingTeam === "yes" && !data.marketingWhatsapp) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        message: "Please share a WhatsApp number so we can reach you.",
-        path: ["marketingWhatsapp"],
-      });
+    if (data.joinWaitlist === "yes") {
+      if (!data.email || !EMAIL_FORMAT_RE.test(data.email)) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "Please enter a valid email address.",
+          path: ["email"],
+        });
+      }
+      if (!data.name) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "Please enter your name.",
+          path: ["name"],
+        });
+      }
+      if (!data.school) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "Please enter your school or university.",
+          path: ["school"],
+        });
+      }
     }
 
     if (!hasAtLeastOneSelection(data.uninstallReasons, data.uninstallOther)) {
@@ -233,7 +246,7 @@ const surveySchema = z
   });
 
 export type ActionResult =
-  | { success: true; message: string }
+  | { success: true; message: string; responseId?: string }
   | { success: false; message: string; fieldErrors?: Record<string, string[]> };
 
 export async function submitWaitlist(
@@ -261,6 +274,16 @@ export async function submitWaitlist(
       success: false,
       message: INVALID_EMAIL_DOMAIN_MESSAGE,
       fieldErrors: { email: [INVALID_EMAIL_DOMAIN_MESSAGE] },
+    };
+  }
+
+  if (!(await isEmailVerified(parsed.data.email))) {
+    return {
+      success: false,
+      message: "Please verify your email before joining the waitlist.",
+      fieldErrors: {
+        email: ["Please verify your email before joining the waitlist."],
+      },
     };
   }
 
@@ -366,13 +389,12 @@ export async function submitSurvey(
     paymentPreference: formData.get("paymentPreference"),
     commissionWillingness: formData.get("commissionWillingness"),
 
-    email: emailValue,
-    name: formData.get("name"),
-    school: formData.get("school"),
     additionalFeedback: formData.get("additionalFeedback") || undefined,
 
-    joinMarketingTeam: formData.get("joinMarketingTeam"),
-    marketingWhatsapp: formData.get("marketingWhatsapp") || undefined,
+    joinWaitlist: formData.get("joinWaitlist"),
+    email: emailValue || undefined,
+    name: formData.get("name") || undefined,
+    school: formData.get("school") || undefined,
 
     surveyorId: formData.get("surveyorId"),
   });
@@ -387,66 +409,76 @@ export async function submitSurvey(
     };
   }
 
-  if (!(await hasValidMxRecord(parsed.data.email))) {
-    return {
-      success: false,
-      message: INVALID_EMAIL_DOMAIN_MESSAGE,
-      fieldErrors: { email: [INVALID_EMAIL_DOMAIN_MESSAGE] },
-    };
+  const wantsWaitlist = parsed.data.joinWaitlist === "yes";
+
+  if (wantsWaitlist) {
+    if (!parsed.data.email || !(await hasValidMxRecord(parsed.data.email))) {
+      return {
+        success: false,
+        message: INVALID_EMAIL_DOMAIN_MESSAGE,
+        fieldErrors: { email: [INVALID_EMAIL_DOMAIN_MESSAGE] },
+      };
+    }
+
+    // Belt-and-suspenders: the wizard already gates progress on a verified
+    // email, but form data can be tampered with client-side, so re-check
+    // here against the server-recorded verification before writing to the DB.
+    if (!(await isEmailVerified(parsed.data.email))) {
+      return {
+        success: false,
+        message: "Please verify your email before submitting.",
+        fieldErrors: { email: ["Please verify your email before submitting."] },
+      };
+    }
   }
 
-  // Belt-and-suspenders: the wizard already gates progress on a verified
-  // email, but form data can be tampered with client-side, so re-check here
-  // against the server-recorded verification before writing to the DB.
-  if (!(await isEmailVerified(parsed.data.email))) {
-    return {
-      success: false,
-      message: "Please verify your email before submitting.",
-      fieldErrors: { email: ["Please verify your email before submitting."] },
-    };
-  }
+  const email = wantsWaitlist ? parsed.data.email!.toLowerCase() : null;
+  const name = wantsWaitlist ? parsed.data.name! : null;
+  const school = wantsWaitlist ? parsed.data.school! : null;
 
   try {
     const supabase = createServerSupabaseClient();
-    const { error } = await supabase.from("survey_responses").insert({
-      is_student: parsed.data.isStudent,
-      needs_extra_income: parsed.data.needsExtraIncome,
+    const { data: inserted, error } = await supabase
+      .from("survey_responses")
+      .insert({
+        is_student: parsed.data.isStudent,
+        needs_extra_income: parsed.data.needsExtraIncome,
 
-      wants_side_hustle: parsed.data.wantsSideHustle || null,
-      hustle_frequency: parsed.data.hustleFrequency || null,
-      hours_per_day: parsed.data.hoursPerDay ?? null,
-      has_skill: parsed.data.hasSkill || null,
-      skills: parsed.data.skills,
-      skills_other: parsed.data.skillsOther || null,
-      willing_different_hustle: parsed.data.willingDifferentHustle || null,
-      hustle_capability: parsed.data.hustleCapability,
+        wants_side_hustle: parsed.data.wantsSideHustle || null,
+        hustle_frequency: parsed.data.hustleFrequency || null,
+        hours_per_day: parsed.data.hoursPerDay ?? null,
+        has_skill: parsed.data.hasSkill || null,
+        skills: parsed.data.skills,
+        skills_other: parsed.data.skillsOther || null,
+        willing_different_hustle: parsed.data.willingDifferentHustle || null,
+        hustle_capability: parsed.data.hustleCapability,
 
-      needs_task_help: parsed.data.needsTaskHelp || null,
-      task_help_types: parsed.data.taskHelpTypes,
-      task_help_other: parsed.data.taskHelpOther || null,
+        needs_task_help: parsed.data.needsTaskHelp || null,
+        task_help_types: parsed.data.taskHelpTypes,
+        task_help_other: parsed.data.taskHelpOther || null,
 
-      would_use_app: parsed.data.wouldUseApp,
-      embarrassed_with_mate: parsed.data.embarrassedWithMate,
-      app_usage_role: parsed.data.appUsageRole,
-      uninstall_reasons: parsed.data.uninstallReasons,
-      uninstall_other: parsed.data.uninstallOther || null,
-      concerns: parsed.data.concerns,
-      concerns_other: parsed.data.concernsOther || null,
-      trust_factors: parsed.data.trustFactors,
-      trust_factors_other: parsed.data.trustFactorsOther || null,
-      payment_preference: parsed.data.paymentPreference,
-      commission_willingness: parsed.data.commissionWillingness,
+        would_use_app: parsed.data.wouldUseApp,
+        embarrassed_with_mate: parsed.data.embarrassedWithMate,
+        app_usage_role: parsed.data.appUsageRole,
+        uninstall_reasons: parsed.data.uninstallReasons,
+        uninstall_other: parsed.data.uninstallOther || null,
+        concerns: parsed.data.concerns,
+        concerns_other: parsed.data.concernsOther || null,
+        trust_factors: parsed.data.trustFactors,
+        trust_factors_other: parsed.data.trustFactorsOther || null,
+        payment_preference: parsed.data.paymentPreference,
+        commission_willingness: parsed.data.commissionWillingness,
 
-      email: parsed.data.email,
-      name: parsed.data.name,
-      school: parsed.data.school,
-      additional_feedback: parsed.data.additionalFeedback || null,
+        join_waitlist: parsed.data.joinWaitlist,
+        email,
+        name,
+        school,
+        additional_feedback: parsed.data.additionalFeedback || null,
 
-      join_marketing_team: parsed.data.joinMarketingTeam,
-      marketing_whatsapp: parsed.data.marketingWhatsapp || null,
-
-      surveyor_id: parsed.data.surveyorId,
-    });
+        surveyor_id: parsed.data.surveyorId,
+      })
+      .select("id")
+      .single();
 
     if (error) {
       return {
@@ -457,12 +489,12 @@ export async function submitSurvey(
 
     await broadcastNewResponse(supabase, parsed.data.surveyorId);
 
-    if (parsed.data.email) {
+    if (email) {
       const { error: waitlistError } = await supabase.from("waitlist").upsert(
         {
-          email: parsed.data.email.toLowerCase(),
-          name: parsed.data.name,
-          school: parsed.data.school,
+          email,
+          name,
+          school,
           source: "survey",
         },
         { onConflict: "email", ignoreDuplicates: true }
@@ -476,6 +508,86 @@ export async function submitSurvey(
     return {
       success: true,
       message: "Thank you! Your response helps shape sydHustle.",
+      responseId: inserted.id,
+    };
+  } catch {
+    return {
+      success: false,
+      message: "Server configuration error. Please try again later.",
+    };
+  }
+}
+
+const marketingInterestSchema = z
+  .object({
+    responseId: z.string().uuid(),
+    joinMarketingTeam: z.enum(["yes", "no"]),
+    marketingWhatsapp: z.string().trim().max(30).optional(),
+  })
+  .superRefine((data, ctx) => {
+    if (data.joinMarketingTeam === "yes" && !data.marketingWhatsapp) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Please share a WhatsApp number so we can reach you.",
+        path: ["marketingWhatsapp"],
+      });
+    }
+  });
+
+/**
+ * Records interest in the marketing team after the survey has already been
+ * submitted (asked on the "thank you" screen rather than as a survey
+ * question), by updating the previously-inserted survey_responses row.
+ */
+export async function submitMarketingInterest(
+  formData: FormData
+): Promise<ActionResult> {
+  const parsed = marketingInterestSchema.safeParse({
+    responseId: formData.get("responseId"),
+    joinMarketingTeam: formData.get("joinMarketingTeam"),
+    marketingWhatsapp: formData.get("marketingWhatsapp") || undefined,
+  });
+
+  if (!parsed.success) {
+    const fieldErrors = parsed.error.flatten().fieldErrors;
+    const firstError = Object.values(fieldErrors).flat()[0];
+    return {
+      success: false,
+      message: firstError ?? "Invalid form data.",
+      fieldErrors,
+    };
+  }
+
+  try {
+    const supabase = createServerSupabaseClient();
+    const { data, error } = await supabase
+      .from("survey_responses")
+      .update({
+        join_marketing_team: parsed.data.joinMarketingTeam,
+        marketing_whatsapp: parsed.data.marketingWhatsapp || null,
+      })
+      .eq("id", parsed.data.responseId)
+      .select("surveyor_id")
+      .single();
+
+    if (error) {
+      console.error("failed to record marketing interest:", error);
+      return {
+        success: false,
+        message: "Something went wrong. Please try again.",
+      };
+    }
+
+    if (data?.surveyor_id) {
+      await broadcastNewResponse(supabase, data.surveyor_id);
+    }
+
+    return {
+      success: true,
+      message:
+        parsed.data.joinMarketingTeam === "yes"
+          ? "Thanks! We'll reach out on WhatsApp closer to launch."
+          : "Thanks for letting us know!",
     };
   } catch {
     return {

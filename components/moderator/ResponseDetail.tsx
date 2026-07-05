@@ -96,6 +96,7 @@ export function ResponseDetail({
         <Field title="Name" value={r.name} />
         <Field title="School" value={r.school} />
         <Field title="Email" value={r.email} />
+        <Field title="Joined waitlist" value={label(yesNoLabels, r.join_waitlist)} />
         <Field title="Is a student" value={label(yesNoLabels, r.is_student)} />
         {surveyorName && <Field title="Surveyor" value={surveyorName} />}
         <Field title="Submitted" value={new Date(r.created_at).toLocaleString()} />
