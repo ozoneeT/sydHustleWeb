@@ -10,7 +10,7 @@ const features = [
     icon: Briefcase,
     title: "Earn from side hustles",
     description:
-      "Find gigs, tutor, freelance, and get paid for your time and skills — on your terms.",
+      "From day-to-day errands and chores to skilled gigs like tutoring or design — find hustles that fit your time and get paid for them.",
   },
   {
     icon: HandHelping,

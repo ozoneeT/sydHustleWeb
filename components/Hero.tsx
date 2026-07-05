@@ -25,7 +25,8 @@ const audiences = [
   {
     icon: Wallet,
     title: "Want to earn?",
-    description: "Find gigs, tutor, freelance, and get paid on your terms.",
+    description:
+      "Pick up everyday hustles — errands, laundry, cleaning, tutoring, and more — and get paid on your terms.",
   },
   {
     icon: HandHelping,
@@ -36,15 +37,7 @@ const audiences = [
 
 export function Hero() {
   return (
-    <section className="relative overflow-hidden px-6 pb-16 pt-16 md:pb-20 md:pt-24">
-      <div className="pointer-events-none absolute inset-0 -z-10 bg-grid" />
-
-      <div className="pointer-events-none absolute inset-0 -z-10">
-        <div className="animate-blob-a absolute left-1/2 top-[-120px] h-[560px] w-[820px] -translate-x-1/2 rounded-full bg-accent/25 blur-[130px]" />
-        <div className="animate-blob-b absolute bottom-[-80px] right-[5%] h-[340px] w-[420px] rounded-full bg-teal-400/15 blur-[110px]" />
-        <div className="absolute left-[8%] top-[20%] h-[220px] w-[220px] rounded-full bg-accent/10 blur-[90px]" />
-      </div>
-
+    <section className="relative px-6 pb-16 pt-16 md:pb-20 md:pt-24">
       <motion.div
         className="mx-auto max-w-4xl text-center"
         initial="hidden"

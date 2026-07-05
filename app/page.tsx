@@ -11,14 +11,18 @@ export default function Home() {
     <>
       <SiteHeader />
       <main className="flex-1">
-        <Hero />
-        <Features />
+        <div className="relative min-h-screen overflow-hidden">
+          <div className="pointer-events-none absolute inset-0 -z-10">
+            <div className="animate-blob-a absolute left-1/2 top-[-120px] h-[560px] w-[820px] -translate-x-1/2 rounded-full bg-accent/25 blur-[130px]" />
+          </div>
+          <Hero />
+          <Features />
+        </div>
         <VoiceSection />
         <section
           id="waitlist"
           className="relative scroll-mt-24 px-6 py-20 md:py-28"
         >
-          <div className="pointer-events-none absolute inset-0 -z-10 bg-grid opacity-60" />
           <Reveal className="mb-10 text-center">
             <h2 className="text-3xl font-bold tracking-tight md:text-4xl">
               Ready when you are
