@@ -10,7 +10,7 @@ export const verifySession = cache(async () => {
   const session = await decryptSession(cookieValue);
 
   if (!session) {
-    redirect("/moderator/login");
+    redirect("/moderator");
   }
 
   return { surveyorId: session.surveyorId, role: session.role };
@@ -45,7 +45,7 @@ export const getCurrentSurveyor = cache(async (): Promise<CurrentSurveyor> => {
     .single();
 
   if (error || !data) {
-    redirect("/moderator/login");
+    redirect("/moderator");
   }
 
   return data;

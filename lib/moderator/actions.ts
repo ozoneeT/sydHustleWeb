@@ -111,7 +111,7 @@ export async function loginModerator(
 
 export async function logoutModerator() {
   await deleteSession();
-  redirect("/moderator/login");
+  redirect("/moderator");
 }
 
 export type VerifyPinResult = { valid: boolean; surveyorId?: string };

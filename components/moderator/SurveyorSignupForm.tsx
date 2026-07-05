@@ -68,7 +68,7 @@ export function SurveyorSignupForm() {
               your dashboard.
             </p>
             <Button asChild size="lg" className="w-full">
-              <Link href="/moderator/login">Go to login</Link>
+              <Link href="/moderator">Go to login</Link>
             </Button>
           </CardContent>
         </Card>
@@ -109,7 +109,7 @@ export function SurveyorSignupForm() {
 
           <p className="mt-6 text-center text-sm text-muted-foreground">
             Already have a PIN?{" "}
-            <Link href="/moderator/login" className="text-accent hover:underline">
+            <Link href="/moderator" className="text-accent hover:underline">
               Log in
             </Link>
           </p>

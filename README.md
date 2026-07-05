@@ -51,8 +51,8 @@ Built with Next.js, Tailwind CSS, and Supabase.
 |-------|---------|
 | `/` | Landing page — waitlist signup, survey CTA |
 | `/survey` | Student side hustle validation questionnaire (requires a moderator PIN to start) |
+| `/moderator` | Log in with name + PIN — routes to `/dashboard` (surveyor) or `/admin` |
 | `/moderator/signup` | Surveyors sign up with just their name and get a unique 6-digit PIN |
-| `/moderator/login` | Log in with name + PIN — routes to `/dashboard` (surveyor) or `/admin` |
 | `/dashboard` | A surveyor's own responses, live counts, and their PIN to reshare |
 | `/admin` | All responses across every surveyor, with a per-surveyor leaderboard |
 
@@ -71,7 +71,7 @@ Review responses in the Supabase **Table Editor**, or via the `/admin` dashboard
 There are no passwords or email-based accounts for surveyors — this is intentionally lightweight for a small internal team:
 
 - **Sign up** (`/moderator/signup`) just takes a name. The server generates a random, unique 6-digit PIN and shows it once — the surveyor needs to save it.
-- **Login** (`/moderator/login`) takes name + PIN. On success, a signed session cookie is issued (see `lib/moderator/session.ts`); there's no Supabase Auth involved.
+- **Login** (`/moderator`) takes name + PIN. On success, a signed session cookie is issued (see `lib/moderator/session.ts`); there's no Supabase Auth involved.
 - Every `/survey` respondent must enter a valid moderator PIN before question one — this is what links their response to a surveyor (`survey_responses.surveyor_id`).
 - Dashboards use React's `cache()`-backed Data Access Layer (`lib/moderator/dal.ts`) to verify the session and scope every query to the logged-in surveyor (or, for admins, to everyone). `proxy.ts` only does a fast optimistic redirect; the real authorization check happens in the DAL on every request.
 - New responses trigger a lightweight Realtime Broadcast ping (`lib/moderator/realtime.ts`) to the relevant surveyor's channel and the admin channel, which tells open dashboards to refresh — no PII is ever sent over that channel, only a "something changed, go refetch" signal.

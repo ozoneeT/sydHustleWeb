@@ -3,30 +3,70 @@ import "server-only";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import type { SurveyorRole } from "@/lib/moderator/session";
 
-export interface ResponseSummary {
+export interface FullResponse {
   id: string;
   created_at: string;
+
+  is_student: string;
+  needs_extra_income: string;
+
+  wants_side_hustle: string | null;
+  hustle_frequency: string | null;
+  hours_per_day: number | null;
+  has_skill: string | null;
+  skills: string[];
+  skills_other: string | null;
+  willing_different_hustle: string | null;
+  hustle_capability: Record<string, "can_do" | "cannot_do">;
+
+  needs_task_help: string | null;
+  task_help_types: string[];
+  task_help_other: string | null;
+
+  would_use_app: string;
+  embarrassed_with_mate: string;
+  app_usage_role: string;
+  uninstall_reasons: string[];
+  uninstall_other: string | null;
+  concerns: string[];
+  concerns_other: string | null;
+  trust_factors: string[];
+  trust_factors_other: string | null;
+  payment_preference: string;
+  commission_willingness: string;
+
+  email: string | null;
   name: string | null;
   school: string | null;
-  email: string | null;
-  is_student: string | null;
-  app_usage_role: string | null;
-  would_use_app: string | null;
-  needs_extra_income: string | null;
+  additional_feedback: string | null;
+
   join_marketing_team: string | null;
+  marketing_whatsapp: string | null;
+
   surveyor_id: string | null;
 }
 
-const SUMMARY_COLUMNS =
-  "id, created_at, name, school, email, is_student, app_usage_role, would_use_app, needs_extra_income, join_marketing_team, surveyor_id";
+const FULL_COLUMNS = `
+  id, created_at,
+  is_student, needs_extra_income,
+  wants_side_hustle, hustle_frequency, hours_per_day, has_skill, skills, skills_other,
+  willing_different_hustle, hustle_capability,
+  needs_task_help, task_help_types, task_help_other,
+  would_use_app, embarrassed_with_mate, app_usage_role,
+  uninstall_reasons, uninstall_other, concerns, concerns_other, trust_factors, trust_factors_other,
+  payment_preference, commission_willingness,
+  email, name, school, additional_feedback,
+  join_marketing_team, marketing_whatsapp,
+  surveyor_id
+`;
 
 export async function getResponsesForSurveyor(
   surveyorId: string
-): Promise<ResponseSummary[]> {
+): Promise<FullResponse[]> {
   const supabase = createServerSupabaseClient();
   const { data, error } = await supabase
     .from("survey_responses")
-    .select(SUMMARY_COLUMNS)
+    .select(FULL_COLUMNS)
     .eq("surveyor_id", surveyorId)
     .order("created_at", { ascending: false });
 
@@ -35,7 +75,7 @@ export async function getResponsesForSurveyor(
     return [];
   }
 
-  return data ?? [];
+  return (data as unknown as FullResponse[]) ?? [];
 }
 
 export interface SurveyorWithCount {
@@ -79,11 +119,11 @@ export async function getAllSurveyorsWithCounts(): Promise<SurveyorWithCount[]> 
   }));
 }
 
-export async function getAllResponses(): Promise<ResponseSummary[]> {
+export async function getAllResponses(): Promise<FullResponse[]> {
   const supabase = createServerSupabaseClient();
   const { data, error } = await supabase
     .from("survey_responses")
-    .select(SUMMARY_COLUMNS)
+    .select(FULL_COLUMNS)
     .order("created_at", { ascending: false });
 
   if (error) {
@@ -91,5 +131,5 @@ export async function getAllResponses(): Promise<ResponseSummary[]> {
     return [];
   }
 
-  return data ?? [];
+  return (data as unknown as FullResponse[]) ?? [];
 }

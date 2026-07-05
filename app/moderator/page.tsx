@@ -7,7 +7,7 @@ export const metadata = {
   description: "Log in to your sydHustle surveyor or admin dashboard.",
 };
 
-export default function ModeratorLoginPage() {
+export default function ModeratorPage() {
   return (
     <>
       <SiteHeader />

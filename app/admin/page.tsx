@@ -2,7 +2,7 @@ import { requireAdmin } from "@/lib/moderator/dal";
 import { getAllResponses, getAllSurveyorsWithCounts } from "@/lib/moderator/data";
 import { ADMIN_CHANNEL } from "@/lib/moderator/realtime";
 import { RealtimeRefresher } from "@/components/moderator/RealtimeRefresher";
-import { ResponsesTable } from "@/components/moderator/ResponsesTable";
+import { ResponsesList } from "@/components/moderator/ResponsesList";
 import { StatCard } from "@/components/moderator/StatCard";
 import { LogoutButton } from "@/components/moderator/LogoutButton";
 import { Card } from "@/components/ui/card";
@@ -103,7 +103,10 @@ export default async function AdminPage() {
 
           <div className="space-y-3">
             <h2 className="text-lg font-semibold">All responses</h2>
-            <ResponsesTable
+            <p className="text-sm text-muted-foreground">
+              Click a response to see the full survey answers.
+            </p>
+            <ResponsesList
               responses={responses}
               surveyorNames={surveyorNames}
               emptyMessage="No survey responses yet."

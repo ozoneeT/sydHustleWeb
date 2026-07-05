@@ -2,7 +2,7 @@ import { requireSurveyor } from "@/lib/moderator/dal";
 import { getResponsesForSurveyor } from "@/lib/moderator/data";
 import { surveyorChannel } from "@/lib/moderator/realtime";
 import { RealtimeRefresher } from "@/components/moderator/RealtimeRefresher";
-import { ResponsesTable } from "@/components/moderator/ResponsesTable";
+import { ResponsesList } from "@/components/moderator/ResponsesList";
 import { StatCard } from "@/components/moderator/StatCard";
 import { LogoutButton } from "@/components/moderator/LogoutButton";
 import { SiteHeader } from "@/components/SiteHeader";
@@ -61,7 +61,10 @@ export default async function DashboardPage() {
 
           <div className="space-y-3">
             <h2 className="text-lg font-semibold">Your responses</h2>
-            <ResponsesTable
+            <p className="text-sm text-muted-foreground">
+              Click a response to see the full survey answers.
+            </p>
+            <ResponsesList
               responses={responses}
               emptyMessage="No one has taken the survey with your PIN yet. Share your PIN to get started."
             />

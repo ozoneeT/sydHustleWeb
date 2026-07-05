@@ -18,7 +18,7 @@ export async function proxy(request: NextRequest) {
   const session = await decryptSession(cookie);
 
   if (!session) {
-    return NextResponse.redirect(new URL("/moderator/login", request.url));
+    return NextResponse.redirect(new URL("/moderator", request.url));
   }
 
   if (pathname.startsWith("/admin") && session.role !== "admin") {

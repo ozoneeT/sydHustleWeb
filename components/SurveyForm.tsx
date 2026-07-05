@@ -7,6 +7,12 @@ import { CheckCircle2 } from "lucide-react";
 import { submitSurvey, type ActionResult } from "@/lib/actions";
 import { verifyModeratorPin } from "@/lib/moderator/actions";
 import { allHustlesRated, hustleTaskOptions } from "@/lib/hustle-tasks";
+import {
+  concernOptions,
+  skillOptions,
+  trustFactorOptions,
+  uninstallOptions,
+} from "@/lib/survey-options";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -16,55 +22,6 @@ import { Reveal } from "@/components/motion/Reveal";
 import { cn } from "@/lib/utils";
 
 const initialState: ActionResult = { success: false, message: "" };
-
-const skillOptions = [
-  { value: "graphic_design", label: "Graphic design" },
-  { value: "writing", label: "Writing / copywriting" },
-  { value: "video_editing", label: "Video editing" },
-  { value: "web_dev", label: "Web or app development" },
-  { value: "social_media", label: "Social media management" },
-  { value: "photography", label: "Photography" },
-  { value: "tutoring", label: "Tutoring a specific subject" },
-  { value: "public_speaking", label: "Public speaking / hosting (MC)" },
-  { value: "music_dj", label: "Music or DJing" },
-  { value: "fashion_design", label: "Fashion design / tailoring" },
-  { value: "makeup_artistry", label: "Makeup artistry" },
-  { value: "hair_styling", label: "Hair styling" },
-  { value: "cooking_baking", label: "Cooking or baking" },
-  { value: "event_planning", label: "Event planning" },
-  { value: "sales_marketing", label: "Sales or marketing" },
-  { value: "accounting", label: "Accounting or bookkeeping" },
-  { value: "translation", label: "Language translation" },
-  { value: "fitness_coaching", label: "Fitness training or coaching" },
-];
-
-const uninstallOptions = [
-  { value: "poor_quality", label: "Poor quality of hustlers or help received" },
-  { value: "payment_issues", label: "Payment issues or getting scammed" },
-  { value: "hard_to_find", label: "Difficult to find tasks or hustlers nearby" },
-  { value: "high_fees", label: "Fees or commission feel too high" },
-  { value: "buggy_app", label: "App is buggy or hard to use" },
-  { value: "safety_concerns", label: "Safety or trust concerns" },
-  { value: "low_activity", label: "Not enough tasks or hustlers in my area" },
-];
-
-const concernOptions = [
-  { value: "meeting_strangers", label: "Meeting or working with strangers" },
-  { value: "getting_scammed", label: "Not getting paid or being scammed" },
-  { value: "quality_of_service", label: "Quality of the service or help received" },
-  { value: "privacy", label: "Privacy of my personal information" },
-  { value: "reliability", label: "Reliability of hustlers or task posters" },
-  { value: "payment_security", label: "Security of in-app payments" },
-];
-
-const trustFactorOptions = [
-  { value: "verified_profiles", label: "Verified student profiles" },
-  { value: "ratings_reviews", label: "Ratings and reviews from other students" },
-  { value: "secure_payments", label: "Secure in-app payments" },
-  { value: "id_verification", label: "ID verification" },
-  { value: "dispute_support", label: "Dispute resolution / customer support" },
-  { value: "community_reporting", label: "Community reporting of bad actors" },
-];
 
 type HustleCapability = "can_do" | "cannot_do";
 
