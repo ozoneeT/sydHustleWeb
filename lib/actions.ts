@@ -2,6 +2,7 @@
 
 import { z } from "zod";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
+import { allHustlesRated } from "@/lib/hustle-tasks";
 
 const waitlistSchema = z.object({
   email: z.string().email("Please enter a valid email address."),
@@ -184,11 +185,11 @@ const surveySchema = z
 
       if (
         showsHustleCapabilityStep(data) &&
-        Object.keys(data.hustleCapability).length === 0
+        !allHustlesRated(data.hustleCapability)
       ) {
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
-          message: "Please mark at least one hustle as Can do or Can't do.",
+          message: "Please mark every hustle as Can do or Can't do.",
           path: ["hustleCapability"],
         });
       }

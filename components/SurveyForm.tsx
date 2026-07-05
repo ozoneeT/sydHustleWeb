@@ -5,6 +5,7 @@ import Link from "next/link";
 import { AnimatePresence, motion } from "framer-motion";
 import { CheckCircle2 } from "lucide-react";
 import { submitSurvey, type ActionResult } from "@/lib/actions";
+import { allHustlesRated, hustleTaskOptions } from "@/lib/hustle-tasks";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -14,32 +15,6 @@ import { Reveal } from "@/components/motion/Reveal";
 import { cn } from "@/lib/utils";
 
 const initialState: ActionResult = { success: false, message: "" };
-
-// Shared catalogue of everyday hustles/tasks — used both when a task poster
-// picks what they need help with, and when a hustler rates their own
-// capability, so supply and demand are directly comparable.
-const hustleTaskOptions = [
-  { value: "mount_tv", label: "Mounting a TV or assembling furniture" },
-  { value: "cooking", label: "Cooking or meal prep" },
-  { value: "cleaning", label: "Cleaning or tidying a room/apartment" },
-  { value: "packing", label: "Packing or unpacking help (moving in/out)" },
-  { value: "laundry", label: "Washing and ironing clothes" },
-  { value: "car_wash", label: "Washing a car" },
-  { value: "errands", label: "Grocery shopping or running errands" },
-  { value: "tutoring", label: "Tutoring or homework help" },
-  { value: "typing", label: "Typing, data entry, or transcription" },
-  { value: "graphic_design", label: "Graphic design or flyer design" },
-  { value: "photography", label: "Photography or videography" },
-  { value: "hair_styling", label: "Hair styling or braiding" },
-  { value: "makeup", label: "Makeup application" },
-  { value: "tech_support", label: "Phone or computer repair / tech support" },
-  { value: "delivery", label: "Delivery of food, packages, or documents" },
-  { value: "event_setup", label: "Event setup or decoration" },
-  { value: "babysitting", label: "Babysitting or child-minding" },
-  { value: "pet_sitting", label: "Pet sitting or dog walking" },
-  { value: "minor_repairs", label: "Minor repairs or handyman tasks" },
-  { value: "baking", label: "Baking or small food orders" },
-];
 
 const skillOptions = [
   { value: "graphic_design", label: "Graphic design" },
@@ -366,9 +341,9 @@ function getHustlerGroupSteps(a: Answers): StepMeta[] {
     group.push({
       id: "hustleCapability",
       title: "Which of these hustles could you do?",
-      description: "Mark each as Can do or Can't do — pick as many as apply",
+      description: "Mark every hustle as Can do or Can't do before continuing",
       required: true,
-      validate: (ans) => Object.keys(ans.hustleCapability).length > 0,
+      validate: (ans) => allHustlesRated(ans.hustleCapability),
     });
   }
 
@@ -469,7 +444,7 @@ function RadioGroup({
   name: string;
   value: string;
   onChange: (value: string) => void;
-  options: { value: string; label: string }[];
+  options: ReadonlyArray<{ value: string; label: string }>;
   columns?: 1 | 2 | 3;
 }) {
   return (
@@ -510,7 +485,7 @@ function CheckboxGroup({
 }: {
   value: string[];
   onChange: (value: string[]) => void;
-  options: { value: string; label: string }[];
+  options: ReadonlyArray<{ value: string; label: string }>;
   otherValue?: string;
   onOtherChange?: (value: string) => void;
   otherPlaceholder?: string;
