@@ -3,6 +3,7 @@
 import { z } from "zod";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { allHustlesRated } from "@/lib/hustle-tasks";
+import { broadcastNewResponse } from "@/lib/moderator/realtime";
 
 const waitlistSchema = z.object({
   email: z.string().email("Please enter a valid email address."),
@@ -99,6 +100,8 @@ const surveySchema = z
 
     joinMarketingTeam: z.enum(["yes", "no"]),
     marketingWhatsapp: z.string().trim().max(30).optional(),
+
+    surveyorId: z.string().uuid("Please enter a valid moderator PIN before continuing."),
   })
   .superRefine((data, ctx) => {
     if (data.needsExtraIncome === "yes" && !data.wantsSideHustle) {
@@ -287,12 +290,17 @@ const HUSTLE_CAPABILITY_PREFIX = "hustleCapability_";
 function formatSurveyInsertError(error: { code?: string; message?: string }) {
   console.error("survey_responses insert failed:", error);
 
-  if (
-    error.code === "PGRST204" ||
-    error.message?.includes("Could not find") ||
-    error.message?.includes("column")
-  ) {
-    return "We couldn't save your survey — the database needs the latest migration. Please try again later.";
+  // PGRST204 means the column genuinely exists in Postgres but PostgREST's
+  // cached schema hasn't picked it up yet — happens right after running an
+  // ALTER TABLE migration until the schema cache is reloaded (Supabase
+  // dashboard: Project Settings -> API -> Reload schema, or run
+  // `NOTIFY pgrst, 'reload schema';` in the SQL editor).
+  if (error.code === "PGRST204" || error.message?.includes("schema cache")) {
+    return "We couldn't save your survey — please try again in a moment while we finish updating the database.";
+  }
+
+  if (error.code === "23503") {
+    return "Your moderator PIN session expired. Please refresh and re-enter the PIN.";
   }
 
   return "Something went wrong. Please try again.";
@@ -352,6 +360,8 @@ export async function submitSurvey(
 
     joinMarketingTeam: formData.get("joinMarketingTeam"),
     marketingWhatsapp: formData.get("marketingWhatsapp") || undefined,
+
+    surveyorId: formData.get("surveyorId"),
   });
 
   if (!parsed.success) {
@@ -402,6 +412,8 @@ export async function submitSurvey(
 
       join_marketing_team: parsed.data.joinMarketingTeam,
       marketing_whatsapp: parsed.data.marketingWhatsapp || null,
+
+      surveyor_id: parsed.data.surveyorId,
     });
 
     if (error) {
@@ -410,6 +422,8 @@ export async function submitSurvey(
         message: formatSurveyInsertError(error),
       };
     }
+
+    await broadcastNewResponse(supabase, parsed.data.surveyorId);
 
     if (parsed.data.email) {
       const { error: waitlistError } = await supabase.from("waitlist").upsert(

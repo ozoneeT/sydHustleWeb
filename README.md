@@ -15,8 +15,13 @@ Built with Next.js, Tailwind CSS, and Supabase.
 2. **Set up Supabase**
 
    - Create a project at [supabase.com](https://supabase.com)
-   - Open the SQL Editor and run the migrations in order: [`supabase/migrations/001_initial.sql`](supabase/migrations/001_initial.sql), then [`supabase/migrations/002_survey_redesign.sql`](supabase/migrations/002_survey_redesign.sql), then [`supabase/migrations/003_marketing_team_and_waitlist_fields.sql`](supabase/migrations/003_marketing_team_and_waitlist_fields.sql)
+   - Open the SQL Editor and run the migrations in order: [`001_initial.sql`](supabase/migrations/001_initial.sql), [`002_survey_redesign.sql`](supabase/migrations/002_survey_redesign.sql), [`003_marketing_team_and_waitlist_fields.sql`](supabase/migrations/003_marketing_team_and_waitlist_fields.sql), then [`004_surveyors.sql`](supabase/migrations/004_surveyors.sql)
    - Copy your project URL, anon key, and service role key from **Project Settings → API**
+   - **Seed your admin account** — surveyors sign themselves up, but the first admin has to be inserted manually. Run this in the SQL editor with your own name and a PIN you choose:
+     ```sql
+     insert into public.surveyors (name, pin, role)
+     values ('Your Name', '482913', 'admin');
+     ```
 
 3. **Configure environment variables**
 
@@ -24,7 +29,13 @@ Built with Next.js, Tailwind CSS, and Supabase.
    cp .env.local.example .env.local
    ```
 
-   Fill in your Supabase credentials in `.env.local`.
+   Fill in your Supabase credentials, and generate a session secret for the dashboards:
+
+   ```bash
+   openssl rand -base64 32
+   ```
+
+   Paste the output as `SESSION_SECRET` in `.env.local`.
 
 4. **Run the dev server**
 
@@ -39,16 +50,33 @@ Built with Next.js, Tailwind CSS, and Supabase.
 | Route | Purpose |
 |-------|---------|
 | `/` | Landing page — waitlist signup, survey CTA |
-| `/survey` | Student side hustle validation questionnaire |
+| `/survey` | Student side hustle validation questionnaire (requires a moderator PIN to start) |
+| `/moderator/signup` | Surveyors sign up with just their name and get a unique 6-digit PIN |
+| `/moderator/login` | Log in with name + PIN — routes to `/dashboard` (surveyor) or `/admin` |
+| `/dashboard` | A surveyor's own responses, live counts, and their PIN to reshare |
+| `/admin` | All responses across every surveyor, with a per-surveyor leaderboard |
 
 ## Data
 
-Responses are stored in two Supabase tables:
+Responses are stored in Supabase tables:
 
 - **`waitlist`** — email signups from the landing page (and optional emails from the survey)
-- **`survey_responses`** — full survey answers
+- **`survey_responses`** — full survey answers, each linked to the surveyor (`surveyor_id`) who collected it
+- **`surveyors`** — surveyor/admin accounts (name, unique PIN, role)
 
-Review responses in the Supabase **Table Editor** dashboard.
+Review responses in the Supabase **Table Editor**, or via the `/admin` dashboard.
+
+### Moderator / surveyor accounts
+
+There are no passwords or email-based accounts for surveyors — this is intentionally lightweight for a small internal team:
+
+- **Sign up** (`/moderator/signup`) just takes a name. The server generates a random, unique 6-digit PIN and shows it once — the surveyor needs to save it.
+- **Login** (`/moderator/login`) takes name + PIN. On success, a signed session cookie is issued (see `lib/moderator/session.ts`); there's no Supabase Auth involved.
+- Every `/survey` respondent must enter a valid moderator PIN before question one — this is what links their response to a surveyor (`survey_responses.surveyor_id`).
+- Dashboards use React's `cache()`-backed Data Access Layer (`lib/moderator/dal.ts`) to verify the session and scope every query to the logged-in surveyor (or, for admins, to everyone). `proxy.ts` only does a fast optimistic redirect; the real authorization check happens in the DAL on every request.
+- New responses trigger a lightweight Realtime Broadcast ping (`lib/moderator/realtime.ts`) to the relevant surveyor's channel and the admin channel, which tells open dashboards to refresh — no PII is ever sent over that channel, only a "something changed, go refetch" signal.
+
+**Known trade-off:** a 6-digit PIN is a small guess-space (there's no rate-limiting yet). This is fine for a small, trusted team of surveyors, but isn't meant to scale to a public-facing login.
 
 ## Deploy to Vercel
 
@@ -58,6 +86,7 @@ Review responses in the Supabase **Table Editor** dashboard.
    - `NEXT_PUBLIC_SUPABASE_URL`
    - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
    - `SUPABASE_SERVICE_ROLE_KEY`
+   - `SESSION_SECRET` (generate with `openssl rand -base64 32` — use a different value than local dev)
 4. Deploy
 
 ## Connect sydhustle.com

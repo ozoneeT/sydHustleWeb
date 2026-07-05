@@ -5,6 +5,7 @@ import Link from "next/link";
 import { AnimatePresence, motion } from "framer-motion";
 import { CheckCircle2 } from "lucide-react";
 import { submitSurvey, type ActionResult } from "@/lib/actions";
+import { verifyModeratorPin } from "@/lib/moderator/actions";
 import { allHustlesRated, hustleTaskOptions } from "@/lib/hustle-tasks";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -68,6 +69,8 @@ const trustFactorOptions = [
 type HustleCapability = "can_do" | "cannot_do";
 
 interface Answers {
+  moderatorPin: string;
+  surveyorId: string;
   isStudent: string;
   needsExtraIncome: string;
   wantsSideHustle: string;
@@ -102,6 +105,8 @@ interface Answers {
 }
 
 const initialAnswers: Answers = {
+  moderatorPin: "",
+  surveyorId: "",
   isStudent: "",
   needsExtraIncome: "",
   wantsSideHustle: "",
@@ -136,6 +141,7 @@ const initialAnswers: Answers = {
 };
 
 type StepId =
+  | "moderatorPin"
   | "isStudent"
   | "needsExtraIncome"
   | "wantsSideHustle"
@@ -181,6 +187,17 @@ function showsHustleCapability(a: Answers) {
     (a.hasSkill === "yes" && a.willingDifferentHustle === "yes")
   );
 }
+const STEP_MODERATOR_PIN: StepMeta = {
+  id: "moderatorPin",
+  title: "Enter the moderator's PIN",
+  description: "Ask the person surveying you for their 6-digit PIN before starting",
+  required: true,
+  // Only checks the PIN's shape so the "Next" button becomes clickable;
+  // the actual verification (and setting of surveyorId) happens
+  // asynchronously in handleNext via verifyModeratorPin.
+  validate: (a) => /^\d{6}$/.test(a.moderatorPin.trim()),
+};
+
 const STEP_IS_STUDENT: StepMeta = {
   id: "isStudent",
   title: "Are you currently a student?",
@@ -382,7 +399,7 @@ function getProviderGroupSteps(a: Answers): StepMeta[] {
 // question or is routed there later based on how they say they'd use the
 // app ("Which would you primarily use the app for?").
 function buildVisibleSteps(a: Answers): StepMeta[] {
-  const order: StepMeta[] = [STEP_IS_STUDENT, STEP_NEEDS_EXTRA_INCOME];
+  const order: StepMeta[] = [STEP_MODERATOR_PIN, STEP_IS_STUDENT, STEP_NEEDS_EXTRA_INCOME];
 
   let hustlerGroupShown = false;
   let providerGroupShown = false;
@@ -612,6 +629,7 @@ const HUSTLE_CAPABILITY_PREFIX = "hustleCapability_";
 
 function buildFormData(a: Answers): FormData {
   const fd = new FormData();
+  fd.set("surveyorId", a.surveyorId);
   fd.set("isStudent", a.isStudent);
   fd.set("needsExtraIncome", a.needsExtraIncome);
 
@@ -672,8 +690,10 @@ export function SurveyForm() {
   );
 
   const [answers, setAnswers] = useState<Answers>(initialAnswers);
-  const [currentStepId, setCurrentStepId] = useState<StepId>("isStudent");
+  const [currentStepId, setCurrentStepId] = useState<StepId>("moderatorPin");
   const [direction, setDirection] = useState(1);
+  const [pinChecking, setPinChecking] = useState(false);
+  const [pinError, setPinError] = useState("");
 
   const update = <K extends keyof Answers>(key: K, value: Answers[K]) => {
     setAnswers((prev) => ({ ...prev, [key]: value }));
@@ -703,8 +723,26 @@ export function SurveyForm() {
     setCurrentStepId(target.id);
   };
 
-  const handleNext = () => {
+  const handleNext = async () => {
     if (!canProceed || isLastStep) return;
+
+    if (currentStep.id === "moderatorPin" && !answers.surveyorId) {
+      setPinError("");
+      setPinChecking(true);
+      const result = await verifyModeratorPin(answers.moderatorPin);
+      setPinChecking(false);
+
+      if (!result.valid || !result.surveyorId) {
+        setPinError("Invalid moderator PIN. Please check and try again.");
+        return;
+      }
+
+      update("surveyorId", result.surveyorId);
+      setDirection(1);
+      goToIndex(currentIndex + 1);
+      return;
+    }
+
     setDirection(1);
     goToIndex(currentIndex + 1);
   };
@@ -764,6 +802,30 @@ export function SurveyForm() {
 
   function renderStepBody() {
     switch (currentStep.id) {
+      case "moderatorPin":
+        return (
+          <div className="space-y-3">
+            <Input
+              id="survey-moderator-pin"
+              inputMode="numeric"
+              pattern="\d{6}"
+              maxLength={6}
+              placeholder="6-digit PIN"
+              className="text-center text-lg tracking-[0.3em]"
+              value={answers.moderatorPin}
+              onChange={(e) => {
+                const digits = e.target.value.replace(/\D/g, "").slice(0, 6);
+                update("moderatorPin", digits);
+                if (answers.surveyorId) update("surveyorId", "");
+                setPinError("");
+              }}
+            />
+            {answers.surveyorId && (
+              <p className="text-sm text-accent">PIN verified ✓</p>
+            )}
+            {pinError && <p className="text-sm text-red-400">{pinError}</p>}
+          </div>
+        );
       case "isStudent":
         return (
           <RadioGroup
@@ -1182,8 +1244,14 @@ export function SurveyForm() {
                 {isPending ? "Submitting..." : "Submit survey"}
               </Button>
             ) : (
-              <Button type="button" onClick={handleNext} disabled={!canProceed}>
-                Next
+              <Button
+                type="button"
+                onClick={handleNext}
+                disabled={!canProceed || pinChecking}
+              >
+                {currentStep.id === "moderatorPin" && pinChecking
+                  ? "Verifying..."
+                  : "Next"}
               </Button>
             )}
           </div>
