@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useMemo, useState } from "react";
+import { startTransition, useActionState, useMemo, useState } from "react";
 import Link from "next/link";
 import { AnimatePresence, motion } from "framer-motion";
 import { CheckCircle2 } from "lucide-react";
@@ -73,6 +73,7 @@ interface Answers {
   wantsSideHustle: string;
   hustleFrequency: string;
   hoursPerDay: number;
+  hoursPerDayTouched: boolean;
   hasSkill: string;
   skills: string[];
   skillsOther: string;
@@ -106,6 +107,7 @@ const initialAnswers: Answers = {
   wantsSideHustle: "",
   hustleFrequency: "",
   hoursPerDay: 2,
+  hoursPerDayTouched: false,
   hasSkill: "",
   skills: [],
   skillsOther: "",
@@ -307,8 +309,9 @@ function getHustlerGroupSteps(a: Answers): StepMeta[] {
     {
       id: "hoursPerDay",
       title: "How many hours per day can you spend hustling?",
+      description: "Drag the slider to set your answer",
       required: true,
-      validate: () => true,
+      validate: (ans) => ans.hoursPerDayTouched,
     },
     {
       id: "hasSkill",
@@ -570,9 +573,11 @@ function HustleCapabilityGrid({
 
 function HoursPerDaySlider({
   value,
+  touched,
   onChange,
 }: {
   value: number;
+  touched: boolean;
   onChange: (value: number) => void;
 }) {
   return (
@@ -588,9 +593,15 @@ function HoursPerDaySlider({
       />
       <div className="flex items-center justify-between text-xs text-muted-foreground">
         <span>0h</span>
-        <span className="rounded-full bg-accent/10 px-3 py-1 text-sm font-semibold text-accent">
-          {value} {value === 1 ? "hour" : "hours"} / day
-        </span>
+        {touched ? (
+          <span className="rounded-full bg-accent/10 px-3 py-1 text-sm font-semibold text-accent">
+            {value} {value === 1 ? "hour" : "hours"} / day
+          </span>
+        ) : (
+          <span className="rounded-full border border-dashed border-white/20 px-3 py-1 text-sm text-muted-foreground">
+            Drag the slider to choose
+          </span>
+        )}
         <span>24h</span>
       </div>
     </div>
@@ -606,7 +617,10 @@ function buildFormData(a: Answers): FormData {
 
   if (a.wantsSideHustle) fd.set("wantsSideHustle", a.wantsSideHustle);
   if (a.hustleFrequency) fd.set("hustleFrequency", a.hustleFrequency);
-  fd.set("hoursPerDay", String(a.hoursPerDay));
+  if (a.hoursPerDayTouched) {
+    fd.set("hoursPerDay", String(a.hoursPerDay));
+    fd.set("hoursPerDayTouched", "true");
+  }
   if (a.hasSkill) fd.set("hasSkill", a.hasSkill);
   a.skills.forEach((s) => fd.append("skills", s));
   if (a.skillsOther) fd.set("skillsOther", a.skillsOther);
@@ -638,7 +652,9 @@ function buildFormData(a: Answers): FormData {
   if (a.additionalFeedback) fd.set("additionalFeedback", a.additionalFeedback);
 
   fd.set("joinMarketingTeam", a.joinMarketingTeam);
-  if (a.marketingWhatsapp) fd.set("marketingWhatsapp", a.marketingWhatsapp);
+  if (a.joinMarketingTeam === "yes") {
+    fd.set("marketingWhatsapp", a.marketingWhatsapp.trim());
+  }
 
   return fd;
 }
@@ -700,7 +716,9 @@ export function SurveyForm() {
   };
 
   const handleSubmit = () => {
-    formAction(buildFormData(answers));
+    startTransition(() => {
+      formAction(buildFormData(answers));
+    });
   };
 
   if (state.success) {
@@ -828,7 +846,11 @@ export function SurveyForm() {
         return (
           <HoursPerDaySlider
             value={answers.hoursPerDay}
-            onChange={(v) => update("hoursPerDay", v)}
+            touched={answers.hoursPerDayTouched}
+            onChange={(v) => {
+              update("hoursPerDay", v);
+              update("hoursPerDayTouched", true);
+            }}
           />
         );
       case "hasSkill":

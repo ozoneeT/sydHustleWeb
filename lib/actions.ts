@@ -61,6 +61,7 @@ const surveySchema = z
       .enum(["daily", "few_times_week", "weekly", "few_times_month", "occasionally"])
       .optional(),
     hoursPerDay: z.coerce.number().int().min(0).max(24).optional(),
+    hoursPerDayTouched: z.enum(["true"]).optional(),
     hasSkill: z.enum(["yes", "no"]).optional(),
     skills: z.array(z.string()).default([]),
     skillsOther: z.string().trim().max(200).optional(),
@@ -149,7 +150,13 @@ const surveySchema = z
         });
       }
 
-      if (data.hoursPerDay === undefined) {
+      if (data.hoursPerDayTouched !== "true") {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "Please drag the slider to set your hours per day.",
+          path: ["hoursPerDay"],
+        });
+      } else if (data.hoursPerDay === undefined) {
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
           message: "Please tell us how many hours per day you can spend hustling.",
@@ -277,6 +284,20 @@ export async function submitWaitlist(
 
 const HUSTLE_CAPABILITY_PREFIX = "hustleCapability_";
 
+function formatSurveyInsertError(error: { code?: string; message?: string }) {
+  console.error("survey_responses insert failed:", error);
+
+  if (
+    error.code === "PGRST204" ||
+    error.message?.includes("Could not find") ||
+    error.message?.includes("column")
+  ) {
+    return "We couldn't save your survey — the database needs the latest migration. Please try again later.";
+  }
+
+  return "Something went wrong. Please try again.";
+}
+
 export async function submitSurvey(
   formData: FormData
 ): Promise<ActionResult> {
@@ -301,6 +322,7 @@ export async function submitSurvey(
     wantsSideHustle: formData.get("wantsSideHustle") || undefined,
     hustleFrequency: formData.get("hustleFrequency") || undefined,
     hoursPerDay: formData.get("hoursPerDay") || undefined,
+    hoursPerDayTouched: formData.get("hoursPerDayTouched") || undefined,
     hasSkill: formData.get("hasSkill") || undefined,
     skills,
     skillsOther: formData.get("skillsOther") || undefined,
@@ -385,12 +407,12 @@ export async function submitSurvey(
     if (error) {
       return {
         success: false,
-        message: "Something went wrong. Please try again.",
+        message: formatSurveyInsertError(error),
       };
     }
 
     if (parsed.data.email) {
-      await supabase.from("waitlist").upsert(
+      const { error: waitlistError } = await supabase.from("waitlist").upsert(
         {
           email: parsed.data.email.toLowerCase(),
           name: parsed.data.name,
@@ -399,6 +421,10 @@ export async function submitSurvey(
         },
         { onConflict: "email", ignoreDuplicates: true }
       );
+
+      if (waitlistError) {
+        console.error("waitlist upsert failed:", waitlistError);
+      }
     }
 
     return {
