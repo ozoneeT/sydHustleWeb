@@ -10,14 +10,45 @@ const waitlistSchema = z.object({
   source: z.enum(["landing", "survey"]).default("landing"),
 });
 
-const optionalEmail = z
-  .string()
-  .trim()
-  .optional()
-  .transform((val) => (val === "" ? undefined : val))
-  .pipe(z.string().email("Please enter a valid email address.").optional());
-
 const hustleCapabilityValue = z.enum(["can_do", "cannot_do"]);
+
+type SurveyBranchData = {
+  needsExtraIncome: "yes" | "no";
+  wantsSideHustle?: "yes" | "no";
+  hasSkill?: "yes" | "no";
+  willingDifferentHustle?: "yes" | "no";
+  needsTaskHelp?: "yes" | "no";
+  appUsageRole: "providing_hustles" | "hustling_the_hustles" | "both";
+};
+
+function showsHustlerTrack(data: SurveyBranchData) {
+  return (
+    (data.needsExtraIncome === "yes" && data.wantsSideHustle === "yes") ||
+    data.appUsageRole === "hustling_the_hustles" ||
+    data.appUsageRole === "both"
+  );
+}
+
+function showsProviderTrack(data: SurveyBranchData) {
+  return (
+    data.needsExtraIncome === "no" ||
+    (data.needsExtraIncome === "yes" && data.wantsSideHustle === "no") ||
+    data.appUsageRole === "providing_hustles" ||
+    data.appUsageRole === "both"
+  );
+}
+
+function showsHustleCapabilityStep(data: SurveyBranchData) {
+  return (
+    showsHustlerTrack(data) &&
+    (data.hasSkill === "no" ||
+      (data.hasSkill === "yes" && data.willingDifferentHustle === "yes"))
+  );
+}
+
+function hasAtLeastOneSelection(values: string[], other?: string) {
+  return values.length > 0 || Boolean(other?.trim());
+}
 
 const surveySchema = z
   .object({
@@ -55,9 +86,13 @@ const surveySchema = z
     ]),
     commissionWillingness: z.enum(["yes", "no", "maybe"]),
 
-    email: optionalEmail,
-    name: z.string().trim().max(100).optional(),
-    school: z.string().trim().max(150).optional(),
+    email: z.string().trim().email("Please enter a valid email address."),
+    name: z.string().trim().min(1, "Please enter your name.").max(100),
+    school: z
+      .string()
+      .trim()
+      .min(1, "Please enter your school or university.")
+      .max(150),
     additionalFeedback: z.string().trim().max(1000).optional(),
 
     joinMarketingTeam: z.enum(["yes", "no"]),
@@ -80,21 +115,104 @@ const surveySchema = z
       });
     }
 
-    // The task-poster gate question ("have you ever needed help?") is a
-    // required stop on two natural entry paths into that track: respondents
-    // who don't need extra income, and respondents who need income but
-    // aren't after a side hustle. If it's reached later purely because of
-    // the "which would you use the app for?" answer, it's asked but not
-    // blocking — mirrored client-side in SurveyForm's getProviderGroupSteps.
-    const naturalProviderEntry =
-      data.needsExtraIncome === "no" ||
-      (data.needsExtraIncome === "yes" && data.wantsSideHustle === "no");
-    if (naturalProviderEntry && !data.needsTaskHelp) {
+    if (!hasAtLeastOneSelection(data.uninstallReasons, data.uninstallOther)) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
-        message: "Please answer whether you've ever needed task help.",
-        path: ["needsTaskHelp"],
+        message: "Please select at least one uninstall reason.",
+        path: ["uninstallReasons"],
       });
+    }
+
+    if (!hasAtLeastOneSelection(data.concerns, data.concernsOther)) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Please select at least one concern.",
+        path: ["concerns"],
+      });
+    }
+
+    if (!hasAtLeastOneSelection(data.trustFactors, data.trustFactorsOther)) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Please select at least one trust factor.",
+        path: ["trustFactors"],
+      });
+    }
+
+    if (showsHustlerTrack(data)) {
+      if (!data.hustleFrequency) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "Please tell us how often you'd offer your hustle.",
+          path: ["hustleFrequency"],
+        });
+      }
+
+      if (data.hoursPerDay === undefined) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "Please tell us how many hours per day you can spend hustling.",
+          path: ["hoursPerDay"],
+        });
+      }
+
+      if (!data.hasSkill) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "Please answer whether you have a skill to offer.",
+          path: ["hasSkill"],
+        });
+      }
+
+      if (data.hasSkill === "yes") {
+        if (!hasAtLeastOneSelection(data.skills, data.skillsOther)) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: "Please select at least one skill.",
+            path: ["skills"],
+          });
+        }
+
+        if (!data.willingDifferentHustle) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: "Please answer whether you'd take on a different hustle.",
+            path: ["willingDifferentHustle"],
+          });
+        }
+      }
+
+      if (
+        showsHustleCapabilityStep(data) &&
+        Object.keys(data.hustleCapability).length === 0
+      ) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "Please mark at least one hustle as Can do or Can't do.",
+          path: ["hustleCapability"],
+        });
+      }
+    }
+
+    if (showsProviderTrack(data)) {
+      if (!data.needsTaskHelp) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "Please answer whether you've ever needed task help.",
+          path: ["needsTaskHelp"],
+        });
+      }
+
+      if (
+        data.needsTaskHelp === "yes" &&
+        !hasAtLeastOneSelection(data.taskHelpTypes, data.taskHelpOther)
+      ) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "Please select at least one task type.",
+          path: ["taskHelpTypes"],
+        });
+      }
     }
   });
 
@@ -205,8 +323,8 @@ export async function submitSurvey(
     commissionWillingness: formData.get("commissionWillingness"),
 
     email: emailValue,
-    name: formData.get("name") || undefined,
-    school: formData.get("school") || undefined,
+    name: formData.get("name"),
+    school: formData.get("school"),
     additionalFeedback: formData.get("additionalFeedback") || undefined,
 
     joinMarketingTeam: formData.get("joinMarketingTeam"),
@@ -254,9 +372,9 @@ export async function submitSurvey(
       payment_preference: parsed.data.paymentPreference,
       commission_willingness: parsed.data.commissionWillingness,
 
-      email: parsed.data.email || null,
-      name: parsed.data.name || null,
-      school: parsed.data.school || null,
+      email: parsed.data.email,
+      name: parsed.data.name,
+      school: parsed.data.school,
       additional_feedback: parsed.data.additionalFeedback || null,
 
       join_marketing_team: parsed.data.joinMarketingTeam,
@@ -274,8 +392,8 @@ export async function submitSurvey(
       await supabase.from("waitlist").upsert(
         {
           email: parsed.data.email.toLowerCase(),
-          name: parsed.data.name || null,
-          school: parsed.data.school || null,
+          name: parsed.data.name,
+          school: parsed.data.school,
           source: "survey",
         },
         { onConflict: "email", ignoreDuplicates: true }

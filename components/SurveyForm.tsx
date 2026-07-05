@@ -192,10 +192,18 @@ interface StepMeta {
 }
 
 // Fixed, branch-independent question definitions. Required flags mirror the
-// enforcement in the surveySchema in lib/actions.ts: plain z.enum(...) fields
-// (no .optional()) are required. Everything else (multi-selects, frequency,
-// hours, skills, capability grid, email, feedback) is optional server-side,
-// so Next is never blocked on those.
+// enforcement in the surveySchema in lib/actions.ts. Only
+// "Anything else you'd like to share?" is optional.
+function hasSelection(values: string[], other?: string) {
+  return values.length > 0 || (other?.trim() ?? "") !== "";
+}
+
+function showsHustleCapability(a: Answers) {
+  return (
+    a.hasSkill === "no" ||
+    (a.hasSkill === "yes" && a.willingDifferentHustle === "yes")
+  );
+}
 const STEP_IS_STUDENT: StepMeta = {
   id: "isStudent",
   title: "Are you currently a student?",
@@ -244,24 +252,24 @@ const STEP_UNINSTALL_REASONS: StepMeta = {
   id: "uninstallReasons",
   title: "What would make you uninstall the app?",
   description: "Select all that apply",
-  required: false,
-  validate: () => true,
+  required: true,
+  validate: (a) => hasSelection(a.uninstallReasons, a.uninstallOther),
 };
 
 const STEP_CONCERNS: StepMeta = {
   id: "concerns",
   title: "What concerns would you have about using the app?",
   description: "Select all that apply",
-  required: false,
-  validate: () => true,
+  required: true,
+  validate: (a) => hasSelection(a.concerns, a.concernsOther),
 };
 
 const STEP_TRUST_FACTORS: StepMeta = {
   id: "trustFactors",
   title: "What would build your trust in the app and the hustle you get matched with?",
   description: "Select all that apply",
-  required: false,
-  validate: () => true,
+  required: true,
+  validate: (a) => hasSelection(a.trustFactors, a.trustFactorsOther),
 };
 
 const STEP_PAYMENT_PREFERENCE: StepMeta = {
@@ -282,9 +290,10 @@ const STEP_COMMISSION_WILLINGNESS: StepMeta = {
 const STEP_EMAIL: StepMeta = {
   id: "email",
   title: "Get early access",
-  description: "Optional — join the waitlist while you're here",
-  required: false,
-  validate: () => true,
+  description: "Join the waitlist while you're here",
+  required: true,
+  validate: (a) =>
+    a.email.trim() !== "" && a.name.trim() !== "" && a.school.trim() !== "",
 };
 
 const STEP_ADDITIONAL_FEEDBACK: StepMeta = {
@@ -317,20 +326,20 @@ function getHustlerGroupSteps(a: Answers): StepMeta[] {
     {
       id: "hustleFrequency",
       title: "How often would you be able to offer your hustle?",
-      required: false,
-      validate: () => true,
+      required: true,
+      validate: (ans) => ans.hustleFrequency !== "",
     },
     {
       id: "hoursPerDay",
       title: "How many hours per day can you spend hustling?",
-      required: false,
+      required: true,
       validate: () => true,
     },
     {
       id: "hasSkill",
       title: "Do you have a skill you could offer?",
-      required: false,
-      validate: () => true,
+      required: true,
+      validate: (ans) => ans.hasSkill !== "",
     },
   ];
 
@@ -340,43 +349,38 @@ function getHustlerGroupSteps(a: Answers): StepMeta[] {
         id: "skills",
         title: "What skill(s) do you have?",
         description: "Select all that apply",
-        required: false,
-        validate: () => true,
+        required: true,
+        validate: (ans) => hasSelection(ans.skills, ans.skillsOther),
       },
       {
         id: "willingDifferentHustle",
         title:
           "If there were no tasks related to your skill, would you take on a different hustle?",
-        required: false,
-        validate: () => true,
+        required: true,
+        validate: (ans) => ans.willingDifferentHustle !== "",
       }
     );
   }
 
-  if (a.hasSkill === "no" || (a.hasSkill === "yes" && a.willingDifferentHustle === "yes")) {
+  if (showsHustleCapability(a)) {
     group.push({
       id: "hustleCapability",
       title: "Which of these hustles could you do?",
       description: "Mark each as Can do or Can't do — pick as many as apply",
-      required: false,
-      validate: () => true,
+      required: true,
+      validate: (ans) => Object.keys(ans.hustleCapability).length > 0,
     });
   }
 
   return group;
 }
 
-// All "task poster" questions, grouped together. Shown when the respondent
-// doesn't need extra income, when they need income but aren't after a side
-// hustle, or later if the role question reveals they'd post tasks after all.
-// `gateRequired` mirrors whether lib/actions.ts enforces the gate question as
-// required for this entry point (only true for the two natural entries).
-function getProviderGroupSteps(gateRequired: boolean, a: Answers): StepMeta[] {
+function getProviderGroupSteps(a: Answers): StepMeta[] {
   const group: StepMeta[] = [
     {
       id: "needsTaskHelp",
       title: "Have you ever needed someone to help you with a task?",
-      required: gateRequired,
+      required: true,
       validate: (ans) => ans.needsTaskHelp !== "",
     },
   ];
@@ -386,8 +390,8 @@ function getProviderGroupSteps(gateRequired: boolean, a: Answers): StepMeta[] {
       id: "taskHelpTypes",
       title: "What type of task do you need help with?",
       description: "Select all that apply",
-      required: false,
-      validate: () => true,
+      required: true,
+      validate: (ans) => hasSelection(ans.taskHelpTypes, ans.taskHelpOther),
     });
   }
 
@@ -413,11 +417,11 @@ function buildVisibleSteps(a: Answers): StepMeta[] {
     } else if (a.wantsSideHustle === "no") {
       // Needs income but not via a side hustle — route into the task-poster
       // questions instead, since they're the other side of the marketplace.
-      order.push(...getProviderGroupSteps(true, a));
+      order.push(...getProviderGroupSteps(a));
       providerGroupShown = true;
     }
   } else if (a.needsExtraIncome === "no") {
-    order.push(...getProviderGroupSteps(true, a));
+    order.push(...getProviderGroupSteps(a));
     providerGroupShown = true;
   }
 
@@ -434,7 +438,7 @@ function buildVisibleSteps(a: Answers): StepMeta[] {
     order.push(...getHustlerGroupSteps(a));
   }
   if (wantsProviderRetro) {
-    order.push(...getProviderGroupSteps(false, a));
+    order.push(...getProviderGroupSteps(a));
   }
 
   order.push(
@@ -653,9 +657,9 @@ function buildFormData(a: Answers): FormData {
   fd.set("paymentPreference", a.paymentPreference);
   fd.set("commissionWillingness", a.commissionWillingness);
 
-  if (a.email) fd.set("email", a.email);
-  if (a.name) fd.set("name", a.name);
-  if (a.school) fd.set("school", a.school);
+  fd.set("email", a.email);
+  fd.set("name", a.name);
+  fd.set("school", a.school);
   if (a.additionalFeedback) fd.set("additionalFeedback", a.additionalFeedback);
 
   fd.set("joinMarketingTeam", a.joinMarketingTeam);
@@ -1015,33 +1019,36 @@ export function SurveyForm() {
         return (
           <div className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="survey-email">Email</Label>
+              <Label htmlFor="survey-email">Email *</Label>
               <Input
                 id="survey-email"
                 type="email"
                 placeholder="you@university.edu"
                 value={answers.email}
                 onChange={(e) => update("email", e.target.value)}
+                required
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="survey-name">Name</Label>
+              <Label htmlFor="survey-name">Name *</Label>
               <Input
                 id="survey-name"
                 type="text"
-                placeholder="Optional"
+                placeholder="Your full name"
                 value={answers.name}
                 onChange={(e) => update("name", e.target.value)}
+                required
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="survey-school">School / University</Label>
+              <Label htmlFor="survey-school">School / University *</Label>
               <Input
                 id="survey-school"
                 type="text"
-                placeholder="Optional"
+                placeholder="e.g. University of Sydney"
                 value={answers.school}
                 onChange={(e) => update("school", e.target.value)}
+                required
               />
             </div>
           </div>
