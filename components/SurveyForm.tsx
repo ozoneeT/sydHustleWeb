@@ -1,109 +1,493 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { useActionState, useMemo, useState } from "react";
 import Link from "next/link";
+import { AnimatePresence, motion } from "framer-motion";
+import { CheckCircle2 } from "lucide-react";
 import { submitSurvey, type ActionResult } from "@/lib/actions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Reveal } from "@/components/motion/Reveal";
 import { cn } from "@/lib/utils";
 
 const initialState: ActionResult = { success: false, message: "" };
 
-const hustleTypeOptions = [
-  { value: "freelancing", label: "Freelancing" },
-  { value: "tutoring", label: "Tutoring" },
-  { value: "resale", label: "Resale / flipping" },
-  { value: "content_creation", label: "Content creation" },
-  { value: "gig_work", label: "Delivery / gig work" },
-  { value: "campus_services", label: "Campus services" },
+// Shared catalogue of everyday hustles/tasks — used both when a task poster
+// picks what they need help with, and when a hustler rates their own
+// capability, so supply and demand are directly comparable.
+const hustleTaskOptions = [
+  { value: "mount_tv", label: "Mounting a TV or assembling furniture" },
+  { value: "cooking", label: "Cooking or meal prep" },
+  { value: "cleaning", label: "Cleaning or tidying a room/apartment" },
+  { value: "packing", label: "Packing or unpacking help (moving in/out)" },
+  { value: "laundry", label: "Washing and ironing clothes" },
+  { value: "car_wash", label: "Washing a car" },
+  { value: "errands", label: "Grocery shopping or running errands" },
+  { value: "tutoring", label: "Tutoring or homework help" },
+  { value: "typing", label: "Typing, data entry, or transcription" },
+  { value: "graphic_design", label: "Graphic design or flyer design" },
+  { value: "photography", label: "Photography or videography" },
+  { value: "hair_styling", label: "Hair styling or braiding" },
+  { value: "makeup", label: "Makeup application" },
+  { value: "tech_support", label: "Phone or computer repair / tech support" },
+  { value: "delivery", label: "Delivery of food, packages, or documents" },
+  { value: "event_setup", label: "Event setup or decoration" },
+  { value: "babysitting", label: "Babysitting or child-minding" },
+  { value: "pet_sitting", label: "Pet sitting or dog walking" },
+  { value: "minor_repairs", label: "Minor repairs or handyman tasks" },
+  { value: "baking", label: "Baking or small food orders" },
 ];
 
-const challengeOptions = [
-  { value: "finding_clients", label: "Finding clients" },
-  { value: "time_management", label: "Time management" },
-  { value: "getting_paid", label: "Getting paid" },
-  { value: "legal_tax", label: "Legal / tax" },
-  { value: "marketing", label: "Marketing myself" },
-  { value: "balancing_studies", label: "Balancing studies" },
-  { value: "dont_know_start", label: "Don't know where to start" },
+const skillOptions = [
+  { value: "graphic_design", label: "Graphic design" },
+  { value: "writing", label: "Writing / copywriting" },
+  { value: "video_editing", label: "Video editing" },
+  { value: "web_dev", label: "Web or app development" },
+  { value: "social_media", label: "Social media management" },
+  { value: "photography", label: "Photography" },
+  { value: "tutoring", label: "Tutoring a specific subject" },
+  { value: "public_speaking", label: "Public speaking / hosting (MC)" },
+  { value: "music_dj", label: "Music or DJing" },
+  { value: "fashion_design", label: "Fashion design / tailoring" },
+  { value: "makeup_artistry", label: "Makeup artistry" },
+  { value: "hair_styling", label: "Hair styling" },
+  { value: "cooking_baking", label: "Cooking or baking" },
+  { value: "event_planning", label: "Event planning" },
+  { value: "sales_marketing", label: "Sales or marketing" },
+  { value: "accounting", label: "Accounting or bookkeeping" },
+  { value: "translation", label: "Language translation" },
+  { value: "fitness_coaching", label: "Fitness training or coaching" },
 ];
 
-const featureOptions = [
-  { value: "marketplace", label: "Marketplace to find gigs" },
-  { value: "community", label: "Student community" },
-  { value: "templates_tools", label: "Templates & tools" },
-  { value: "mentorship", label: "Mentorship" },
-  { value: "payment_invoicing", label: "Payment & invoicing" },
-  { value: "learning_resources", label: "Learning resources" },
+const uninstallOptions = [
+  { value: "poor_quality", label: "Poor quality of hustlers or help received" },
+  { value: "payment_issues", label: "Payment issues or getting scammed" },
+  { value: "hard_to_find", label: "Difficult to find tasks or hustlers nearby" },
+  { value: "high_fees", label: "Fees or commission feel too high" },
+  { value: "buggy_app", label: "App is buggy or hard to use" },
+  { value: "safety_concerns", label: "Safety or trust concerns" },
+  { value: "low_activity", label: "Not enough tasks or hustlers in my area" },
 ];
 
-function CheckboxGroup({
-  name,
-  options,
-  otherName,
-  otherPlaceholder,
-}: {
+const concernOptions = [
+  { value: "meeting_strangers", label: "Meeting or working with strangers" },
+  { value: "getting_scammed", label: "Not getting paid or being scammed" },
+  { value: "quality_of_service", label: "Quality of the service or help received" },
+  { value: "privacy", label: "Privacy of my personal information" },
+  { value: "reliability", label: "Reliability of hustlers or task posters" },
+  { value: "payment_security", label: "Security of in-app payments" },
+];
+
+const trustFactorOptions = [
+  { value: "verified_profiles", label: "Verified student profiles" },
+  { value: "ratings_reviews", label: "Ratings and reviews from other students" },
+  { value: "secure_payments", label: "Secure in-app payments" },
+  { value: "id_verification", label: "ID verification" },
+  { value: "dispute_support", label: "Dispute resolution / customer support" },
+  { value: "community_reporting", label: "Community reporting of bad actors" },
+];
+
+type HustleCapability = "can_do" | "cannot_do";
+
+interface Answers {
+  isStudent: string;
+  needsExtraIncome: string;
+  wantsSideHustle: string;
+  hustleFrequency: string;
+  hoursPerDay: number;
+  hasSkill: string;
+  skills: string[];
+  skillsOther: string;
+  willingDifferentHustle: string;
+  hustleCapability: Record<string, HustleCapability>;
+  needsTaskHelp: string;
+  taskHelpTypes: string[];
+  taskHelpOther: string;
+  wouldUseApp: string;
+  embarrassedWithMate: string;
+  appUsageRole: string;
+  uninstallReasons: string[];
+  uninstallOther: string;
+  concerns: string[];
+  concernsOther: string;
+  trustFactors: string[];
+  trustFactorsOther: string;
+  paymentPreference: string;
+  commissionWillingness: string;
+  email: string;
   name: string;
-  options: { value: string; label: string }[];
-  otherName?: string;
-  otherPlaceholder?: string;
-}) {
-  return (
-    <div className="space-y-3">
-      <div className="grid gap-3 sm:grid-cols-2">
-        {options.map((option) => (
-          <label
-            key={option.value}
-            className="flex cursor-pointer items-center gap-3 rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm transition-colors hover:border-accent/30 has-[:checked]:border-accent/50 has-[:checked]:bg-accent/10"
-          >
-            <input
-              type="checkbox"
-              name={name}
-              value={option.value}
-              className="h-4 w-4 rounded border-white/20 accent-accent"
-            />
-            {option.label}
-          </label>
-        ))}
-      </div>
-      {otherName && (
-        <Input
-          name={otherName}
-          placeholder={otherPlaceholder ?? "Other (optional)"}
-        />
-      )}
-    </div>
+  school: string;
+  additionalFeedback: string;
+  joinMarketingTeam: string;
+  marketingWhatsapp: string;
+}
+
+const initialAnswers: Answers = {
+  isStudent: "",
+  needsExtraIncome: "",
+  wantsSideHustle: "",
+  hustleFrequency: "",
+  hoursPerDay: 2,
+  hasSkill: "",
+  skills: [],
+  skillsOther: "",
+  willingDifferentHustle: "",
+  hustleCapability: {},
+  needsTaskHelp: "",
+  taskHelpTypes: [],
+  taskHelpOther: "",
+  wouldUseApp: "",
+  embarrassedWithMate: "",
+  appUsageRole: "",
+  uninstallReasons: [],
+  uninstallOther: "",
+  concerns: [],
+  concernsOther: "",
+  trustFactors: [],
+  trustFactorsOther: "",
+  paymentPreference: "",
+  commissionWillingness: "",
+  email: "",
+  name: "",
+  school: "",
+  additionalFeedback: "",
+  joinMarketingTeam: "",
+  marketingWhatsapp: "",
+};
+
+type StepId =
+  | "isStudent"
+  | "needsExtraIncome"
+  | "wantsSideHustle"
+  | "needsTaskHelp"
+  | "taskHelpTypes"
+  | "hustleFrequency"
+  | "hoursPerDay"
+  | "hasSkill"
+  | "skills"
+  | "willingDifferentHustle"
+  | "hustleCapability"
+  | "wouldUseApp"
+  | "embarrassedWithMate"
+  | "appUsageRole"
+  | "uninstallReasons"
+  | "concerns"
+  | "trustFactors"
+  | "paymentPreference"
+  | "commissionWillingness"
+  | "email"
+  | "additionalFeedback"
+  | "joinMarketingTeam"
+  | "marketingWhatsapp";
+
+interface StepMeta {
+  id: StepId;
+  title: string;
+  description?: string;
+  required: boolean;
+  validate: (a: Answers) => boolean;
+}
+
+// Fixed, branch-independent question definitions. Required flags mirror the
+// enforcement in the surveySchema in lib/actions.ts: plain z.enum(...) fields
+// (no .optional()) are required. Everything else (multi-selects, frequency,
+// hours, skills, capability grid, email, feedback) is optional server-side,
+// so Next is never blocked on those.
+const STEP_IS_STUDENT: StepMeta = {
+  id: "isStudent",
+  title: "Are you currently a student?",
+  required: true,
+  validate: (a) => a.isStudent !== "",
+};
+
+const STEP_NEEDS_EXTRA_INCOME: StepMeta = {
+  id: "needsExtraIncome",
+  title: "Do you need extra income?",
+  required: true,
+  validate: (a) => a.needsExtraIncome !== "",
+};
+
+const STEP_WANTS_SIDE_HUSTLE: StepMeta = {
+  id: "wantsSideHustle",
+  title: "Are you looking for a side hustle?",
+  required: true,
+  validate: (a) => a.wantsSideHustle !== "",
+};
+
+const STEP_WOULD_USE_APP: StepMeta = {
+  id: "wouldUseApp",
+  title:
+    "If there was an app where students could offer services to other students and get paid, would you use it?",
+  required: true,
+  validate: (a) => a.wouldUseApp !== "",
+};
+
+const STEP_EMBARRASSED_WITH_MATE: StepMeta = {
+  id: "embarrassedWithMate",
+  title:
+    "Would you feel embarrassed if the person you were hustling for or with was someone you know personally?",
+  required: true,
+  validate: (a) => a.embarrassedWithMate !== "",
+};
+
+const STEP_APP_USAGE_ROLE: StepMeta = {
+  id: "appUsageRole",
+  title: "Which would you primarily use the app for?",
+  required: true,
+  validate: (a) => a.appUsageRole !== "",
+};
+
+const STEP_UNINSTALL_REASONS: StepMeta = {
+  id: "uninstallReasons",
+  title: "What would make you uninstall the app?",
+  description: "Select all that apply",
+  required: false,
+  validate: () => true,
+};
+
+const STEP_CONCERNS: StepMeta = {
+  id: "concerns",
+  title: "What concerns would you have about using the app?",
+  description: "Select all that apply",
+  required: false,
+  validate: () => true,
+};
+
+const STEP_TRUST_FACTORS: StepMeta = {
+  id: "trustFactors",
+  title: "What would build your trust in the app and the hustle you get matched with?",
+  description: "Select all that apply",
+  required: false,
+  validate: () => true,
+};
+
+const STEP_PAYMENT_PREFERENCE: StepMeta = {
+  id: "paymentPreference",
+  title: "Which payment method would you prefer?",
+  required: true,
+  validate: (a) => a.paymentPreference !== "",
+};
+
+const STEP_COMMISSION_WILLINGNESS: StepMeta = {
+  id: "commissionWillingness",
+  title:
+    "Would you be willing to give up 10% of your earnings to sydHustle for managing the platform?",
+  required: true,
+  validate: (a) => a.commissionWillingness !== "",
+};
+
+const STEP_EMAIL: StepMeta = {
+  id: "email",
+  title: "Get early access",
+  description: "Optional — join the waitlist while you're here",
+  required: false,
+  validate: () => true,
+};
+
+const STEP_ADDITIONAL_FEEDBACK: StepMeta = {
+  id: "additionalFeedback",
+  title: "Anything else you'd like to share?",
+  description: "Optional",
+  required: false,
+  validate: () => true,
+};
+
+const STEP_JOIN_MARKETING_TEAM: StepMeta = {
+  id: "joinMarketingTeam",
+  title: "Would you be willing to join the sydHustle marketing team when the app launches?",
+  required: true,
+  validate: (a) => a.joinMarketingTeam !== "",
+};
+
+const STEP_MARKETING_WHATSAPP: StepMeta = {
+  id: "marketingWhatsapp",
+  title: "Great! What's your WhatsApp number so we can reach you?",
+  required: true,
+  validate: (a) => a.marketingWhatsapp.trim() !== "",
+};
+
+// All "hustler" (service-provider) questions, grouped together. Shown either
+// right after "Are you looking for a side hustle?" = Yes, or later if the
+// respondent tells us at the role question that they'd hustle after all.
+function getHustlerGroupSteps(a: Answers): StepMeta[] {
+  const group: StepMeta[] = [
+    {
+      id: "hustleFrequency",
+      title: "How often would you be able to offer your hustle?",
+      required: false,
+      validate: () => true,
+    },
+    {
+      id: "hoursPerDay",
+      title: "How many hours per day can you spend hustling?",
+      required: false,
+      validate: () => true,
+    },
+    {
+      id: "hasSkill",
+      title: "Do you have a skill you could offer?",
+      required: false,
+      validate: () => true,
+    },
+  ];
+
+  if (a.hasSkill === "yes") {
+    group.push(
+      {
+        id: "skills",
+        title: "What skill(s) do you have?",
+        description: "Select all that apply",
+        required: false,
+        validate: () => true,
+      },
+      {
+        id: "willingDifferentHustle",
+        title:
+          "If there were no tasks related to your skill, would you take on a different hustle?",
+        required: false,
+        validate: () => true,
+      }
+    );
+  }
+
+  if (a.hasSkill === "no" || (a.hasSkill === "yes" && a.willingDifferentHustle === "yes")) {
+    group.push({
+      id: "hustleCapability",
+      title: "Which of these hustles could you do?",
+      description: "Mark each as Can do or Can't do — pick as many as apply",
+      required: false,
+      validate: () => true,
+    });
+  }
+
+  return group;
+}
+
+// All "task poster" questions, grouped together. Shown when the respondent
+// doesn't need extra income, when they need income but aren't after a side
+// hustle, or later if the role question reveals they'd post tasks after all.
+// `gateRequired` mirrors whether lib/actions.ts enforces the gate question as
+// required for this entry point (only true for the two natural entries).
+function getProviderGroupSteps(gateRequired: boolean, a: Answers): StepMeta[] {
+  const group: StepMeta[] = [
+    {
+      id: "needsTaskHelp",
+      title: "Have you ever needed someone to help you with a task?",
+      required: gateRequired,
+      validate: (ans) => ans.needsTaskHelp !== "",
+    },
+  ];
+
+  if (a.needsTaskHelp === "yes") {
+    group.push({
+      id: "taskHelpTypes",
+      title: "What type of task do you need help with?",
+      description: "Select all that apply",
+      required: false,
+      validate: () => true,
+    });
+  }
+
+  return group;
+}
+
+// Builds the full, ordered list of steps a respondent will see. Hustler
+// questions and task-poster questions are always kept together as a group,
+// regardless of whether someone enters that group from the initial income
+// question or is routed there later based on how they say they'd use the
+// app ("Which would you primarily use the app for?").
+function buildVisibleSteps(a: Answers): StepMeta[] {
+  const order: StepMeta[] = [STEP_IS_STUDENT, STEP_NEEDS_EXTRA_INCOME];
+
+  let hustlerGroupShown = false;
+  let providerGroupShown = false;
+
+  if (a.needsExtraIncome === "yes") {
+    order.push(STEP_WANTS_SIDE_HUSTLE);
+    if (a.wantsSideHustle === "yes") {
+      order.push(...getHustlerGroupSteps(a));
+      hustlerGroupShown = true;
+    } else if (a.wantsSideHustle === "no") {
+      // Needs income but not via a side hustle — route into the task-poster
+      // questions instead, since they're the other side of the marketplace.
+      order.push(...getProviderGroupSteps(true, a));
+      providerGroupShown = true;
+    }
+  } else if (a.needsExtraIncome === "no") {
+    order.push(...getProviderGroupSteps(true, a));
+    providerGroupShown = true;
+  }
+
+  order.push(STEP_WOULD_USE_APP, STEP_EMBARRASSED_WITH_MATE, STEP_APP_USAGE_ROLE);
+
+  const wantsHustlerRetro =
+    !hustlerGroupShown &&
+    (a.appUsageRole === "hustling_the_hustles" || a.appUsageRole === "both");
+  const wantsProviderRetro =
+    !providerGroupShown &&
+    (a.appUsageRole === "providing_hustles" || a.appUsageRole === "both");
+
+  if (wantsHustlerRetro) {
+    order.push(...getHustlerGroupSteps(a));
+  }
+  if (wantsProviderRetro) {
+    order.push(...getProviderGroupSteps(false, a));
+  }
+
+  order.push(
+    STEP_UNINSTALL_REASONS,
+    STEP_CONCERNS,
+    STEP_TRUST_FACTORS,
+    STEP_PAYMENT_PREFERENCE,
+    STEP_COMMISSION_WILLINGNESS,
+    STEP_EMAIL,
+    STEP_ADDITIONAL_FEEDBACK,
+    STEP_JOIN_MARKETING_TEAM
   );
+
+  if (a.joinMarketingTeam === "yes") {
+    order.push(STEP_MARKETING_WHATSAPP);
+  }
+
+  return order;
 }
 
 function RadioGroup({
   name,
-  options,
-  required,
+  value,
   onChange,
+  options,
+  columns = 1,
 }: {
   name: string;
+  value: string;
+  onChange: (value: string) => void;
   options: { value: string; label: string }[];
-  required?: boolean;
-  onChange?: (value: string) => void;
+  columns?: 1 | 2 | 3;
 }) {
   return (
-    <div className="grid gap-3">
+    <div
+      className={cn(
+        "grid gap-3",
+        columns === 2 && "sm:grid-cols-2",
+        columns === 3 && "sm:grid-cols-3"
+      )}
+    >
       {options.map((option) => (
         <label
           key={option.value}
-          className="flex cursor-pointer items-center gap-3 rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm transition-colors hover:border-accent/30 has-[:checked]:border-accent/50 has-[:checked]:bg-accent/10"
+          className="flex cursor-pointer items-center gap-3 rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm transition-all hover:border-accent/30 hover:bg-white/[0.07] has-[:checked]:border-accent/50 has-[:checked]:bg-accent/10"
         >
           <input
             type="radio"
             name={name}
             value={option.value}
-            required={required}
-            onChange={() => onChange?.(option.value)}
-            className="h-4 w-4 accent-accent"
+            checked={value === option.value}
+            onChange={() => onChange(option.value)}
+            className="h-4 w-4 shrink-0 accent-accent"
           />
           {option.label}
         </label>
@@ -112,255 +496,695 @@ function RadioGroup({
   );
 }
 
-function Section({
-  title,
-  description,
-  children,
+function CheckboxGroup({
+  value,
+  onChange,
+  options,
+  otherValue,
+  onOtherChange,
+  otherPlaceholder,
 }: {
-  title: string;
-  description?: string;
-  children: React.ReactNode;
+  value: string[];
+  onChange: (value: string[]) => void;
+  options: { value: string; label: string }[];
+  otherValue?: string;
+  onOtherChange?: (value: string) => void;
+  otherPlaceholder?: string;
 }) {
+  const toggle = (val: string) => {
+    onChange(
+      value.includes(val) ? value.filter((v) => v !== val) : [...value, val]
+    );
+  };
+
   return (
-    <div className="space-y-4 border-b border-white/10 pb-8">
-      <div>
-        <h3 className="text-lg font-semibold">{title}</h3>
-        {description && (
-          <p className="mt-1 text-sm text-muted-foreground">{description}</p>
-        )}
+    <div className="space-y-3">
+      <div className="grid gap-3 sm:grid-cols-2">
+        {options.map((option) => (
+          <label
+            key={option.value}
+            className="flex cursor-pointer items-center gap-3 rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm transition-all hover:border-accent/30 hover:bg-white/[0.07] has-[:checked]:border-accent/50 has-[:checked]:bg-accent/10"
+          >
+            <input
+              type="checkbox"
+              checked={value.includes(option.value)}
+              onChange={() => toggle(option.value)}
+              className="h-4 w-4 shrink-0 rounded border-white/20 accent-accent"
+            />
+            {option.label}
+          </label>
+        ))}
       </div>
-      {children}
+      {onOtherChange && (
+        <Input
+          value={otherValue ?? ""}
+          onChange={(e) => onOtherChange(e.target.value)}
+          placeholder={otherPlaceholder ?? "Other (optional)"}
+        />
+      )}
     </div>
   );
 }
+
+function HustleCapabilityGrid({
+  value,
+  onChange,
+}: {
+  value: Record<string, HustleCapability>;
+  onChange: (hustleKey: string, capability: HustleCapability) => void;
+}) {
+  return (
+    <div className="max-h-[28rem] space-y-2 overflow-y-auto pr-1">
+      {hustleTaskOptions.map((hustle) => (
+        <div
+          key={hustle.value}
+          className="flex flex-col gap-3 rounded-xl border border-white/10 bg-white/5 px-4 py-3 sm:flex-row sm:items-center sm:justify-between"
+        >
+          <span className="text-sm">{hustle.label}</span>
+          <div className="flex shrink-0 gap-2">
+            <label className="cursor-pointer rounded-full border border-white/10 px-3 py-1 text-xs font-medium text-muted-foreground transition-colors has-[:checked]:border-accent has-[:checked]:bg-accent has-[:checked]:text-accent-foreground">
+              <input
+                type="radio"
+                name={`hustleCapability_${hustle.value}`}
+                checked={value[hustle.value] === "can_do"}
+                onChange={() => onChange(hustle.value, "can_do")}
+                className="sr-only"
+              />
+              Can do
+            </label>
+            <label className="cursor-pointer rounded-full border border-white/10 px-3 py-1 text-xs font-medium text-muted-foreground transition-colors has-[:checked]:border-rose-400/60 has-[:checked]:bg-rose-400/10 has-[:checked]:text-rose-300">
+              <input
+                type="radio"
+                name={`hustleCapability_${hustle.value}`}
+                checked={value[hustle.value] === "cannot_do"}
+                onChange={() => onChange(hustle.value, "cannot_do")}
+                className="sr-only"
+              />
+              Can&apos;t do
+            </label>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function HoursPerDaySlider({
+  value,
+  onChange,
+}: {
+  value: number;
+  onChange: (value: number) => void;
+}) {
+  return (
+    <div className="space-y-3">
+      <input
+        type="range"
+        min={0}
+        max={24}
+        step={1}
+        value={value}
+        onChange={(e) => onChange(Number(e.target.value))}
+        className="w-full accent-accent"
+      />
+      <div className="flex items-center justify-between text-xs text-muted-foreground">
+        <span>0h</span>
+        <span className="rounded-full bg-accent/10 px-3 py-1 text-sm font-semibold text-accent">
+          {value} {value === 1 ? "hour" : "hours"} / day
+        </span>
+        <span>24h</span>
+      </div>
+    </div>
+  );
+}
+
+const HUSTLE_CAPABILITY_PREFIX = "hustleCapability_";
+
+function buildFormData(a: Answers): FormData {
+  const fd = new FormData();
+  fd.set("isStudent", a.isStudent);
+  fd.set("needsExtraIncome", a.needsExtraIncome);
+
+  if (a.wantsSideHustle) fd.set("wantsSideHustle", a.wantsSideHustle);
+  if (a.hustleFrequency) fd.set("hustleFrequency", a.hustleFrequency);
+  fd.set("hoursPerDay", String(a.hoursPerDay));
+  if (a.hasSkill) fd.set("hasSkill", a.hasSkill);
+  a.skills.forEach((s) => fd.append("skills", s));
+  if (a.skillsOther) fd.set("skillsOther", a.skillsOther);
+  if (a.willingDifferentHustle)
+    fd.set("willingDifferentHustle", a.willingDifferentHustle);
+  Object.entries(a.hustleCapability).forEach(([key, val]) => {
+    fd.set(`${HUSTLE_CAPABILITY_PREFIX}${key}`, val);
+  });
+
+  if (a.needsTaskHelp) fd.set("needsTaskHelp", a.needsTaskHelp);
+  a.taskHelpTypes.forEach((t) => fd.append("taskHelpTypes", t));
+  if (a.taskHelpOther) fd.set("taskHelpOther", a.taskHelpOther);
+
+  fd.set("wouldUseApp", a.wouldUseApp);
+  fd.set("embarrassedWithMate", a.embarrassedWithMate);
+  fd.set("appUsageRole", a.appUsageRole);
+  a.uninstallReasons.forEach((r) => fd.append("uninstallReasons", r));
+  if (a.uninstallOther) fd.set("uninstallOther", a.uninstallOther);
+  a.concerns.forEach((c) => fd.append("concerns", c));
+  if (a.concernsOther) fd.set("concernsOther", a.concernsOther);
+  a.trustFactors.forEach((t) => fd.append("trustFactors", t));
+  if (a.trustFactorsOther) fd.set("trustFactorsOther", a.trustFactorsOther);
+  fd.set("paymentPreference", a.paymentPreference);
+  fd.set("commissionWillingness", a.commissionWillingness);
+
+  if (a.email) fd.set("email", a.email);
+  if (a.name) fd.set("name", a.name);
+  if (a.school) fd.set("school", a.school);
+  if (a.additionalFeedback) fd.set("additionalFeedback", a.additionalFeedback);
+
+  fd.set("joinMarketingTeam", a.joinMarketingTeam);
+  if (a.marketingWhatsapp) fd.set("marketingWhatsapp", a.marketingWhatsapp);
+
+  return fd;
+}
+
+const slideVariants = {
+  enter: (direction: number) => ({ opacity: 0, x: direction > 0 ? 28 : -28 }),
+  center: { opacity: 1, x: 0 },
+  exit: (direction: number) => ({ opacity: 0, x: direction > 0 ? -28 : 28 }),
+};
 
 export function SurveyForm() {
   const [state, formAction, isPending] = useActionState(
     async (_prev: ActionResult, formData: FormData) => submitSurvey(formData),
     initialState
   );
-  const [isStudent, setIsStudent] = useState<string>("");
-  const [hasSideHustle, setHasSideHustle] = useState<string>("");
+
+  const [answers, setAnswers] = useState<Answers>(initialAnswers);
+  const [currentStepId, setCurrentStepId] = useState<StepId>("isStudent");
+  const [direction, setDirection] = useState(1);
+
+  const update = <K extends keyof Answers>(key: K, value: Answers[K]) => {
+    setAnswers((prev) => ({ ...prev, [key]: value }));
+  };
+
+  const visibleSteps = useMemo(() => buildVisibleSteps(answers), [answers]);
+
+  // If a step the user was on disappears (e.g. they went back and changed a
+  // branch answer), fall back to roughly the same depth instead of jumping
+  // back to the first question. Updated directly wherever we navigate, so we
+  // never need to derive it from an effect.
+  const [lastKnownIndex, setLastKnownIndex] = useState(0);
+  const rawIndex = visibleSteps.findIndex((s) => s.id === currentStepId);
+  const currentIndex =
+    rawIndex === -1 ? Math.min(lastKnownIndex, visibleSteps.length - 1) : rawIndex;
+
+  const currentStep = visibleSteps[currentIndex] ?? visibleSteps[0];
+  const isFirstStep = currentIndex === 0;
+  const isLastStep = currentIndex === visibleSteps.length - 1;
+  const canProceed = !currentStep.required || currentStep.validate(answers);
+  const progressPct = ((currentIndex + 1) / visibleSteps.length) * 100;
+
+  const goToIndex = (index: number) => {
+    const target = visibleSteps[index];
+    if (!target) return;
+    setLastKnownIndex(index);
+    setCurrentStepId(target.id);
+  };
+
+  const handleNext = () => {
+    if (!canProceed || isLastStep) return;
+    setDirection(1);
+    goToIndex(currentIndex + 1);
+  };
+
+  const handleBack = () => {
+    if (isFirstStep) return;
+    setDirection(-1);
+    goToIndex(currentIndex - 1);
+  };
+
+  const handleSubmit = () => {
+    formAction(buildFormData(answers));
+  };
 
   if (state.success) {
     return (
-      <Card className="mx-auto max-w-2xl border-accent/30">
-        <CardHeader className="text-center">
-          <CardTitle className="text-3xl text-accent">Thank you!</CardTitle>
-          <CardDescription className="text-base">{state.message}</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4 text-center">
-          <p className="text-sm text-muted-foreground">
-            Your feedback directly helps us decide whether to build sydHustle
-            and what to prioritise first.
-          </p>
-          <div className="flex flex-col items-center gap-3 sm:flex-row sm:justify-center">
-            <Button asChild>
-              <Link href="/#waitlist">Join the waitlist</Link>
-            </Button>
-            <Button asChild variant="secondary">
-              <Link href="/">Back to home</Link>
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
+      <Reveal className="mx-auto max-w-2xl">
+        <motion.div
+          initial={{ opacity: 0, scale: 0.96 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ duration: 0.4, ease: [0.21, 0.47, 0.32, 0.98] }}
+        >
+          <Card className="border-accent/30">
+            <CardHeader className="items-center text-center">
+              <motion.div
+                initial={{ scale: 0 }}
+                animate={{ scale: 1 }}
+                transition={{ type: "spring", stiffness: 260, damping: 16, delay: 0.1 }}
+                className="mb-2 flex h-14 w-14 items-center justify-center rounded-full bg-accent/15 text-accent"
+              >
+                <CheckCircle2 className="h-7 w-7" />
+              </motion.div>
+              <CardTitle className="text-3xl text-accent">Thank you!</CardTitle>
+              <CardDescription className="text-base">{state.message}</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4 text-center">
+              <p className="text-sm text-muted-foreground">
+                Your responses directly shape whether we build sydHustle, and
+                whether we prioritise hustlers, task posters, or both.
+              </p>
+              <div className="flex flex-col items-center gap-3 sm:flex-row sm:justify-center">
+                <Button asChild>
+                  <Link href="/#waitlist">Join the waitlist</Link>
+                </Button>
+                <Button asChild variant="secondary">
+                  <Link href="/">Back to home</Link>
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </motion.div>
+      </Reveal>
     );
   }
 
-  const showHustleDetails =
-    hasSideHustle === "yes" || hasSideHustle === "before";
-
-  return (
-    <Card className="mx-auto max-w-2xl">
-      <CardHeader>
-        <CardTitle className="text-2xl">Student side hustle survey</CardTitle>
-        <CardDescription>
-          ~2 minutes. Anonymous. Helps us decide if sydHustle is worth building.
-        </CardDescription>
-      </CardHeader>
-      <CardContent>
-        <form action={formAction} className="space-y-8">
-          <Section title="1. Are you currently a student?">
-            <RadioGroup
-              name="isStudent"
-              required
-              onChange={setIsStudent}
-              options={[
-                { value: "university", label: "Yes — university" },
-                { value: "college", label: "Yes — college or TAFE" },
-                { value: "high_school", label: "Yes — high school" },
-                { value: "not_student", label: "No" },
-              ]}
-            />
-          </Section>
-
-          {isStudent === "not_student" && (
-            <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-4 text-sm text-amber-200">
-              This survey is designed for students, but you can still continue
-              if you&apos;d like to share your perspective.
-            </div>
-          )}
-
-          <Section title="2. Do you currently have a side hustle?">
-            <RadioGroup
-              name="hasSideHustle"
-              required
-              onChange={setHasSideHustle}
-              options={[
-                { value: "yes", label: "Yes" },
-                { value: "no", label: "No" },
-                { value: "before", label: "Had one before, not now" },
-              ]}
-            />
-          </Section>
-
-          {showHustleDetails && (
-            <>
-              <Section
-                title="3. What kind of side hustle?"
-                description="Select all that apply"
-              >
-                <CheckboxGroup
-                  name="hustleTypes"
-                  options={hustleTypeOptions}
-                  otherName="hustleOther"
-                  otherPlaceholder="Other type (optional)"
-                />
-              </Section>
-
-              <Section title="4. Hours per week on your side hustle">
-                <RadioGroup
-                  name="hoursPerWeek"
-                  options={[
-                    { value: "0", label: "0 hours" },
-                    { value: "1-5", label: "1–5 hours" },
-                    { value: "6-10", label: "6–10 hours" },
-                    { value: "10+", label: "10+ hours" },
-                  ]}
-                />
-              </Section>
-            </>
-          )}
-
-          <Section
-            title="5. Biggest challenge with side hustles as a student"
-            description="Select all that apply"
-          >
-            <CheckboxGroup
-              name="challenges"
-              options={challengeOptions}
-              otherName="challengeOther"
-              otherPlaceholder="Other challenge (optional)"
-            />
-          </Section>
-
-          <Section
-            title="6. What would help you most?"
-            description="Select all that apply"
-          >
-            <CheckboxGroup name="desiredFeatures" options={featureOptions} />
-          </Section>
-
-          <Section title="7. How interested would you be in a platform built for student side hustlers?">
-            <div className="flex flex-wrap gap-3">
-              {[1, 2, 3, 4, 5].map((score) => (
-                <label
-                  key={score}
-                  className="flex cursor-pointer flex-col items-center gap-1"
-                >
-                  <input
-                    type="radio"
-                    name="interestScore"
-                    value={score}
-                    required
-                    className="peer sr-only"
-                  />
-                  <span
-                    className={cn(
-                      "flex h-12 w-12 items-center justify-center rounded-full border border-white/10 bg-white/5 text-lg font-semibold transition-all",
-                      "peer-checked:border-accent peer-checked:bg-accent peer-checked:text-accent-foreground"
-                    )}
-                  >
-                    {score}
-                  </span>
-                  <span className="text-xs text-muted-foreground">
-                    {score === 1
-                      ? "Not at all"
-                      : score === 5
-                        ? "Extremely"
-                        : ""}
-                  </span>
-                </label>
-              ))}
-            </div>
-          </Section>
-
-          <Section title="8. Would you use sydHustle if it launched in the next 6 months?">
-            <RadioGroup
-              name="wouldUse"
-              required
-              options={[
-                { value: "definitely", label: "Definitely" },
-                { value: "probably", label: "Probably" },
-                { value: "maybe", label: "Maybe" },
-                { value: "probably_not", label: "Probably not" },
-                { value: "definitely_not", label: "Definitely not" },
-              ]}
-            />
-          </Section>
-
-          <Section title="9. Would you pay for premium features?">
-            <p className="text-sm text-muted-foreground">
-              e.g. invoicing, verified profile, priority listings
-            </p>
-            <RadioGroup
-              name="wouldPay"
-              required
-              options={[
-                { value: "yes", label: "Yes" },
-                { value: "maybe", label: "Maybe" },
-                { value: "no", label: "No" },
-              ]}
-            />
-          </Section>
-
-          <Section title="10. What would make you trust a new platform like this?">
-            <Textarea
-              name="trustFactors"
-              placeholder="Optional — e.g. student verification, reviews, secure payments..."
-              rows={3}
-            />
-          </Section>
-
-          <Section title="11. Get early access (optional)">
+  function renderStepBody() {
+    switch (currentStep.id) {
+      case "isStudent":
+        return (
+          <RadioGroup
+            name="isStudent"
+            columns={2}
+            value={answers.isStudent}
+            onChange={(v) => update("isStudent", v)}
+            options={[
+              { value: "yes", label: "Yes" },
+              { value: "no", label: "No" },
+            ]}
+          />
+        );
+      case "needsExtraIncome":
+        return (
+          <RadioGroup
+            name="needsExtraIncome"
+            columns={2}
+            value={answers.needsExtraIncome}
+            onChange={(v) => update("needsExtraIncome", v)}
+            options={[
+              { value: "yes", label: "Yes" },
+              { value: "no", label: "No" },
+            ]}
+          />
+        );
+      case "wantsSideHustle":
+        return (
+          <RadioGroup
+            name="wantsSideHustle"
+            columns={2}
+            value={answers.wantsSideHustle}
+            onChange={(v) => update("wantsSideHustle", v)}
+            options={[
+              { value: "yes", label: "Yes" },
+              { value: "no", label: "No" },
+            ]}
+          />
+        );
+      case "needsTaskHelp":
+        return (
+          <RadioGroup
+            name="needsTaskHelp"
+            columns={2}
+            value={answers.needsTaskHelp}
+            onChange={(v) => update("needsTaskHelp", v)}
+            options={[
+              { value: "yes", label: "Yes" },
+              { value: "no", label: "No" },
+            ]}
+          />
+        );
+      case "taskHelpTypes":
+        return (
+          <CheckboxGroup
+            value={answers.taskHelpTypes}
+            onChange={(v) => update("taskHelpTypes", v)}
+            options={hustleTaskOptions}
+            otherValue={answers.taskHelpOther}
+            onOtherChange={(v) => update("taskHelpOther", v)}
+            otherPlaceholder="Other task (optional)"
+          />
+        );
+      case "hustleFrequency":
+        return (
+          <RadioGroup
+            name="hustleFrequency"
+            value={answers.hustleFrequency}
+            onChange={(v) => update("hustleFrequency", v)}
+            options={[
+              { value: "daily", label: "Daily" },
+              { value: "few_times_week", label: "A few times a week" },
+              { value: "weekly", label: "Weekly" },
+              { value: "few_times_month", label: "A few times a month" },
+              { value: "occasionally", label: "Occasionally, when available" },
+            ]}
+          />
+        );
+      case "hoursPerDay":
+        return (
+          <HoursPerDaySlider
+            value={answers.hoursPerDay}
+            onChange={(v) => update("hoursPerDay", v)}
+          />
+        );
+      case "hasSkill":
+        return (
+          <RadioGroup
+            name="hasSkill"
+            columns={2}
+            value={answers.hasSkill}
+            onChange={(v) => update("hasSkill", v)}
+            options={[
+              { value: "yes", label: "Yes" },
+              { value: "no", label: "No" },
+            ]}
+          />
+        );
+      case "skills":
+        return (
+          <CheckboxGroup
+            value={answers.skills}
+            onChange={(v) => update("skills", v)}
+            options={skillOptions}
+            otherValue={answers.skillsOther}
+            onOtherChange={(v) => update("skillsOther", v)}
+            otherPlaceholder="Other skill (optional)"
+          />
+        );
+      case "willingDifferentHustle":
+        return (
+          <RadioGroup
+            name="willingDifferentHustle"
+            columns={2}
+            value={answers.willingDifferentHustle}
+            onChange={(v) => update("willingDifferentHustle", v)}
+            options={[
+              { value: "yes", label: "Yes" },
+              { value: "no", label: "No" },
+            ]}
+          />
+        );
+      case "hustleCapability":
+        return (
+          <HustleCapabilityGrid
+            value={answers.hustleCapability}
+            onChange={(key, val) =>
+              update("hustleCapability", { ...answers.hustleCapability, [key]: val })
+            }
+          />
+        );
+      case "wouldUseApp":
+        return (
+          <RadioGroup
+            name="wouldUseApp"
+            columns={3}
+            value={answers.wouldUseApp}
+            onChange={(v) => update("wouldUseApp", v)}
+            options={[
+              { value: "yes", label: "Yes" },
+              { value: "maybe", label: "Maybe" },
+              { value: "no", label: "No" },
+            ]}
+          />
+        );
+      case "embarrassedWithMate":
+        return (
+          <RadioGroup
+            name="embarrassedWithMate"
+            columns={3}
+            value={answers.embarrassedWithMate}
+            onChange={(v) => update("embarrassedWithMate", v)}
+            options={[
+              { value: "yes", label: "Yes" },
+              { value: "no", label: "No" },
+              { value: "depends", label: "Depends on the task" },
+            ]}
+          />
+        );
+      case "appUsageRole":
+        return (
+          <RadioGroup
+            name="appUsageRole"
+            value={answers.appUsageRole}
+            onChange={(v) => update("appUsageRole", v)}
+            options={[
+              {
+                value: "providing_hustles",
+                label: "Providing Hustles — finding people to help me with task(s)",
+              },
+              {
+                value: "hustling_the_hustles",
+                label: "Hustling the Hustles — offering my services to earn money",
+              },
+              { value: "both", label: "Both" },
+            ]}
+          />
+        );
+      case "uninstallReasons":
+        return (
+          <CheckboxGroup
+            value={answers.uninstallReasons}
+            onChange={(v) => update("uninstallReasons", v)}
+            options={uninstallOptions}
+            otherValue={answers.uninstallOther}
+            onOtherChange={(v) => update("uninstallOther", v)}
+            otherPlaceholder="Other reason (optional)"
+          />
+        );
+      case "concerns":
+        return (
+          <CheckboxGroup
+            value={answers.concerns}
+            onChange={(v) => update("concerns", v)}
+            options={concernOptions}
+            otherValue={answers.concernsOther}
+            onOtherChange={(v) => update("concernsOther", v)}
+            otherPlaceholder="Other concern (optional)"
+          />
+        );
+      case "trustFactors":
+        return (
+          <CheckboxGroup
+            value={answers.trustFactors}
+            onChange={(v) => update("trustFactors", v)}
+            options={trustFactorOptions}
+            otherValue={answers.trustFactorsOther}
+            onOtherChange={(v) => update("trustFactorsOther", v)}
+            otherPlaceholder="Other factor (optional)"
+          />
+        );
+      case "paymentPreference":
+        return (
+          <RadioGroup
+            name="paymentPreference"
+            value={answers.paymentPreference}
+            onChange={(v) => update("paymentPreference", v)}
+            options={[
+              {
+                value: "direct_with_client",
+                label: "Directly with the client (online transfer or in-person cash)",
+              },
+              {
+                value: "sydhustle_dashboard",
+                label: "Through the sydHustle in-app dashboard, with buyer protection",
+              },
+              { value: "no_preference", label: "No preference — either works for me" },
+            ]}
+          />
+        );
+      case "commissionWillingness":
+        return (
+          <RadioGroup
+            name="commissionWillingness"
+            columns={3}
+            value={answers.commissionWillingness}
+            onChange={(v) => update("commissionWillingness", v)}
+            options={[
+              { value: "yes", label: "Yes" },
+              { value: "no", label: "No" },
+              { value: "maybe", label: "Maybe, depending on the service" },
+            ]}
+          />
+        );
+      case "email":
+        return (
+          <div className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="survey-email">Email</Label>
               <Input
                 id="survey-email"
-                name="email"
                 type="email"
                 placeholder="you@university.edu"
+                value={answers.email}
+                onChange={(e) => update("email", e.target.value)}
               />
             </div>
-          </Section>
-
-          <Section title="12. Anything else we should know?">
-            <Textarea
-              name="additionalFeedback"
-              placeholder="Optional — share anything on your mind"
-              rows={4}
+            <div className="space-y-2">
+              <Label htmlFor="survey-name">Name</Label>
+              <Input
+                id="survey-name"
+                type="text"
+                placeholder="Optional"
+                value={answers.name}
+                onChange={(e) => update("name", e.target.value)}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="survey-school">School / University</Label>
+              <Input
+                id="survey-school"
+                type="text"
+                placeholder="Optional"
+                value={answers.school}
+                onChange={(e) => update("school", e.target.value)}
+              />
+            </div>
+          </div>
+        );
+      case "additionalFeedback":
+        return (
+          <Textarea
+            placeholder="Optional — share anything on your mind"
+            rows={5}
+            value={answers.additionalFeedback}
+            onChange={(e) => update("additionalFeedback", e.target.value)}
+          />
+        );
+      case "joinMarketingTeam":
+        return (
+          <RadioGroup
+            name="joinMarketingTeam"
+            columns={2}
+            value={answers.joinMarketingTeam}
+            onChange={(v) => update("joinMarketingTeam", v)}
+            options={[
+              { value: "yes", label: "Yes" },
+              { value: "no", label: "No" },
+            ]}
+          />
+        );
+      case "marketingWhatsapp":
+        return (
+          <div className="space-y-2">
+            <Label htmlFor="survey-whatsapp">WhatsApp number</Label>
+            <Input
+              id="survey-whatsapp"
+              type="tel"
+              placeholder="e.g. +234 801 234 5678"
+              value={answers.marketingWhatsapp}
+              onChange={(e) => update("marketingWhatsapp", e.target.value)}
             />
-          </Section>
+          </div>
+        );
+      default:
+        return null;
+    }
+  }
 
-          {state.message && !state.success && (
-            <p className="text-sm text-red-400">{state.message}</p>
+  return (
+    <Reveal className="mx-auto max-w-2xl">
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-2xl">sydHustle Student Survey</CardTitle>
+          <CardDescription>
+            A few minutes of your time helps us understand whether you&apos;d
+            hustle, need a hustle, or both — and how useful sydHustle would
+            be to you.
+          </CardDescription>
+
+          <div className="mt-2">
+            <div className="h-1.5 w-full overflow-hidden rounded-full bg-white/10">
+              <motion.div
+                className="h-full rounded-full bg-accent"
+                initial={false}
+                animate={{ width: `${progressPct}%` }}
+                transition={{ duration: 0.4, ease: [0.21, 0.47, 0.32, 0.98] }}
+              />
+            </div>
+            <p className="mt-2 text-xs text-muted-foreground">
+              Question {currentIndex + 1} of {visibleSteps.length}
+            </p>
+          </div>
+        </CardHeader>
+
+        <CardContent>
+          <div className="min-h-[16rem]">
+            <AnimatePresence mode="wait" custom={direction}>
+              <motion.div
+                key={currentStep.id}
+                custom={direction}
+                variants={slideVariants}
+                initial="enter"
+                animate="center"
+                exit="exit"
+                transition={{ duration: 0.32, ease: [0.21, 0.47, 0.32, 0.98] }}
+                className="space-y-4"
+              >
+                <div>
+                  <h3 className="text-lg font-semibold">{currentStep.title}</h3>
+                  {currentStep.description && (
+                    <p className="mt-1 text-sm text-muted-foreground">
+                      {currentStep.description}
+                    </p>
+                  )}
+                </div>
+                <div>{renderStepBody()}</div>
+              </motion.div>
+            </AnimatePresence>
+          </div>
+
+          {!canProceed && (
+            <motion.p
+              initial={{ opacity: 0, y: -4 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="mt-4 text-sm text-amber-400"
+            >
+              Please answer this question to continue.
+            </motion.p>
           )}
 
-          <Button type="submit" size="lg" className="w-full" disabled={isPending}>
-            {isPending ? "Submitting..." : "Submit survey"}
-          </Button>
-        </form>
-      </CardContent>
-    </Card>
+          {state.message && !state.success && isLastStep && (
+            <motion.p
+              initial={{ opacity: 0, y: -4 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="mt-4 text-sm text-red-400"
+            >
+              {state.message}
+            </motion.p>
+          )}
+
+          <div className="mt-8 flex items-center justify-between gap-3">
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={handleBack}
+              disabled={isFirstStep}
+            >
+              Back
+            </Button>
+
+            {isLastStep ? (
+              <Button
+                type="button"
+                size="lg"
+                onClick={handleSubmit}
+                disabled={isPending}
+              >
+                {isPending ? "Submitting..." : "Submit survey"}
+              </Button>
+            ) : (
+              <Button type="button" onClick={handleNext} disabled={!canProceed}>
+                Next
+              </Button>
+            )}
+          </div>
+        </CardContent>
+      </Card>
+    </Reveal>
   );
 }

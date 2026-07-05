@@ -10,51 +10,93 @@ const waitlistSchema = z.object({
   source: z.enum(["landing", "survey"]).default("landing"),
 });
 
-const surveySchema = z.object({
-  isStudent: z.enum([
-    "university",
-    "college",
-    "high_school",
-    "not_student",
-  ]),
-  hasSideHustle: z.enum(["yes", "no", "before"]),
-  hustleTypes: z.array(z.string()).default([]),
-  hustleOther: z.string().trim().max(200).optional(),
-  hoursPerWeek: z
-    .enum(["0", "1-5", "6-10", "10+"])
-    .optional()
-    .nullable(),
-  challenges: z.array(z.string()).default([]),
-  challengeOther: z.string().trim().max(200).optional(),
-  desiredFeatures: z
-    .array(z.string())
-    .min(1, "Select at least one feature."),
-  interestScore: z.coerce.number().int().min(1).max(5),
-  wouldUse: z.enum([
-    "definitely",
-    "probably",
-    "maybe",
-    "probably_not",
-    "definitely_not",
-  ]),
-  wouldPay: z.enum(["yes", "maybe", "no"]),
-  trustFactors: z.string().trim().max(500).optional(),
-  email: z
-    .string()
-    .trim()
-    .optional()
-    .transform((val) => (val === "" ? undefined : val))
-    .pipe(z.string().email("Please enter a valid email address.").optional()),
-  additionalFeedback: z.string().trim().max(1000).optional(),
-}).superRefine((data, ctx) => {
-  if (data.challenges.length === 0 && !data.challengeOther) {
-    ctx.addIssue({
-      code: z.ZodIssueCode.custom,
-      message: "Select at least one challenge.",
-      path: ["challenges"],
-    });
-  }
-});
+const optionalEmail = z
+  .string()
+  .trim()
+  .optional()
+  .transform((val) => (val === "" ? undefined : val))
+  .pipe(z.string().email("Please enter a valid email address.").optional());
+
+const hustleCapabilityValue = z.enum(["can_do", "cannot_do"]);
+
+const surveySchema = z
+  .object({
+    isStudent: z.enum(["yes", "no"]),
+    needsExtraIncome: z.enum(["yes", "no"]),
+
+    wantsSideHustle: z.enum(["yes", "no"]).optional(),
+    hustleFrequency: z
+      .enum(["daily", "few_times_week", "weekly", "few_times_month", "occasionally"])
+      .optional(),
+    hoursPerDay: z.coerce.number().int().min(0).max(24).optional(),
+    hasSkill: z.enum(["yes", "no"]).optional(),
+    skills: z.array(z.string()).default([]),
+    skillsOther: z.string().trim().max(200).optional(),
+    willingDifferentHustle: z.enum(["yes", "no"]).optional(),
+    hustleCapability: z.record(z.string(), hustleCapabilityValue).default({}),
+
+    needsTaskHelp: z.enum(["yes", "no"]).optional(),
+    taskHelpTypes: z.array(z.string()).default([]),
+    taskHelpOther: z.string().trim().max(200).optional(),
+
+    wouldUseApp: z.enum(["yes", "maybe", "no"]),
+    embarrassedWithMate: z.enum(["yes", "no", "depends"]),
+    appUsageRole: z.enum(["providing_hustles", "hustling_the_hustles", "both"]),
+    uninstallReasons: z.array(z.string()).default([]),
+    uninstallOther: z.string().trim().max(300).optional(),
+    concerns: z.array(z.string()).default([]),
+    concernsOther: z.string().trim().max(300).optional(),
+    trustFactors: z.array(z.string()).default([]),
+    trustFactorsOther: z.string().trim().max(300).optional(),
+    paymentPreference: z.enum([
+      "direct_with_client",
+      "sydhustle_dashboard",
+      "no_preference",
+    ]),
+    commissionWillingness: z.enum(["yes", "no", "maybe"]),
+
+    email: optionalEmail,
+    name: z.string().trim().max(100).optional(),
+    school: z.string().trim().max(150).optional(),
+    additionalFeedback: z.string().trim().max(1000).optional(),
+
+    joinMarketingTeam: z.enum(["yes", "no"]),
+    marketingWhatsapp: z.string().trim().max(30).optional(),
+  })
+  .superRefine((data, ctx) => {
+    if (data.needsExtraIncome === "yes" && !data.wantsSideHustle) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Please let us know if you're looking for a side hustle.",
+        path: ["wantsSideHustle"],
+      });
+    }
+
+    if (data.joinMarketingTeam === "yes" && !data.marketingWhatsapp) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Please share a WhatsApp number so we can reach you.",
+        path: ["marketingWhatsapp"],
+      });
+    }
+
+    // The task-poster gate question ("have you ever needed help?") is a
+    // required stop on two natural entry paths into that track: respondents
+    // who don't need extra income, and respondents who need income but
+    // aren't after a side hustle. If it's reached later purely because of
+    // the "which would you use the app for?" answer, it's asked but not
+    // blocking — mirrored client-side in SurveyForm's getProviderGroupSteps.
+    const naturalProviderEntry =
+      data.needsExtraIncome === "no" ||
+      (data.needsExtraIncome === "yes" && data.wantsSideHustle === "no");
+    if (naturalProviderEntry && !data.needsTaskHelp) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Please answer whether you've ever needed task help.",
+        path: ["needsTaskHelp"],
+      });
+    }
+  });
 
 export type ActionResult =
   | { success: true; message: string }
@@ -114,29 +156,61 @@ export async function submitWaitlist(
   }
 }
 
+const HUSTLE_CAPABILITY_PREFIX = "hustleCapability_";
+
 export async function submitSurvey(
   formData: FormData
 ): Promise<ActionResult> {
-  const hustleTypes = formData.getAll("hustleTypes").map(String);
-  const challenges = formData.getAll("challenges").map(String);
-  const desiredFeatures = formData.getAll("desiredFeatures").map(String);
+  const skills = formData.getAll("skills").map(String);
+  const taskHelpTypes = formData.getAll("taskHelpTypes").map(String);
+  const uninstallReasons = formData.getAll("uninstallReasons").map(String);
+  const concerns = formData.getAll("concerns").map(String);
+  const trustFactors = formData.getAll("trustFactors").map(String);
   const emailValue = String(formData.get("email") ?? "").trim();
+
+  const hustleCapability: Record<string, string> = {};
+  for (const [key, value] of formData.entries()) {
+    if (key.startsWith(HUSTLE_CAPABILITY_PREFIX) && typeof value === "string") {
+      hustleCapability[key.slice(HUSTLE_CAPABILITY_PREFIX.length)] = value;
+    }
+  }
 
   const parsed = surveySchema.safeParse({
     isStudent: formData.get("isStudent"),
-    hasSideHustle: formData.get("hasSideHustle"),
-    hustleTypes,
-    hustleOther: formData.get("hustleOther") || undefined,
-    hoursPerWeek: formData.get("hoursPerWeek") || null,
-    challenges,
-    challengeOther: formData.get("challengeOther") || undefined,
-    desiredFeatures,
-    interestScore: formData.get("interestScore"),
-    wouldUse: formData.get("wouldUse"),
-    wouldPay: formData.get("wouldPay"),
-    trustFactors: formData.get("trustFactors") || undefined,
+    needsExtraIncome: formData.get("needsExtraIncome"),
+
+    wantsSideHustle: formData.get("wantsSideHustle") || undefined,
+    hustleFrequency: formData.get("hustleFrequency") || undefined,
+    hoursPerDay: formData.get("hoursPerDay") || undefined,
+    hasSkill: formData.get("hasSkill") || undefined,
+    skills,
+    skillsOther: formData.get("skillsOther") || undefined,
+    willingDifferentHustle: formData.get("willingDifferentHustle") || undefined,
+    hustleCapability,
+
+    needsTaskHelp: formData.get("needsTaskHelp") || undefined,
+    taskHelpTypes,
+    taskHelpOther: formData.get("taskHelpOther") || undefined,
+
+    wouldUseApp: formData.get("wouldUseApp"),
+    embarrassedWithMate: formData.get("embarrassedWithMate"),
+    appUsageRole: formData.get("appUsageRole"),
+    uninstallReasons,
+    uninstallOther: formData.get("uninstallOther") || undefined,
+    concerns,
+    concernsOther: formData.get("concernsOther") || undefined,
+    trustFactors,
+    trustFactorsOther: formData.get("trustFactorsOther") || undefined,
+    paymentPreference: formData.get("paymentPreference"),
+    commissionWillingness: formData.get("commissionWillingness"),
+
     email: emailValue,
+    name: formData.get("name") || undefined,
+    school: formData.get("school") || undefined,
     additionalFeedback: formData.get("additionalFeedback") || undefined,
+
+    joinMarketingTeam: formData.get("joinMarketingTeam"),
+    marketingWhatsapp: formData.get("marketingWhatsapp") || undefined,
   });
 
   if (!parsed.success) {
@@ -153,19 +227,40 @@ export async function submitSurvey(
     const supabase = createServerSupabaseClient();
     const { error } = await supabase.from("survey_responses").insert({
       is_student: parsed.data.isStudent,
-      has_side_hustle: parsed.data.hasSideHustle,
-      hustle_types: parsed.data.hustleTypes,
-      hustle_other: parsed.data.hustleOther || null,
-      hours_per_week: parsed.data.hoursPerWeek || null,
-      challenges: parsed.data.challenges,
-      challenge_other: parsed.data.challengeOther || null,
-      desired_features: parsed.data.desiredFeatures,
-      interest_score: parsed.data.interestScore,
-      would_use: parsed.data.wouldUse,
-      would_pay: parsed.data.wouldPay,
-      trust_factors: parsed.data.trustFactors || null,
+      needs_extra_income: parsed.data.needsExtraIncome,
+
+      wants_side_hustle: parsed.data.wantsSideHustle || null,
+      hustle_frequency: parsed.data.hustleFrequency || null,
+      hours_per_day: parsed.data.hoursPerDay ?? null,
+      has_skill: parsed.data.hasSkill || null,
+      skills: parsed.data.skills,
+      skills_other: parsed.data.skillsOther || null,
+      willing_different_hustle: parsed.data.willingDifferentHustle || null,
+      hustle_capability: parsed.data.hustleCapability,
+
+      needs_task_help: parsed.data.needsTaskHelp || null,
+      task_help_types: parsed.data.taskHelpTypes,
+      task_help_other: parsed.data.taskHelpOther || null,
+
+      would_use_app: parsed.data.wouldUseApp,
+      embarrassed_with_mate: parsed.data.embarrassedWithMate,
+      app_usage_role: parsed.data.appUsageRole,
+      uninstall_reasons: parsed.data.uninstallReasons,
+      uninstall_other: parsed.data.uninstallOther || null,
+      concerns: parsed.data.concerns,
+      concerns_other: parsed.data.concernsOther || null,
+      trust_factors: parsed.data.trustFactors,
+      trust_factors_other: parsed.data.trustFactorsOther || null,
+      payment_preference: parsed.data.paymentPreference,
+      commission_willingness: parsed.data.commissionWillingness,
+
       email: parsed.data.email || null,
+      name: parsed.data.name || null,
+      school: parsed.data.school || null,
       additional_feedback: parsed.data.additionalFeedback || null,
+
+      join_marketing_team: parsed.data.joinMarketingTeam,
+      marketing_whatsapp: parsed.data.marketingWhatsapp || null,
     });
 
     if (error) {
@@ -179,6 +274,8 @@ export async function submitSurvey(
       await supabase.from("waitlist").upsert(
         {
           email: parsed.data.email.toLowerCase(),
+          name: parsed.data.name || null,
+          school: parsed.data.school || null,
           source: "survey",
         },
         { onConflict: "email", ignoreDuplicates: true }

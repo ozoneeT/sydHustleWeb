@@ -11,11 +11,11 @@ const plusJakarta = Plus_Jakarta_Sans({
 export const metadata: Metadata = {
   title: "sydHustle — Your side hustle, sorted.",
   description:
-    "sydHustle is in development. Join the waitlist and take our survey to help shape the future of student side hustles.",
+    "sydHustle is in development — a platform for students who want to earn extra and students who need help getting things done. Join the waitlist and take our survey.",
   openGraph: {
     title: "sydHustle — Your side hustle, sorted.",
     description:
-      "Join the waitlist and take our survey. Help us build something students actually want.",
+      "Join the waitlist and take our survey. Help us build something students actually want — whether you're earning or need a hand.",
     url: "https://sydhustle.com",
     siteName: "sydHustle",
   },
@@ -27,7 +27,11 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className={`${plusJakarta.variable} h-full antialiased`}>
+    <html
+      lang="en"
+      data-scroll-behavior="smooth"
+      className={`${plusJakarta.variable} h-full antialiased`}
+    >
       <body className="min-h-full flex flex-col font-sans">{children}</body>
     </html>
   );
