@@ -26,7 +26,7 @@ const audiences = [
     icon: Wallet,
     title: "Want to earn?",
     description:
-      "Pick up everyday hustles — errands, laundry, cleaning, tutoring, and more — and get paid on your terms.",
+      "Complete everyday hustles. Earn on your schedule.",
   },
   {
     icon: HandHelping,
