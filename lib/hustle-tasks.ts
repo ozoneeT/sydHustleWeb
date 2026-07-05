@@ -28,7 +28,7 @@ export const hustleTaskOptions = [
   { value: "water_fetching", label: "Fetching and storing water" },
   { value: "generator_fueling", label: "Generator fueling and starting" },
   // More personal / potentially "embarrassing"
-  { value: "laundry", label: "Laundry by hand, including underwear" },
+  { value: "laundry", label: "Laundry by hand" },
   { value: "queue_standing", label: "Standing in a queue as a proxy (e.g. registration, banking)" },
   { value: "toilet_cleaning", label: "Cleaning a toilet or bathroom" },
   { value: "trash_disposal", label: "Carrying out and disposing of trash" },
