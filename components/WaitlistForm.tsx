@@ -189,7 +189,7 @@ export function WaitlistForm() {
                         id="email"
                         name="email"
                         type="email"
-                        placeholder="you@university.edu"
+                        placeholder="you@email.com"
                         value={email}
                         onChange={(e) => {
                           setEmail(e.target.value);

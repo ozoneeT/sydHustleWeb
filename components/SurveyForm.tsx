@@ -1369,7 +1369,7 @@ export function SurveyForm() {
               <Input
                 id="survey-school"
                 type="text"
-                placeholder="e.g. University of Sydney"
+                placeholder="e.g. University of ..."
                 value={answers.school}
                 onChange={(e) => update("school", e.target.value)}
                 required

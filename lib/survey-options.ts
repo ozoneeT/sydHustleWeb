@@ -52,7 +52,7 @@ export const trustFactorOptions = [
   { value: "secure_payments", label: "Secure in-app payments" },
   { value: "id_verification", label: "ID verification" },
   { value: "dispute_support", label: "Dispute resolution / customer support" },
-  { value: "community_reporting", label: "Community reporting of bad actors" },
+  { value: "community_reporting", label: "Being able to report or flag someone who scams or misbehaves" },
 ] as const;
 
 export function labelFor(
