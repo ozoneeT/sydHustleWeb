@@ -2,10 +2,19 @@ import { SurveyForm } from "@/components/SurveyForm";
 import { SiteHeader } from "@/components/SiteHeader";
 import { Footer } from "@/components/Footer";
 
-export const metadata = {
-  title: "Survey — sydHustle",
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "Survey",
   description:
     "Help shape sydHustle. Tell us whether you'd hustle, need a hustle, or both.",
+  alternates: { canonical: "/survey" },
+  openGraph: {
+    title: "Survey | sydHustle",
+    description:
+      "Help shape sydHustle. Tell us whether you'd hustle, need a hustle, or both.",
+    url: "/survey",
+  },
 };
 
 export default function SurveyPage() {

@@ -33,7 +33,13 @@ export function SiteHeader() {
           className="flex items-center gap-2.5 text-xl font-bold tracking-tight transition-opacity hover:opacity-80"
         >
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/syd.svg" alt="sydHustle" width={28} height={28} />
+          <img
+            src="/sydhustle-icon.webp"
+            alt="sydHustle app icon — geometric teal S mark"
+            width={28}
+            height={28}
+            className="h-7 w-7 object-contain"
+          />
           <span>
             syd<span className="text-accent">Hustle</span>
           </span>
