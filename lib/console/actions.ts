@@ -1,52 +1,12 @@
 "use server";
 
-import { createHash, timingSafeEqual } from "node:crypto";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 
 import { requireConsole } from "@/lib/console/dal";
-import {
-  createConsoleSession,
-  deleteConsoleSession,
-} from "@/lib/console/session";
+import { deleteConsoleSession } from "@/lib/console/session";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
-
-/** Constant-time equality over hashes, so length differences leak nothing. */
-function safeEqual(a: string, b: string): boolean {
-  const ha = createHash("sha256").update(a).digest();
-  const hb = createHash("sha256").update(b).digest();
-  return timingSafeEqual(ha, hb);
-}
-
-export type LoginState = { error: string | null };
-
-export async function consoleLogin(
-  _prev: LoginState,
-  formData: FormData
-): Promise<LoginState> {
-  const email = String(formData.get("email") ?? "").trim().toLowerCase();
-  const password = String(formData.get("password") ?? "");
-
-  const expectedEmail = process.env.CONSOLE_EMAIL;
-  const expectedPassword = process.env.CONSOLE_PASSWORD;
-  if (!expectedEmail || !expectedPassword) {
-    return { error: "Console sign-in is not configured on this deployment." };
-  }
-
-  const ok =
-    safeEqual(email, expectedEmail.toLowerCase()) &&
-    safeEqual(password, expectedPassword);
-
-  if (!ok) {
-    // A flat delay keeps a wrong guess as slow as a scripted one.
-    await new Promise((resolve) => setTimeout(resolve, 800));
-    return { error: "That email and password don't match." };
-  }
-
-  await createConsoleSession();
-  redirect("/console/overview");
-}
 
 export async function consoleLogout() {
   await deleteConsoleSession();

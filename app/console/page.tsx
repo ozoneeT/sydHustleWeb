@@ -9,10 +9,27 @@ export const metadata = {
   robots: { index: false, follow: false },
 };
 
-export default async function ConsoleLoginPage() {
+function errorMessage(code: string | undefined): string | null {
+  switch (code) {
+    case "invalid":
+      return "That email and password don't match.";
+    case "config":
+      return "Console sign-in is not configured on this deployment.";
+    default:
+      return null;
+  }
+}
+
+export default async function ConsoleLoginPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ error?: string }>;
+}) {
   if (await hasConsoleSession()) {
     redirect("/console/overview");
   }
+
+  const { error } = await searchParams;
 
   return (
     <main className="flex min-h-screen items-center justify-center px-6">
@@ -21,7 +38,7 @@ export default async function ConsoleLoginPage() {
         <p className="mt-1 mb-6 text-sm text-muted-foreground">
           Operators only. Every visit is on the record.
         </p>
-        <ConsoleLoginForm />
+        <ConsoleLoginForm error={errorMessage(error)} />
       </Card>
     </main>
   );

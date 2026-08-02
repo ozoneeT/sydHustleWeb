@@ -1,22 +1,23 @@
 "use client";
 
-import { useActionState } from "react";
+import { useFormStatus } from "react-dom";
 
-import { consoleLogin, type LoginState } from "@/lib/console/actions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
-const initialState: LoginState = { error: null };
-
-export function ConsoleLoginForm() {
-  const [state, formAction, pending] = useActionState(
-    consoleLogin,
-    initialState
-  );
-
+function SubmitButton() {
+  const { pending } = useFormStatus();
   return (
-    <form action={formAction} className="space-y-5">
+    <Button className="w-full" disabled={pending} type="submit">
+      {pending ? "Signing in…" : "Sign in"}
+    </Button>
+  );
+}
+
+export function ConsoleLoginForm({ error }: { error?: string | null }) {
+  return (
+    <form action="/console/login" className="space-y-5" method="post">
       <div className="space-y-2">
         <Label htmlFor="email">Email</Label>
         <Input
@@ -39,13 +40,9 @@ export function ConsoleLoginForm() {
         />
       </div>
 
-      {state.error ? (
-        <p className="text-sm text-red-400">{state.error}</p>
-      ) : null}
+      {error ? <p className="text-sm text-red-400">{error}</p> : null}
 
-      <Button className="w-full" disabled={pending} type="submit">
-        {pending ? "Signing in…" : "Sign in"}
-      </Button>
+      <SubmitButton />
     </form>
   );
 }
