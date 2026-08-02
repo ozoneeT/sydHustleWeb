@@ -7,12 +7,12 @@ export default function robots(): MetadataRoute.Robots {
       {
         userAgent: "*",
         allow: "/",
-        disallow: ["/admin", "/dashboard", "/moderator"],
+        disallow: ["/admin", "/dashboard", "/moderator", "/console"],
       },
       {
         userAgent: "Googlebot",
         allow: ["/", "/sydhustle-icon.webp", "/sydhustle-logo.webp", "/sydhustle-logo-light.png"],
-        disallow: ["/admin", "/dashboard", "/moderator"],
+        disallow: ["/admin", "/dashboard", "/moderator", "/console"],
       },
       {
         userAgent: "Googlebot-Image",
