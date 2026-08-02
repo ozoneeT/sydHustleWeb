@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Plus_Jakarta_Sans } from "next/font/google";
 import "./globals.css";
+import { StaleDeploymentReloader } from "@/components/StaleDeploymentReloader";
 import {
   absoluteUrl,
   BRAND_ASSETS,
@@ -185,7 +186,10 @@ export default function RootLayout({
           }}
         />
       </head>
-      <body className="min-h-full flex flex-col font-sans">{children}</body>
+      <body className="min-h-full flex flex-col font-sans">
+        <StaleDeploymentReloader />
+        {children}
+      </body>
     </html>
   );
 }
