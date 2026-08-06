@@ -11,6 +11,7 @@ const LINKS = [
   { href: "/console/subscribers", label: "Subscribers" },
   { href: "/console/transactions", label: "Transactions" },
   { href: "/console/withdrawals", label: "Withdrawals" },
+  { href: "/console/appeals", label: "Appeals" },
   { href: "/console/moderation", label: "Moderation" },
   { href: "/console/broadcast", label: "Broadcast" },
 ];
