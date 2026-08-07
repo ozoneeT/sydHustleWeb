@@ -43,6 +43,8 @@ export type PlatformSettings = {
   sms_daily_price: number;
   sms_weekly_price: number;
   sms_monthly_price: number;
+  /** Naira to open a slot to change the SMS alert number. */
+  sms_number_change_fee: number;
   updated_at: string;
 };
 
@@ -51,7 +53,7 @@ export async function getPlatformSettings(): Promise<PlatformSettings> {
   const { data, error } = await supabase
     .from("platform_settings")
     .select(
-      "withdrawal_cut_percent, escrow_cut_percent, escrow_cut_applies_to, sms_daily_price, sms_weekly_price, sms_monthly_price, updated_at"
+      "withdrawal_cut_percent, escrow_cut_percent, escrow_cut_applies_to, sms_daily_price, sms_weekly_price, sms_monthly_price, sms_number_change_fee, updated_at"
     )
     .eq("id", 1)
     .single();
@@ -63,6 +65,7 @@ export async function getPlatformSettings(): Promise<PlatformSettings> {
     sms_daily_price: Number(data.sms_daily_price),
     sms_weekly_price: Number(data.sms_weekly_price),
     sms_monthly_price: Number(data.sms_monthly_price),
+    sms_number_change_fee: Number(data.sms_number_change_fee),
   } as PlatformSettings;
 }
 

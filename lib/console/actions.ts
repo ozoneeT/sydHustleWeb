@@ -20,6 +20,7 @@ const earningsSchema = z.object({
   sms_daily_price: z.coerce.number().min(0).max(10000),
   sms_weekly_price: z.coerce.number().min(0).max(10000),
   sms_monthly_price: z.coerce.number().min(0).max(10000),
+  sms_number_change_fee: z.coerce.number().min(0).max(10000),
 });
 
 export type EarningsState = { error: string | null; saved: boolean };
@@ -42,6 +43,7 @@ export async function updateEarningsSettings(
     sms_daily_price: formData.get("sms_daily_price"),
     sms_weekly_price: formData.get("sms_weekly_price"),
     sms_monthly_price: formData.get("sms_monthly_price"),
+    sms_number_change_fee: formData.get("sms_number_change_fee"),
   });
   if (!parsed.success) {
     return {

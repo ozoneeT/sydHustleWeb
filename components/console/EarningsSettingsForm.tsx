@@ -123,6 +123,28 @@ export function EarningsSettingsForm({
         </p>
       </div>
 
+      <div className="space-y-2">
+        <Label htmlFor="sms_number_change_fee">
+          SMS alerts — number change fee (₦)
+        </Label>
+        <Input
+          defaultValue={settings.sms_number_change_fee}
+          id="sms_number_change_fee"
+          max={10000}
+          min={0}
+          name="sms_number_change_fee"
+          step="1"
+          type="number"
+        />
+        <p className="text-xs text-muted-foreground">
+          Charged once when a subscriber moves their alerts to a different
+          number — it covers re-verifying the new handset by text. It buys
+          the change, not the attempt: someone who pays and then backs out
+          keeps the credit and changes later for free. Repricing only
+          affects slots bought from now on.
+        </p>
+      </div>
+
       {state.error ? (
         <p className="text-sm text-red-400">{state.error}</p>
       ) : null}
