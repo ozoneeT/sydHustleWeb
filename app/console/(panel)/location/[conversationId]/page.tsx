@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 
 import {
   LiveLocationMap,
-  type MapPin,
+  type FinalPin,
 } from "@/components/console/LiveLocationMap";
 import { Card } from "@/components/ui/card";
 import {
@@ -14,10 +14,11 @@ import {
 export const metadata = { title: "Live channel — sydHustle Console" };
 
 /**
- * One session's channel, on the map. Live while the session is in its
- * movement phase (the map subscribes to the same realtime channel the two
- * apps broadcast on); once finished, the recorded final positions are
- * plotted instead.
+ * One session's channel, on the map: the Hustler, the Provider, and the
+ * Hustle itself, tracked as three independent points. Live while the
+ * session is in its movement phase (the map subscribes to the same
+ * realtime channel the two apps broadcast on); once finished, the
+ * recorded final positions are plotted instead.
  */
 export default async function LiveChannelPage({
   params,
@@ -34,34 +35,36 @@ export default async function LiveChannelPage({
   if (!session && finals.length === 0) notFound();
 
   const live = session !== null;
-  // Who is on the move mirrors the app's own rule (travelling_party in the
-  // console_live_sessions view) — on a booking held at the worker's place
-  // it's the payer travelling, not the worker.
-  const workerFirst = session?.worker_name?.split(" ")[0] ?? "Hustler";
-  const payerFirst = session?.payer_name?.split(" ")[0] ?? "Provider";
-  const payerTravels = session?.travelling_party === "payer";
-  const travellerName = payerTravels ? payerFirst : workerFirst;
-  const hostName = payerTravels ? workerFirst : payerFirst;
+  const workerName = session?.worker_name?.split(" ")[0] ?? "Hustler";
+  const payerName = session?.payer_name?.split(" ")[0] ?? "Provider";
 
-  const pins: MapPin[] = [];
-  if (session?.venue_lat != null && session.venue_lng != null) {
-    pins.push({
-      role: "venue",
-      label: session.venue_label ?? "Venue",
-      lat: session.venue_lat,
-      lng: session.venue_lng,
-    });
-  }
-  if (!live) {
-    for (const position of finals) {
-      pins.push({
-        role: "final",
-        label: `${position.full_name ?? "Unknown"} (${position.role})`,
+  // The venue the server last saw. The map supersedes it with whatever the
+  // apps broadcast, so a mid-session move shows without a reload — but a
+  // finished session falls back to the venue recorded against the final
+  // positions, which is where the Hustle actually stood at the end.
+  const venue =
+    session?.venue_lat != null && session.venue_lng != null
+      ? {
+          lat: session.venue_lat,
+          lng: session.venue_lng,
+          label: session.venue_label,
+        }
+      : finals.find((p) => p.venue_lat != null && p.venue_lng != null)
+        ? {
+            lat: finals.find((p) => p.venue_lat != null)!.venue_lat!,
+            lng: finals.find((p) => p.venue_lng != null)!.venue_lng!,
+            label: "Hustle location at close",
+          }
+        : null;
+
+  const finalPins: FinalPin[] = live
+    ? []
+    : finals.map((position) => ({
+        label: position.full_name ?? "Unknown",
+        role: position.role,
         lat: position.lat,
         lng: position.lng,
-      });
-    }
-  }
+      }));
 
   return (
     <div className="space-y-6">
@@ -77,17 +80,18 @@ export default async function LiveChannelPage({
         </h1>
         <p className="text-sm text-muted-foreground">
           {live
-            ? `${travellerName} travelling to ${hostName}${session.venue_label ? ` · ${session.venue_label}` : ""}`
+            ? `${session.worker_name ?? "Hustler"} and ${session.payer_name ?? "Provider"}${session.venue_label ? ` · ${session.venue_label}` : ""}`
             : "Finished — showing each participant's recorded final position."}
         </p>
       </div>
 
       <LiveLocationMap
         conversationId={conversationId}
-        hostName={hostName}
+        finals={finalPins}
         live={live}
-        pins={pins}
-        travellerName={travellerName}
+        payerName={payerName}
+        venue={venue}
+        workerName={workerName}
       />
 
       {!live && finals.length > 0 ? (

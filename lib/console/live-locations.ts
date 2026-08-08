@@ -35,12 +35,18 @@ export type LiveSession = {
 export type FinalPosition = {
   conversation_id: string;
   profile_id: string;
-  role: "traveller" | "host";
+  /** The party ('worker'/'payer'). Rows written before the three-point
+   * model carry the old relative vocabulary instead. */
+  role: "worker" | "payer" | "traveller" | "host";
   lat: number;
   lng: number;
   recorded_at: string;
   full_name: string | null;
   title: string | null;
+  /** Where the Hustle stood when the session ended — not necessarily the
+   * address it was booked at, since the spot can be moved mid-session. */
+  venue_lat: number | null;
+  venue_lng: number | null;
 };
 
 export async function getLiveSessions(): Promise<LiveSession[]> {
