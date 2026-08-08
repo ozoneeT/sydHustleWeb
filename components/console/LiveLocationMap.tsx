@@ -70,25 +70,61 @@ type Slot = keyof typeof COLORS;
  * however many maps mount. */
 let mapsReady: Promise<typeof google> | null = null;
 
+/** Google calls this global when it REJECTS the key — a referrer that
+ * isn't on the allow-list, billing disabled, an unenabled API. Without it
+ * the API just paints its own grey panel inside the map div and the page
+ * has no idea anything is wrong, which is a poor way to run an oversight
+ * console. Components register here to say so themselves. */
+const authFailureListeners = new Set<() => void>();
+
+const CALLBACK_NAME = "__sydConsoleMapsReady";
+
+type MapsWindow = Window & {
+  [CALLBACK_NAME]?: () => void;
+  gm_authFailure?: () => void;
+};
+
 function loadGoogleMaps(apiKey: string): Promise<typeof google> {
   if (typeof window === "undefined") {
     return new Promise(() => {});
   }
-  if (window.google?.maps) return Promise.resolve(window.google);
+  // `google.maps.Map` specifically, not just `google.maps`: with
+  // `loading=async` the namespace exists well before the library behind
+  // it does.
+  if (window.google?.maps?.Map) return Promise.resolve(window.google);
   if (mapsReady) return mapsReady;
 
+  const w = window as MapsWindow;
+  w.gm_authFailure = () => {
+    authFailureListeners.forEach((listener) => listener());
+  };
+
   mapsReady = new Promise((resolve, reject) => {
+    // `loading=async` defers the API's own bootstrap, so `google.maps` is
+    // NOT usable when the script's `onload` fires — reaching for
+    // `google.maps.Map` there throws. The `callback` parameter is the only
+    // signal that the library is actually ready, and is required whenever
+    // `loading=async` is set.
+    w[CALLBACK_NAME] = () => {
+      delete w[CALLBACK_NAME];
+      resolve(window.google!);
+    };
+
     const script = document.createElement("script");
-    // `loading=async` is Google's documented pairing for a script injected
-    // this way; without it the API logs a performance warning that reads
-    // like a failure while you're debugging a real one.
-    script.src = `https://maps.googleapis.com/maps/api/js?key=${encodeURIComponent(apiKey)}&v=weekly&loading=async`;
+    script.src =
+      "https://maps.googleapis.com/maps/api/js" +
+      `?key=${encodeURIComponent(apiKey)}` +
+      "&v=weekly&loading=async" +
+      `&callback=${CALLBACK_NAME}`;
     script.async = true;
     script.onerror = () => {
+      // Only a genuine network/blocked-request failure lands here: a
+      // rejected KEY still serves valid JS and reports through
+      // `gm_authFailure` instead.
       mapsReady = null;
-      reject(new Error("Google Maps failed to load"));
+      delete w[CALLBACK_NAME];
+      reject(new Error("The Maps script could not be fetched."));
     };
-    script.onload = () => resolve(window.google);
     document.head.appendChild(script);
   });
   return mapsReady;
@@ -160,24 +196,53 @@ export function LiveLocationMap({
     const markers = markersRef.current;
     let cancelled = false;
 
+    // Google rejecting the key is silent by default — it paints its own
+    // grey panel and says nothing to the page. This turns it into an
+    // answer the operator (and whoever is debugging) can act on.
+    const onAuthFailure = () => {
+      if (!cancelled) {
+        setMapError(
+          "Google rejected this API key for this site. Check the key's " +
+            "website restrictions and that billing is enabled — the exact " +
+            "reason is in the browser console.",
+        );
+      }
+    };
+    authFailureListeners.add(onAuthFailure);
+
     void loadGoogleMaps(apiKey)
       .then((g) => {
         if (cancelled || !mapNodeRef.current) return;
-        const centre = initialVenue ?? { lat: 7.3775, lng: 3.947 }; // Ibadan
-        mapRef.current = new g.maps.Map(mapNodeRef.current, {
-          center: { lat: centre.lat, lng: centre.lng },
-          zoom: 15,
-          clickableIcons: false,
-          streetViewControl: false,
-          mapTypeControl: true,
-          fullscreenControl: true,
-        });
-        setMapReady(true);
+        // Deliberately its own try: an exception building the map is a
+        // different failure from the script never arriving, and reporting
+        // one as the other sends you looking in the wrong place.
+        try {
+          const centre = initialVenue ?? { lat: 7.3775, lng: 3.947 }; // Ibadan
+          mapRef.current = new g.maps.Map(mapNodeRef.current, {
+            center: { lat: centre.lat, lng: centre.lng },
+            zoom: 15,
+            clickableIcons: false,
+            streetViewControl: false,
+            mapTypeControl: true,
+            fullscreenControl: true,
+          });
+          setMapReady(true);
+        } catch (error) {
+          console.error("[console/location] map init failed", error);
+          setMapError("The map could not be created — see the console.");
+        }
       })
-      .catch(() => setMapError("Google Maps failed to load."));
+      .catch((error: unknown) => {
+        console.error("[console/location] Maps script failed", error);
+        setMapError(
+          "The Google Maps script could not be fetched — check the network " +
+            "tab for a blocked request.",
+        );
+      });
 
     return () => {
       cancelled = true;
+      authFailureListeners.delete(onAuthFailure);
       markers.forEach((marker) => marker.setMap(null));
       markers.clear();
       mapRef.current = null;
