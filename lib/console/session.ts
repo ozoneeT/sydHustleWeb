@@ -37,9 +37,10 @@ export async function createConsoleSession() {
   });
 }
 
-export async function hasConsoleSession(): Promise<boolean> {
-  const cookieStore = await cookies();
-  const token = cookieStore.get(CONSOLE_COOKIE)?.value;
+/** Cookie-token check for proxy / edge — no next/headers dependency. */
+export async function verifyConsoleToken(
+  token: string | undefined
+): Promise<boolean> {
   if (!token) return false;
   try {
     const { payload } = await jwtVerify(token, getSecretKey(), {
@@ -51,7 +52,14 @@ export async function hasConsoleSession(): Promise<boolean> {
   }
 }
 
+export async function hasConsoleSession(): Promise<boolean> {
+  const cookieStore = await cookies();
+  return verifyConsoleToken(cookieStore.get(CONSOLE_COOKIE)?.value);
+}
+
 export async function deleteConsoleSession() {
   const cookieStore = await cookies();
   cookieStore.delete({ name: CONSOLE_COOKIE, path: "/console" });
 }
+
+export { CONSOLE_COOKIE };

@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useLinkStatus } from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState, type ComponentType, type ReactNode } from "react";
 import {
@@ -22,6 +23,19 @@ import {
 
 import { ConsoleLogoutButton } from "@/components/console/ConsoleLogoutButton";
 import { cn } from "@/lib/utils";
+
+function NavPendingHint() {
+  const { pending } = useLinkStatus();
+  return (
+    <span
+      aria-hidden
+      className={cn(
+        "ml-auto h-1.5 w-1.5 shrink-0 rounded-full bg-accent",
+        pending ? "animate-pulse opacity-100" : "opacity-0"
+      )}
+    />
+  );
+}
 
 type NavIcon = ComponentType<{ className?: string; strokeWidth?: number }>;
 
@@ -139,7 +153,8 @@ function SidebarBody({
                           )}
                           strokeWidth={1.75}
                         />
-                        {link.label}
+                        <span className="truncate">{link.label}</span>
+                        <NavPendingHint />
                       </Link>
                     </li>
                   );

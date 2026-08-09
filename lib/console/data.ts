@@ -2,8 +2,8 @@ import "server-only";
 
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 
-/** All reads for the console. Service-role, server-only — nothing here is
- * reachable without a console session (pages call requireConsole first). */
+/** All reads for the console. Service-role, server-only — panel routes are
+ * gated by proxy.ts; mutations still call requireConsole in their actions. */
 
 export type ConsoleStats = {
   users: { total: number; new_7d: number };
