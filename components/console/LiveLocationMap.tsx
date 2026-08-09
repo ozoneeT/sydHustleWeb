@@ -303,7 +303,19 @@ export function LiveLocationMap({
           );
         }
       })
-      .subscribe();
+      .subscribe((status) => {
+        // Broadcast is fire-and-forget: opening this page mid-journey would
+        // otherwise show an empty map until somebody happened to move. The
+        // apps answer this with their current state immediately.
+        if (status !== "SUBSCRIBED") return;
+        void channel
+          .send({
+            type: "broadcast",
+            event: "sync",
+            payload: { profileId: "console" },
+          })
+          .catch(() => {});
+      });
 
     return () => {
       void supabase.removeChannel(channel);
