@@ -90,7 +90,14 @@ export async function revealIdentityRecord(
     | null;
 
   if (!response.ok || !body || body.error) {
-    return { error: body?.error ?? "Could not open that record.", record: null };
+    // The status is carried through when the body has nothing useful —
+    // a bare "could not open that record" hides whether the refusal came
+    // from the function, the gateway, or something in between.
+    return {
+      error:
+        body?.error ?? `Could not open that record (HTTP ${response.status}).`,
+      record: null,
+    };
   }
 
   // So the audit trail below the form shows this read immediately — the
