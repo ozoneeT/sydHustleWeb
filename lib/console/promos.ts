@@ -1,5 +1,9 @@
 import "server-only";
 
+import {
+  PROMO_SURFACES,
+  type PromoSurfaceField,
+} from "@/lib/console/app-routes";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 
 /**
@@ -34,6 +38,9 @@ export type PromoBannerRow = {
   rotate_minutes: number;
   show_on_home: boolean;
   show_on_skills: boolean;
+  show_on_hustles: boolean;
+  show_on_wallet: boolean;
+  show_on_messages: boolean;
   is_active: boolean;
   sort_order: number;
   starts_at: string | null;
@@ -56,7 +63,15 @@ export async function listPromoBanners(): Promise<PromoBannerRow[]> {
  * enabled — a scheduled one can be active and not yet running. */
 export function isLive(row: PromoBannerRow): boolean {
   if (!row.is_active) return false;
-  if (!row.show_on_home && !row.show_on_skills) return false;
+  if (
+    !row.show_on_home &&
+    !row.show_on_skills &&
+    !row.show_on_hustles &&
+    !row.show_on_wallet &&
+    !row.show_on_messages
+  ) {
+    return false;
+  }
   const now = Date.now();
   if (row.starts_at && new Date(row.starts_at).getTime() > now) return false;
   if (row.ends_at && new Date(row.ends_at).getTime() <= now) return false;
@@ -71,15 +86,16 @@ export function isLive(row: PromoBannerRow): boolean {
  * console has to say so rather than letting someone wonder why their
  * new promo is invisible.
  */
-export function surfaceCounts(rows: PromoBannerRow[]): {
-  home: number;
-  skills: number;
-} {
+export function surfaceCounts(
+  rows: PromoBannerRow[],
+): Record<PromoSurfaceField, number> {
   const live = rows.filter(isLive);
-  return {
-    home: live.filter((row) => row.show_on_home).length,
-    skills: live.filter((row) => row.show_on_skills).length,
-  };
+  return Object.fromEntries(
+    PROMO_SURFACES.map((surface) => [
+      surface.field,
+      live.filter((row) => row[surface.field]).length,
+    ]),
+  ) as Record<PromoSurfaceField, number>;
 }
 
 export const SURFACE_LIMIT = 2;

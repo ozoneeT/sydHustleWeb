@@ -4,6 +4,7 @@ import {
   PromoToggle,
 } from "@/components/console/PromoBannerForm";
 import { StatCard } from "@/components/moderator/StatCard";
+import { APP_ROUTES, PROMO_SURFACES } from "@/lib/console/app-routes";
 import {
   isLive,
   listPromoBanners,
@@ -20,6 +21,9 @@ export const dynamic = "force-dynamic";
 export default async function PromosPage() {
   const banners = await listPromoBanners();
   const counts = surfaceCounts(banners);
+  const over = PROMO_SURFACES.filter(
+    (surface) => counts[surface.field] > SURFACE_LIMIT,
+  );
 
   return (
     <div className="space-y-8">
@@ -35,34 +39,28 @@ export default async function PromosPage() {
         </p>
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-3">
-        <StatCard
-          label="Live on Skills"
-          value={`${Math.min(counts.skills, SURFACE_LIMIT)} / ${SURFACE_LIMIT}`}
-          hint={
-            counts.skills > SURFACE_LIMIT
-              ? `${counts.skills - SURFACE_LIMIT} never appears`
-              : "slots in use"
-          }
-        />
-        <StatCard
-          label="Live on Home"
-          value={`${Math.min(counts.home, SURFACE_LIMIT)} / ${SURFACE_LIMIT}`}
-          hint={
-            counts.home > SURFACE_LIMIT
-              ? `${counts.home - SURFACE_LIMIT} never appears`
-              : "slots in use"
-          }
-        />
-        <StatCard label="Total banners" value={banners.length} />
+      <div className="grid gap-4 sm:grid-cols-3 lg:grid-cols-5">
+        {PROMO_SURFACES.map((surface) => (
+          <StatCard
+            key={surface.field}
+            label={surface.label}
+            value={`${Math.min(counts[surface.field], SURFACE_LIMIT)} / ${SURFACE_LIMIT}`}
+            hint={
+              counts[surface.field] > SURFACE_LIMIT
+                ? `${counts[surface.field] - SURFACE_LIMIT} never appears`
+                : "slots in use"
+            }
+          />
+        ))}
       </div>
 
-      {counts.skills > SURFACE_LIMIT || counts.home > SURFACE_LIMIT ? (
+      {over.length > 0 ? (
         <p className="rounded-xl border border-amber-500/30 bg-amber-500/5 p-4 text-sm text-amber-300">
-          More live banners than slots. The app shows the first{" "}
-          {SURFACE_LIMIT} by order and silently ignores the rest — so a banner
-          below the cut isn&apos;t broken, it just never appears. Lower its
-          order, or turn something else off.
+          More live banners than slots on{" "}
+          {over.map((surface) => surface.label).join(", ")}. The app shows the
+          first {SURFACE_LIMIT} by order and silently ignores the rest — so a
+          banner below the cut isn&apos;t broken, it just never appears. Lower
+          its order, or turn something else off.
         </p>
       ) : null}
 
@@ -91,16 +89,72 @@ export default async function PromosPage() {
           <PromoBannerForm />
         </div>
       </section>
+
+      <RouteReference />
     </div>
+  );
+}
+
+/**
+ * What a CTA link can point at.
+ *
+ * The app's router ignores anything it doesn't recognise, so a typo
+ * here produces a button that silently does nothing rather than an
+ * error anyone sees — which is exactly the kind of bug that survives
+ * for months. Worth having the list on the page.
+ */
+function RouteReference() {
+  return (
+    <section className="space-y-2">
+      <h2 className="text-sm font-semibold text-muted-foreground">
+        Where a button can link to
+      </h2>
+      <div className="rounded-xl border border-white/10 p-4">
+        <p className="mb-4 text-sm text-muted-foreground">
+          In-app screens start with <code className="text-accent">/</code>.
+          External links must be <code className="text-accent">https://</code>.
+          Anything else is rejected when you save, because the app would
+          quietly ignore it.
+        </p>
+        <div className="grid gap-6 sm:grid-cols-2">
+          {APP_ROUTES.map((group) => (
+            <div key={group.group}>
+              <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                {group.group}
+              </p>
+              <ul className="space-y-1.5">
+                {group.routes.map((route) => (
+                  <li className="text-sm" key={route.path}>
+                    <code className="rounded bg-white/5 px-1.5 py-0.5 text-xs text-accent">
+                      {route.path}
+                    </code>{" "}
+                    <span className="text-muted-foreground">{route.label}</span>
+                    {route.note ? (
+                      <span className="block pl-1 text-xs text-muted-foreground/70">
+                        {route.note}
+                      </span>
+                    ) : null}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ))}
+        </div>
+        <p className="mt-4 text-xs text-muted-foreground">
+          Screens that need a specific record — a chat, one Hustler&apos;s
+          profile, a single transaction — aren&apos;t listed. A banner is shown
+          to everybody, and those screens have no meaning without knowing whose.
+        </p>
+      </div>
+    </section>
   );
 }
 
 function BannerCard({ banner }: { banner: PromoBannerRow }) {
   const live = isLive(banner);
-  const where = [
-    banner.show_on_home ? "Home" : null,
-    banner.show_on_skills ? "Skills" : null,
-  ].filter(Boolean);
+  const where = PROMO_SURFACES.filter((surface) => banner[surface.field]).map(
+    (surface) => surface.label,
+  );
 
   return (
     <div className="rounded-xl border border-white/10">
@@ -117,6 +171,16 @@ function BannerCard({ banner }: { banner: PromoBannerRow }) {
         <span className="rounded-full bg-white/10 px-2 py-1 text-xs text-muted-foreground">
           {banner.kind === "featured" ? "featured listings" : "custom"}
         </span>
+
+        {banner.image_url ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            alt=""
+            className="h-10 w-16 shrink-0 rounded object-cover"
+            src={banner.image_url}
+          />
+        ) : null}
+
         <div className="min-w-[12rem] flex-1">
           <p className="font-medium">{banner.title ?? "(no headline)"}</p>
           <p className="text-xs text-muted-foreground">

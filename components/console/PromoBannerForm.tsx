@@ -4,15 +4,19 @@ import { useActionState, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { APP_ROUTE_PATHS, PROMO_SURFACES } from "@/lib/console/app-routes";
 import {
   deletePromoBanner,
   savePromoBanner,
   togglePromoBanner,
+  uploadPromoArt,
   type PromoActionState,
+  type PromoUploadState,
 } from "@/lib/console/promo-actions";
 import type { PromoBannerRow } from "@/lib/console/promos";
 
 const INITIAL: PromoActionState = { error: null, done: false };
+const UPLOAD_INITIAL: PromoUploadState = { error: null, url: null };
 
 const field =
   "w-full rounded-lg border border-white/10 bg-transparent px-3 py-2 text-sm outline-none focus:border-accent/50";
@@ -85,15 +89,9 @@ export function PromoBannerForm({ banner }: { banner?: PromoBannerRow }) {
               name="subtitle"
             />
           </label>
-          <label className="space-y-1 text-xs text-muted-foreground sm:col-span-2">
-            Image URL — https only. Leave blank for the brand gradient.
-            <input
-              className={field}
-              defaultValue={banner?.image_url ?? ""}
-              name="image_url"
-              placeholder="https://…"
-            />
-          </label>
+          <div className="sm:col-span-2">
+            <ArtPicker initial={banner?.image_url ?? ""} />
+          </div>
         </div>
       ) : (
         <div className="space-y-3">
@@ -159,9 +157,15 @@ export function PromoBannerForm({ banner }: { banner?: PromoBannerRow }) {
           <input
             className={field}
             defaultValue={banner?.cta_url ?? ""}
+            list="app-routes"
             name="cta_url"
             placeholder="/sms-paywall"
           />
+          <datalist id="app-routes">
+            {APP_ROUTE_PATHS.map((path) => (
+              <option key={path} value={path} />
+            ))}
+          </datalist>
         </label>
       </div>
 
@@ -170,22 +174,23 @@ export function PromoBannerForm({ banner }: { banner?: PromoBannerRow }) {
           Where it appears
         </legend>
         <div className="flex flex-wrap items-center gap-5">
-          <label className="flex items-center gap-2 text-sm">
-            <input
-              defaultChecked={banner?.show_on_home ?? false}
-              name="show_on_home"
-              type="checkbox"
-            />
-            Home
-          </label>
-          <label className="flex items-center gap-2 text-sm">
-            <input
-              defaultChecked={banner?.show_on_skills ?? true}
-              name="show_on_skills"
-              type="checkbox"
-            />
-            Skills
-          </label>
+          {PROMO_SURFACES.map((surface) => (
+            <label
+              className="flex items-center gap-2 text-sm"
+              key={surface.field}
+            >
+              <input
+                defaultChecked={
+                  banner ? banner[surface.field] : surface.defaultOn
+                }
+                name={surface.field}
+                type="checkbox"
+              />
+              {surface.label}
+            </label>
+          ))}
+        </div>
+        <div className="flex flex-wrap items-center gap-5 border-t border-white/5 pt-3">
           <label className="flex items-center gap-2 text-sm">
             <input
               defaultChecked={banner?.is_active ?? true}
@@ -207,8 +212,10 @@ export function PromoBannerForm({ banner }: { banner?: PromoBannerRow }) {
           </label>
         </div>
         <p className="text-xs text-muted-foreground">
-          Neither box ticked means it runs nowhere. Each surface shows the first
-          two by order — a third stays here but never appears.
+          Nothing ticked means it runs nowhere. Each surface shows the first two
+          by order — a third stays here but never appears. Hustles, Wallet and
+          Messages start off: Messages is a private conversation list, and an
+          advert landing there should be a deliberate act.
         </p>
       </fieldset>
 
@@ -290,5 +297,101 @@ export function PromoDelete({ id }: { id: string }) {
         <span className="text-xs text-red-400">{state.error}</span>
       ) : null}
     </form>
+  );
+}
+
+/**
+ * Artwork: upload from this machine, or paste a URL.
+ *
+ * The upload is its own action rather than part of the save, because a
+ * file and a form submit have different failure modes — an image that
+ * is too large should not also lose the copy someone just typed. It
+ * uploads, hands back a public URL, and fills the hidden field the save
+ * actually reads. Pasting a URL straight in still works.
+ */
+function ArtPicker({ initial }: { initial: string }) {
+  const [state, action, pending] = useActionState(
+    uploadPromoArt,
+    UPLOAD_INITIAL,
+  );
+  const [url, setUrl] = useState(initial);
+
+  // The action's result wins once it lands, so the preview and the
+  // hidden field follow the upload without an effect.
+  const current = state.url ?? url;
+
+  return (
+    <div className="space-y-2">
+      <p className="text-xs text-muted-foreground">
+        Artwork — optional. Leave empty for the brand gradient.
+      </p>
+
+      <input name="image_url" type="hidden" value={current} />
+
+      <div className="flex flex-wrap items-center gap-3">
+        {current ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            alt="Banner artwork"
+            className="h-16 w-28 rounded-lg object-cover"
+            src={current}
+          />
+        ) : (
+          <div className="flex h-16 w-28 items-center justify-center rounded-lg border border-dashed border-white/15 text-xs text-muted-foreground">
+            No image
+          </div>
+        )}
+
+        <div className="space-y-2">
+          <input
+            accept="image/jpeg,image/png,image/webp"
+            className="block text-xs text-muted-foreground file:mr-3 file:rounded-lg file:border-0 file:bg-white/10 file:px-3 file:py-1.5 file:text-xs file:text-foreground"
+            form="promo-art-upload"
+            name="file"
+            type="file"
+          />
+          <div className="flex items-center gap-2">
+            <Button
+              className="h-8 px-3 text-xs"
+              disabled={pending}
+              form="promo-art-upload"
+              type="submit"
+              variant="secondary"
+            >
+              {pending ? "Uploading…" : "Upload"}
+            </Button>
+            {current ? (
+              <Button
+                className="h-8 px-2 text-xs"
+                onClick={() => setUrl("")}
+                type="button"
+                variant="ghost"
+              >
+                Remove
+              </Button>
+            ) : null}
+            {state.error ? (
+              <span className="text-xs text-red-400">{state.error}</span>
+            ) : null}
+          </div>
+        </div>
+      </div>
+
+      <label className="block space-y-1 text-xs text-muted-foreground">
+        …or paste an https:// image URL
+        <input
+          className={field}
+          onChange={(event) => setUrl(event.target.value)}
+          placeholder="https://…"
+          value={current}
+        />
+      </label>
+
+      {/* Sits outside the banner form: nesting one form inside another
+          is invalid HTML, and the upload has to submit on its own
+          without taking the half-filled banner with it. The file input
+          and its button reach it by `form=`. */}
+      <form action={action} id="promo-art-upload" />
+    </div>
   );
 }

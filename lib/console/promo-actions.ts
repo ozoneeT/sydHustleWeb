@@ -8,6 +8,56 @@ import { createServerSupabaseClient } from "@/lib/supabase/server";
 
 export type PromoActionState = { error: string | null; done: boolean };
 
+/** What the bucket accepts, and how big. A banner is drawn at most a
+ * phone-width wide, so anything past a couple of megabytes is a photo
+ * nobody downsized before uploading. */
+const MAX_ART_BYTES = 4 * 1024 * 1024;
+const ART_TYPES = ["image/jpeg", "image/png", "image/webp"];
+
+/**
+ * Upload artwork from the operator's machine and return its public URL.
+ *
+ * Goes through the service-role client, because `promo-art` has no
+ * insert policy at all — this bucket feeds a surface every user sees,
+ * so upload rights belong to the console rather than to anybody holding
+ * a session.
+ */
+export async function uploadPromoArt(
+  _prev: PromoUploadState,
+  formData: FormData,
+): Promise<PromoUploadState> {
+  await requireConsole();
+
+  const file = formData.get("file");
+  if (!(file instanceof File) || file.size === 0) {
+    return { error: "Choose an image first.", url: null };
+  }
+  if (!ART_TYPES.includes(file.type)) {
+    return { error: "JPEG, PNG or WebP only.", url: null };
+  }
+  if (file.size > MAX_ART_BYTES) {
+    return { error: "That image is over 4MB — resize it first.", url: null };
+  }
+
+  const supabase = createServerSupabaseClient();
+  const ext = file.name.split(".").pop()?.toLowerCase() ?? "jpg";
+  // Random name, not the original: two operators uploading `banner.jpg`
+  // must not overwrite each other, and the filename off someone's
+  // desktop is not something to put in a public URL.
+  const path = `${crypto.randomUUID()}.${ext}`;
+
+  const { error } = await supabase.storage
+    .from("promo-art")
+    .upload(path, file, { contentType: file.type, upsert: false });
+  if (error) return { error: error.message, url: null };
+
+  const { data } = supabase.storage.from("promo-art").getPublicUrl(path);
+  return { error: null, url: data.publicUrl };
+}
+
+export type PromoUploadState = { error: string | null; url: string | null };
+
+
 const checkbox = z
   .union([z.literal("on"), z.literal("true"), z.null(), z.undefined()])
   .transform((v) => v === "on" || v === "true");
@@ -46,6 +96,9 @@ const bannerSchema = z.object({
   rotate_minutes: z.coerce.number().int().min(1).max(1440),
   show_on_home: checkbox,
   show_on_skills: checkbox,
+  show_on_hustles: checkbox,
+  show_on_wallet: checkbox,
+  show_on_messages: checkbox,
   is_active: checkbox,
   sort_order: z.coerce.number().int().min(1).max(999),
 });
@@ -63,6 +116,9 @@ function parse(formData: FormData) {
     rotate_minutes: formData.get("rotate_minutes") ?? 20,
     show_on_home: formData.get("show_on_home"),
     show_on_skills: formData.get("show_on_skills"),
+    show_on_hustles: formData.get("show_on_hustles"),
+    show_on_wallet: formData.get("show_on_wallet"),
+    show_on_messages: formData.get("show_on_messages"),
     is_active: formData.get("is_active"),
     sort_order: formData.get("sort_order") ?? 100,
   });
@@ -106,6 +162,9 @@ export async function savePromoBanner(
     rotate_minutes: v.rotate_minutes,
     show_on_home: v.show_on_home,
     show_on_skills: v.show_on_skills,
+    show_on_hustles: v.show_on_hustles,
+    show_on_wallet: v.show_on_wallet,
+    show_on_messages: v.show_on_messages,
     is_active: v.is_active,
     sort_order: v.sort_order,
   };
