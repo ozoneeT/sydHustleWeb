@@ -2,6 +2,7 @@
 
 import { useActionState, useState } from "react";
 
+import { PromoPreview } from "@/components/console/PromoPreview";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { APP_ROUTE_PATHS, PROMO_SURFACES } from "@/lib/console/app-routes";
@@ -20,99 +21,124 @@ const UPLOAD_INITIAL: PromoUploadState = { error: null, url: null };
 
 const field =
   "w-full rounded-lg border border-white/10 bg-transparent px-3 py-2 text-sm outline-none focus:border-accent/50";
+const labelClass = "space-y-1 text-xs text-muted-foreground";
 
 /**
- * Create or edit one banner.
+ * Create or edit one banner, with a live preview.
  *
- * The two kinds share a form and swap the middle of it, because they
- * share everything that actually matters — placement, order, schedule —
- * and differ only in where the content comes from.
+ * Everything the preview draws is controlled state rather than an
+ * uncontrolled input, because the whole point is that the picture
+ * follows the typing. Everything it does NOT draw — placement,
+ * schedule, the featured settings — stays uncontrolled, since making
+ * the entire form controlled would be a lot of re-rendering to show
+ * nothing new.
  */
 export function PromoBannerForm({ banner }: { banner?: PromoBannerRow }) {
   const [state, action, pending] = useActionState(savePromoBanner, INITIAL);
+
   const [kind, setKind] = useState<"custom" | "featured">(
     banner?.kind ?? "custom",
   );
+  const [eyebrow, setEyebrow] = useState(banner?.eyebrow ?? "");
+  const [title, setTitle] = useState(banner?.title ?? "");
+  const [subtitle, setSubtitle] = useState(banner?.subtitle ?? "");
+  const [ctaLabel, setCtaLabel] = useState(banner?.cta_label ?? "");
+  const [imageUrl, setImageUrl] = useState(banner?.image_url ?? "");
+
+  const [imageMode, setImageMode] = useState<"background" | "side" | "none">(
+    banner?.image_mode ?? "background",
+  );
+  const [imageSide, setImageSide] = useState<"left" | "right">(
+    banner?.image_side ?? "right",
+  );
+  const [imageScale, setImageScale] = useState(
+    Number(banner?.image_scale ?? 0.36),
+  );
+  const [height, setHeight] = useState(banner?.height ?? 150);
+  const [widthPct, setWidthPct] = useState(banner?.width_pct ?? 100);
+  const [backgroundMode, setBackgroundMode] = useState<"solid" | "gradient">(
+    banner?.background_mode ?? "gradient",
+  );
 
   return (
-    <form action={action} className="space-y-4">
-      {banner ? <input name="id" type="hidden" value={banner.id} /> : null}
-      <input name="kind" type="hidden" value={kind} />
+    <div className="grid gap-6 lg:grid-cols-[1fr_420px]">
+      <form action={action} className="space-y-4">
+        {banner ? <input name="id" type="hidden" value={banner.id} /> : null}
+        <input name="kind" type="hidden" value={kind} />
+        <input name="image_url" type="hidden" value={imageUrl} />
+        <input name="image_mode" type="hidden" value={imageMode} />
+        <input name="image_side" type="hidden" value={imageSide} />
+        <input name="image_scale" type="hidden" value={imageScale} />
+        <input name="background_mode" type="hidden" value={backgroundMode} />
 
-      <div className="flex gap-2">
-        <Button
-          className="h-8 px-3 text-xs"
-          onClick={() => setKind("custom")}
-          type="button"
-          variant={kind === "custom" ? "default" : "secondary"}
-        >
-          Custom content
-        </Button>
-        <Button
-          className="h-8 px-3 text-xs"
-          onClick={() => setKind("featured")}
-          type="button"
-          variant={kind === "featured" ? "default" : "secondary"}
-        >
-          Featured listings
-        </Button>
-      </div>
-
-      {kind === "custom" ? (
-        <div className="grid gap-3 sm:grid-cols-2">
-          <label className="space-y-1 text-xs text-muted-foreground">
-            Eyebrow
-            <input
-              className={field}
-              defaultValue={banner?.eyebrow ?? ""}
-              maxLength={60}
-              name="eyebrow"
-              placeholder="NEVER MISS A BOOKING"
-            />
-          </label>
-          <label className="space-y-1 text-xs text-muted-foreground">
-            Headline (required)
-            <input
-              className={field}
-              defaultValue={banner?.title ?? ""}
-              maxLength={120}
-              name="title"
-              placeholder="Get a text the moment someone books you"
-            />
-          </label>
-          <label className="space-y-1 text-xs text-muted-foreground sm:col-span-2">
-            Subtitle
-            <input
-              className={field}
-              defaultValue={banner?.subtitle ?? ""}
-              maxLength={200}
-              name="subtitle"
-            />
-          </label>
-          <div className="sm:col-span-2">
-            <ArtPicker initial={banner?.image_url ?? ""} />
-          </div>
+        <div className="flex gap-2">
+          <Button
+            className="h-8 px-3 text-xs"
+            onClick={() => setKind("custom")}
+            type="button"
+            variant={kind === "custom" ? "default" : "secondary"}
+          >
+            Custom content
+          </Button>
+          <Button
+            className="h-8 px-3 text-xs"
+            onClick={() => setKind("featured")}
+            type="button"
+            variant={kind === "featured" ? "default" : "secondary"}
+          >
+            Featured listings
+          </Button>
         </div>
-      ) : (
-        <div className="space-y-3">
+
+        {kind === "featured" ? (
           <p className="rounded-lg border border-amber-500/30 bg-amber-500/5 p-3 text-xs text-amber-300">
             This banner shows live hustleBoost placements, and the app labels it{" "}
             <strong>PROMOTED</strong> because someone paid for them. Don&apos;t
             use it for house content that wasn&apos;t sold — the label would be
             claiming a commercial relationship that doesn&apos;t exist.
           </p>
-          <div className="grid gap-3 sm:grid-cols-2">
-            <label className="space-y-1 text-xs text-muted-foreground">
-              Headline
+        ) : null}
+
+        <div className="grid gap-3 sm:grid-cols-2">
+          {kind === "custom" ? (
+            <label className={labelClass}>
+              Eyebrow
               <input
                 className={field}
-                defaultValue={banner?.title ?? ""}
-                maxLength={120}
-                name="title"
-                placeholder="Boosted right now"
+                maxLength={60}
+                name="eyebrow"
+                onChange={(e) => setEyebrow(e.target.value)}
+                placeholder="NEVER MISS A BOOKING"
+                value={eyebrow}
               />
             </label>
-            <label className="space-y-1 text-xs text-muted-foreground">
+          ) : null}
+          <label className={labelClass}>
+            Headline{kind === "custom" ? " (required)" : ""}
+            <input
+              className={field}
+              maxLength={120}
+              name="title"
+              onChange={(e) => setTitle(e.target.value)}
+              placeholder="Get a text the moment someone books you"
+              value={title}
+            />
+          </label>
+          <label className={`${labelClass} sm:col-span-2`}>
+            Subtitle
+            <input
+              className={field}
+              maxLength={200}
+              name="subtitle"
+              onChange={(e) => setSubtitle(e.target.value)}
+              value={subtitle}
+            />
+          </label>
+        </div>
+
+        {kind === "featured" ? (
+          <div className="grid gap-3 sm:grid-cols-2">
+            <label className={labelClass}>
               How many to show
               <Input
                 defaultValue={banner?.featured_count ?? 6}
@@ -122,7 +148,7 @@ export function PromoBannerForm({ banner }: { banner?: PromoBannerRow }) {
                 type="number"
               />
             </label>
-            <label className="space-y-1 text-xs text-muted-foreground">
+            <label className={labelClass}>
               Reshuffle every (minutes)
               <Input
                 defaultValue={banner?.rotate_minutes ?? 20}
@@ -133,104 +159,381 @@ export function PromoBannerForm({ banner }: { banner?: PromoBannerRow }) {
               />
             </label>
           </div>
-          <p className="text-xs text-muted-foreground">
-            Drawn from whatever is boosted at the time. The shuffle is derived
-            from the clock, so every phone sees the same set within a window and
-            it changes on its own — no job to run, nothing to keep in sync.
-          </p>
+        ) : null}
+
+        <div className="grid gap-3 sm:grid-cols-2">
+          <label className={labelClass}>
+            Button label
+            <input
+              className={field}
+              maxLength={40}
+              name="cta_label"
+              onChange={(e) => setCtaLabel(e.target.value)}
+              placeholder="Turn on SMS alerts"
+              value={ctaLabel}
+            />
+          </label>
+          <label className={labelClass}>
+            Button link — /screen or https://
+            <input
+              className={field}
+              defaultValue={banner?.cta_url ?? ""}
+              list="app-routes"
+              name="cta_url"
+              placeholder="/sms-paywall"
+            />
+            <datalist id="app-routes">
+              {APP_ROUTE_PATHS.map((path) => (
+                <option key={path} value={path} />
+              ))}
+            </datalist>
+          </label>
         </div>
-      )}
 
-      <div className="grid gap-3 sm:grid-cols-2">
-        <label className="space-y-1 text-xs text-muted-foreground">
-          Button label
-          <input
-            className={field}
-            defaultValue={banner?.cta_label ?? ""}
-            maxLength={40}
-            name="cta_label"
-            placeholder="Turn on SMS alerts"
+        <ArtPicker onChange={setImageUrl} value={imageUrl} />
+
+        <fieldset className="space-y-3 rounded-lg border border-white/10 p-3">
+          <legend className="px-1 text-xs text-muted-foreground">Layout</legend>
+
+          <Choice
+            label="Artwork"
+            onChange={(v) => setImageMode(v as typeof imageMode)}
+            options={[
+              { value: "background", label: "Fills the card" },
+              { value: "side", label: "Beside the copy" },
+              { value: "none", label: "No image" },
+            ]}
+            value={imageMode}
           />
-        </label>
-        <label className="space-y-1 text-xs text-muted-foreground">
-          Button link — /screen or https://
-          <input
-            className={field}
-            defaultValue={banner?.cta_url ?? ""}
-            list="app-routes"
-            name="cta_url"
-            placeholder="/sms-paywall"
+
+          {imageMode === "side" ? (
+            <>
+              <Choice
+                label="Side"
+                onChange={(v) => setImageSide(v as typeof imageSide)}
+                options={[
+                  { value: "left", label: "Left" },
+                  { value: "right", label: "Right" },
+                ]}
+                value={imageSide}
+              />
+              <Slider
+                display={`${Math.round(imageScale * 100)}%`}
+                label="Image width"
+                max={0.6}
+                min={0.15}
+                onChange={setImageScale}
+                step={0.01}
+                value={imageScale}
+              />
+            </>
+          ) : null}
+
+          {imageMode !== "background" ? (
+            <Choice
+              label="Background"
+              onChange={(v) => setBackgroundMode(v as typeof backgroundMode)}
+              options={[
+                { value: "gradient", label: "Gradient" },
+                { value: "solid", label: "Solid" },
+              ]}
+              value={backgroundMode}
+            />
+          ) : null}
+
+          <Slider
+            display={`${height}pt`}
+            label="Card height"
+            max={320}
+            min={90}
+            name="height"
+            onChange={setHeight}
+            step={2}
+            value={height}
           />
-          <datalist id="app-routes">
-            {APP_ROUTE_PATHS.map((path) => (
-              <option key={path} value={path} />
+          <Slider
+            display={`${widthPct}%`}
+            label="Card width"
+            max={100}
+            min={60}
+            name="width_pct"
+            onChange={setWidthPct}
+            step={1}
+            value={widthPct}
+          />
+        </fieldset>
+
+        <fieldset className="space-y-2 rounded-lg border border-white/10 p-3">
+          <legend className="px-1 text-xs text-muted-foreground">
+            Where it appears
+          </legend>
+          <div className="flex flex-wrap items-center gap-5">
+            {PROMO_SURFACES.map((surface) => (
+              <label
+                className="flex items-center gap-2 text-sm"
+                key={surface.field}
+              >
+                <input
+                  defaultChecked={
+                    banner ? banner[surface.field] : surface.defaultOn
+                  }
+                  name={surface.field}
+                  type="checkbox"
+                />
+                {surface.label}
+              </label>
             ))}
-          </datalist>
-        </label>
-      </div>
-
-      <fieldset className="space-y-2 rounded-lg border border-white/10 p-3">
-        <legend className="px-1 text-xs text-muted-foreground">
-          Where it appears
-        </legend>
-        <div className="flex flex-wrap items-center gap-5">
-          {PROMO_SURFACES.map((surface) => (
-            <label
-              className="flex items-center gap-2 text-sm"
-              key={surface.field}
-            >
+          </div>
+          <div className="flex flex-wrap items-center gap-5 border-t border-white/5 pt-3">
+            <label className="flex items-center gap-2 text-sm">
               <input
-                defaultChecked={
-                  banner ? banner[surface.field] : surface.defaultOn
-                }
-                name={surface.field}
+                defaultChecked={banner?.is_active ?? true}
+                name="is_active"
                 type="checkbox"
               />
-              {surface.label}
+              Active
             </label>
-          ))}
-        </div>
-        <div className="flex flex-wrap items-center gap-5 border-t border-white/5 pt-3">
-          <label className="flex items-center gap-2 text-sm">
-            <input
-              defaultChecked={banner?.is_active ?? true}
-              name="is_active"
-              type="checkbox"
-            />
-            Active
-          </label>
-          <label className="flex items-center gap-2 text-sm">
-            Order
-            <Input
-              className="h-8 w-20"
-              defaultValue={banner?.sort_order ?? 100}
-              max={999}
-              min={1}
-              name="sort_order"
-              type="number"
-            />
-          </label>
-        </div>
-        <p className="text-xs text-muted-foreground">
-          Nothing ticked means it runs nowhere. Each surface shows the first two
-          by order — a third stays here but never appears. Hustles, Wallet and
-          Messages start off: Messages is a private conversation list, and an
-          advert landing there should be a deliberate act.
-        </p>
-      </fieldset>
+            <label className="flex items-center gap-2 text-sm">
+              Order
+              <Input
+                className="h-8 w-20"
+                defaultValue={banner?.sort_order ?? 100}
+                max={999}
+                min={1}
+                name="sort_order"
+                type="number"
+              />
+            </label>
+          </div>
+          <p className="text-xs text-muted-foreground">
+            Nothing ticked means it runs nowhere. Each surface shows the first
+            two by order — a third stays here but never appears. Hustles, Wallet
+            and Messages start off: Messages is a private conversation list, and
+            an advert landing there should be a deliberate act.
+          </p>
+        </fieldset>
 
-      <div className="flex flex-wrap items-center gap-2">
-        <Button disabled={pending} type="submit">
-          {pending ? "Saving…" : banner ? "Save changes" : "Create banner"}
-        </Button>
-        {state.error ? (
-          <span className="text-xs text-red-400">{state.error}</span>
-        ) : null}
-        {state.done ? (
-          <span className="text-xs text-emerald-400">Saved.</span>
-        ) : null}
+        <div className="flex flex-wrap items-center gap-2">
+          <Button disabled={pending} type="submit">
+            {pending ? "Saving…" : banner ? "Save changes" : "Create banner"}
+          </Button>
+          {state.error ? (
+            <span className="text-xs text-red-400">{state.error}</span>
+          ) : null}
+          {state.done ? (
+            <span className="text-xs text-emerald-400">Saved.</span>
+          ) : null}
+        </div>
+      </form>
+
+      <div className="space-y-2 lg:sticky lg:top-4 lg:self-start">
+        <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+          Preview
+        </p>
+        <PromoPreview
+          values={{
+            eyebrow,
+            title,
+            subtitle,
+            imageUrl,
+            ctaLabel,
+            isPaid: kind === "featured",
+            imageMode,
+            imageSide,
+            imageScale,
+            height,
+            widthPct,
+            backgroundMode,
+          }}
+        />
+        <p className="text-xs text-muted-foreground">
+          Drawn at a phone&apos;s real proportions. A <strong>featured</strong>{" "}
+          banner also shows a strip of the boosted listings underneath, which
+          can&apos;t be previewed here because the set is picked at the moment
+          it&apos;s shown.
+        </p>
       </div>
-    </form>
+    </div>
+  );
+}
+
+/** A labelled row of mutually exclusive buttons. */
+function Choice({
+  label,
+  options,
+  value,
+  onChange,
+}: {
+  label: string;
+  options: { value: string; label: string }[];
+  value: string;
+  onChange: (value: string) => void;
+}) {
+  return (
+    <div className="flex flex-wrap items-center gap-2">
+      <span className="w-24 shrink-0 text-xs text-muted-foreground">
+        {label}
+      </span>
+      {options.map((option) => (
+        <Button
+          className="h-7 px-2.5 text-xs"
+          key={option.value}
+          onClick={() => onChange(option.value)}
+          type="button"
+          variant={value === option.value ? "default" : "secondary"}
+        >
+          {option.label}
+        </Button>
+      ))}
+    </div>
+  );
+}
+
+function Slider({
+  label,
+  value,
+  min,
+  max,
+  step,
+  display,
+  name,
+  onChange,
+}: {
+  label: string;
+  value: number;
+  min: number;
+  max: number;
+  step: number;
+  display: string;
+  /** Present only when the value posts directly; the rest are mirrored
+   * into hidden inputs alongside their control. */
+  name?: string;
+  onChange: (value: number) => void;
+}) {
+  return (
+    <div className="flex flex-wrap items-center gap-3">
+      <span className="w-24 shrink-0 text-xs text-muted-foreground">
+        {label}
+      </span>
+      <input
+        className="h-1.5 min-w-[10rem] flex-1 cursor-pointer appearance-none rounded-full bg-white/10 accent-accent"
+        max={max}
+        min={min}
+        name={name}
+        onChange={(event) => onChange(Number(event.target.value))}
+        step={step}
+        type="range"
+        value={value}
+      />
+      <span className="w-14 shrink-0 text-right text-xs tabular-nums text-foreground">
+        {display}
+      </span>
+    </div>
+  );
+}
+
+/**
+ * Artwork: upload from this machine, or paste a URL.
+ *
+ * The upload is its own action rather than part of the save, because a
+ * file and a form submit have different failure modes — an image that
+ * is too large should not also lose the copy someone just typed. It
+ * uploads, hands back a public URL, and lifts it into the parent's
+ * state so the preview updates with it.
+ */
+function ArtPicker({
+  value,
+  onChange,
+}: {
+  value: string;
+  onChange: (url: string) => void;
+}) {
+  const [state, action, pending] = useActionState(
+    uploadPromoArt,
+    UPLOAD_INITIAL,
+  );
+  const [lastUploaded, setLastUploaded] = useState<string | null>(null);
+
+  // Lift a finished upload into the parent once, during render rather
+  // than in an effect — writing state during render is allowed when
+  // it's derived from a prop/result change and guarded against
+  // repeating, which `lastUploaded` does.
+  if (state.url && state.url !== lastUploaded) {
+    setLastUploaded(state.url);
+    onChange(state.url);
+  }
+
+  return (
+    <div className="space-y-2">
+      <p className="text-xs text-muted-foreground">
+        Artwork — optional. A transparent PNG works well beside the copy.
+      </p>
+
+      <div className="flex flex-wrap items-center gap-3">
+        {value ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            alt="Banner artwork"
+            className="h-16 w-28 rounded-lg object-contain"
+            src={value}
+          />
+        ) : (
+          <div className="flex h-16 w-28 items-center justify-center rounded-lg border border-dashed border-white/15 text-xs text-muted-foreground">
+            No image
+          </div>
+        )}
+
+        <div className="space-y-2">
+          <input
+            accept="image/jpeg,image/png,image/webp"
+            className="block text-xs text-muted-foreground file:mr-3 file:rounded-lg file:border-0 file:bg-white/10 file:px-3 file:py-1.5 file:text-xs file:text-foreground"
+            form="promo-art-upload"
+            name="file"
+            type="file"
+          />
+          <div className="flex items-center gap-2">
+            <Button
+              className="h-8 px-3 text-xs"
+              disabled={pending}
+              form="promo-art-upload"
+              type="submit"
+              variant="secondary"
+            >
+              {pending ? "Uploading…" : "Upload"}
+            </Button>
+            {value ? (
+              <Button
+                className="h-8 px-2 text-xs"
+                onClick={() => onChange("")}
+                type="button"
+                variant="ghost"
+              >
+                Remove
+              </Button>
+            ) : null}
+            {state.error ? (
+              <span className="text-xs text-red-400">{state.error}</span>
+            ) : null}
+          </div>
+        </div>
+      </div>
+
+      <label className="block space-y-1 text-xs text-muted-foreground">
+        …or paste an https:// image URL
+        <input
+          className={field}
+          onChange={(event) => onChange(event.target.value)}
+          placeholder="https://…"
+          value={value}
+        />
+      </label>
+
+      {/* Sits outside the banner form: nesting one form inside another
+          is invalid HTML, and the upload has to submit on its own
+          without taking the half-filled banner with it. The file input
+          and its button reach it by `form=`. */}
+      <form action={action} id="promo-art-upload" />
+    </div>
   );
 }
 
@@ -297,101 +600,5 @@ export function PromoDelete({ id }: { id: string }) {
         <span className="text-xs text-red-400">{state.error}</span>
       ) : null}
     </form>
-  );
-}
-
-/**
- * Artwork: upload from this machine, or paste a URL.
- *
- * The upload is its own action rather than part of the save, because a
- * file and a form submit have different failure modes — an image that
- * is too large should not also lose the copy someone just typed. It
- * uploads, hands back a public URL, and fills the hidden field the save
- * actually reads. Pasting a URL straight in still works.
- */
-function ArtPicker({ initial }: { initial: string }) {
-  const [state, action, pending] = useActionState(
-    uploadPromoArt,
-    UPLOAD_INITIAL,
-  );
-  const [url, setUrl] = useState(initial);
-
-  // The action's result wins once it lands, so the preview and the
-  // hidden field follow the upload without an effect.
-  const current = state.url ?? url;
-
-  return (
-    <div className="space-y-2">
-      <p className="text-xs text-muted-foreground">
-        Artwork — optional. Leave empty for the brand gradient.
-      </p>
-
-      <input name="image_url" type="hidden" value={current} />
-
-      <div className="flex flex-wrap items-center gap-3">
-        {current ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
-            alt="Banner artwork"
-            className="h-16 w-28 rounded-lg object-cover"
-            src={current}
-          />
-        ) : (
-          <div className="flex h-16 w-28 items-center justify-center rounded-lg border border-dashed border-white/15 text-xs text-muted-foreground">
-            No image
-          </div>
-        )}
-
-        <div className="space-y-2">
-          <input
-            accept="image/jpeg,image/png,image/webp"
-            className="block text-xs text-muted-foreground file:mr-3 file:rounded-lg file:border-0 file:bg-white/10 file:px-3 file:py-1.5 file:text-xs file:text-foreground"
-            form="promo-art-upload"
-            name="file"
-            type="file"
-          />
-          <div className="flex items-center gap-2">
-            <Button
-              className="h-8 px-3 text-xs"
-              disabled={pending}
-              form="promo-art-upload"
-              type="submit"
-              variant="secondary"
-            >
-              {pending ? "Uploading…" : "Upload"}
-            </Button>
-            {current ? (
-              <Button
-                className="h-8 px-2 text-xs"
-                onClick={() => setUrl("")}
-                type="button"
-                variant="ghost"
-              >
-                Remove
-              </Button>
-            ) : null}
-            {state.error ? (
-              <span className="text-xs text-red-400">{state.error}</span>
-            ) : null}
-          </div>
-        </div>
-      </div>
-
-      <label className="block space-y-1 text-xs text-muted-foreground">
-        …or paste an https:// image URL
-        <input
-          className={field}
-          onChange={(event) => setUrl(event.target.value)}
-          placeholder="https://…"
-          value={current}
-        />
-      </label>
-
-      {/* Sits outside the banner form: nesting one form inside another
-          is invalid HTML, and the upload has to submit on its own
-          without taking the half-filled banner with it. The file input
-          and its button reach it by `form=`. */}
-      <form action={action} id="promo-art-upload" />
-    </div>
   );
 }

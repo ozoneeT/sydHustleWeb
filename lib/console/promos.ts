@@ -41,6 +41,12 @@ export type PromoBannerRow = {
   show_on_hustles: boolean;
   show_on_wallet: boolean;
   show_on_messages: boolean;
+  image_mode: "background" | "side" | "none";
+  image_side: "left" | "right";
+  image_scale: number;
+  height: number;
+  width_pct: number;
+  background_mode: "solid" | "gradient";
   is_active: boolean;
   sort_order: number;
   starts_at: string | null;
