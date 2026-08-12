@@ -1,6 +1,6 @@
 import { StatCard } from "@/components/moderator/StatCard";
 import { listSubscribers } from "@/lib/console/data";
-import { naira, shortDate } from "@/lib/console/format";
+import { shortDate } from "@/lib/console/format";
 
 export const metadata = { title: "Subscribers — sydHustle Console" };
 
@@ -68,17 +68,10 @@ export default async function SubscribersPage() {
                 <td className="px-4 py-3 font-mono text-xs text-muted-foreground">
                   {row.phone}
                 </td>
-                <td className="px-4 py-3 capitalize">
-                  {row.plan}
-                  {row.pending_plan ? (
-                    <span className="block text-xs text-sky-400">
-                      → {row.pending_plan}
-                      {row.pending_prepaid_amount != null
-                        ? ` (${naira(row.pending_prepaid_amount)} prepaid)`
-                        : ""}
-                    </span>
-                  ) : null}
-                </td>
+                {/* No pending-switch line any more: plan changes happen
+                    inside the store's subscription group, so we never
+                    see one in flight. */}
+                <td className="px-4 py-3 capitalize">{row.plan}</td>
                 <td className="px-4 py-3 text-muted-foreground">
                   {shortDate(row.current_period_end)}
                   {!row.auto_renew ? (

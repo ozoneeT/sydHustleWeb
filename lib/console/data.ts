@@ -260,8 +260,6 @@ export type SubscriberRow = {
   status: string;
   auto_renew: boolean;
   current_period_end: string;
-  pending_plan: string | null;
-  pending_prepaid_amount: number | null;
   created_at: string;
   /** Paid-up right now — status alone lags, since the renewal job runs
    * hourly and a lapsed row keeps saying 'active' until it fires. */
@@ -273,14 +271,17 @@ export async function listSubscribers(): Promise<SubscriberRow[]> {
   const { data, error } = await supabase
     .from("sms_subscriptions")
     .select(
-      "profile_id, phone, plan, status, auto_renew, current_period_end, pending_plan, pending_prepaid_amount, created_at"
+      // No `pending_plan`/`pending_prepaid_amount`: 20260810070000
+      // dropped them when SMS billing moved to the app stores. Switching
+      // plans inside a subscription group is Apple's and Google's job and
+      // they prorate it themselves, so there is no pending switch for us
+      // to hold — and selecting the columns broke the whole build.
+      "profile_id, phone, plan, status, auto_renew, current_period_end, created_at"
     )
     .order("created_at", { ascending: false });
   if (error) throw new Error(error.message);
 
-  type Row = Omit<SubscriberRow, "profile_name" | "live" | "pending_prepaid_amount"> & {
-    pending_prepaid_amount: string | number | null;
-  };
+  type Row = Omit<SubscriberRow, "profile_name" | "live">;
   const rows = (data ?? []) as Row[];
 
   // No FK from subscriptions to profiles for PostgREST to follow, so the
@@ -300,10 +301,6 @@ export async function listSubscribers(): Promise<SubscriberRow[]> {
   const now = Date.now();
   return rows.map((row) => ({
     ...row,
-    pending_prepaid_amount:
-      row.pending_prepaid_amount === null
-        ? null
-        : Number(row.pending_prepaid_amount),
     profile_name: nameById.get(row.profile_id) ?? null,
     live:
       row.status === "active" &&
