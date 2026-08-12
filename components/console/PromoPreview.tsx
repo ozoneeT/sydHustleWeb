@@ -1,5 +1,40 @@
 "use client";
 
+import {
+  Gift,
+  Megaphone,
+  MessageCircle,
+  Rocket,
+  ShieldCheck,
+  Sparkles,
+  Star,
+  TrendingUp,
+  Wallet,
+  Zap,
+  type LucideIcon,
+} from "lucide-react";
+
+/**
+ * Ionicons name → the nearest Lucide equivalent.
+ *
+ * The app draws from Ionicons and the console from Lucide, so the
+ * preview can only be honest about an icon it has a stand-in for. The
+ * curated list in `promo-presets.ts` is what keeps the two in step; a
+ * name missing here renders nothing rather than guessing.
+ */
+const ICONS: Record<string, LucideIcon> = {
+  "chatbubble-ellipses": MessageCircle,
+  rocket: Rocket,
+  "shield-checkmark": ShieldCheck,
+  sparkles: Sparkles,
+  "trending-up": TrendingUp,
+  wallet: Wallet,
+  flash: Zap,
+  star: Star,
+  gift: Gift,
+  megaphone: Megaphone,
+};
+
 /**
  * What the banner will look like on a phone.
  *
@@ -74,6 +109,7 @@ export type PreviewValues = {
   bgLightTo: string;
   bgDarkFrom: string;
   bgDarkTo: string;
+  icon: string;
 };
 
 /** Both schemes, side by side — the only honest way to check a colour
@@ -96,7 +132,10 @@ function PromoPreviewPane({
 }) {
   const hasImage = Boolean(values.imageUrl) && values.imageMode !== "none";
   const isBackground = hasImage && values.imageMode === "background";
-  const isSide = hasImage && values.imageMode === "side";
+  const Icon = values.icon ? ICONS[values.icon] : undefined;
+  // An icon stands in for a side image when there is no artwork, which
+  // is what lets a preset look finished the moment it is picked.
+  const isSide = values.imageMode === "side" && (hasImage || Boolean(Icon));
 
   const available = PHONE_WIDTH - FEED_INSET * 2;
   const cardWidth = Math.round((available * values.widthPct) / 100);
@@ -229,7 +268,18 @@ function PromoPreviewPane({
               ) : null}
             </div>
 
-            {isSide ? (
+            {isSide && !hasImage && Icon ? (
+              <div
+                className="flex items-center justify-center"
+                style={{
+                  width: `${values.imageScale * 100}%`,
+                  color: ink,
+                  opacity: 0.9,
+                }}
+              >
+                <Icon size={Math.min(96, values.height * 0.5)} />
+              </div>
+            ) : isSide ? (
               // `contain`, matching the app: a side image is usually an
               // icon or a cut-out, and cropping one to fill a box loses
               // the thing it was a picture of.

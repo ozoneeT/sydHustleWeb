@@ -7,6 +7,11 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { APP_ROUTE_PATHS, PROMO_SURFACES } from "@/lib/console/app-routes";
 import {
+  PROMO_ICONS,
+  PROMO_PRESETS,
+  type PromoPreset,
+} from "@/lib/console/promo-presets";
+import {
   deletePromoBanner,
   savePromoBanner,
   togglePromoBanner,
@@ -67,6 +72,36 @@ export function PromoBannerForm({ banner }: { banner?: PromoBannerRow }) {
     banner?.bg_dark_from ?? "#0F2E2E",
   );
   const [bgDarkTo, setBgDarkTo] = useState(banner?.bg_dark_to ?? "#081A1A");
+  const [icon, setIcon] = useState(banner?.icon ?? "");
+
+  /**
+   * Fill the form from a preset.
+   *
+   * Copies plain values in and stops — nothing records which preset was
+   * used, so editing a preset here never rewrites a campaign that is
+   * already running. Anything the preset doesn't mention keeps what is
+   * on screen, so picking one late in an edit doesn't wipe the
+   * placement you already set.
+   */
+  const applyPreset = (preset: PromoPreset) => {
+    const v = preset.values;
+    if (v.kind) setKind(v.kind);
+    setEyebrow(v.eyebrow ?? "");
+    setTitle(v.title ?? "");
+    setSubtitle(v.subtitle ?? "");
+    setCtaLabel(v.cta_label ?? "");
+    setIcon(v.icon ?? "");
+    if (v.image_mode) setImageMode(v.image_mode);
+    if (v.image_side) setImageSide(v.image_side);
+    if (v.image_scale !== undefined) setImageScale(Number(v.image_scale));
+    if (v.height !== undefined) setHeight(v.height);
+    if (v.width_pct !== undefined) setWidthPct(v.width_pct);
+    if (v.background_mode) setBackgroundMode(v.background_mode);
+    if (v.bg_dark_from) setBgDarkFrom(v.bg_dark_from);
+    if (v.bg_dark_to) setBgDarkTo(v.bg_dark_to);
+    if (v.bg_light_from) setBgLightFrom(v.bg_light_from);
+    if (v.bg_light_to) setBgLightTo(v.bg_light_to);
+  };
 
   return (
     <div className="grid gap-6 lg:grid-cols-[1fr_420px]">
@@ -82,6 +117,28 @@ export function PromoBannerForm({ banner }: { banner?: PromoBannerRow }) {
         <input name="bg_light_to" type="hidden" value={bgLightTo} />
         <input name="bg_dark_from" type="hidden" value={bgDarkFrom} />
         <input name="bg_dark_to" type="hidden" value={bgDarkTo} />
+        <input name="icon" type="hidden" value={icon} />
+
+        <div className="space-y-2 rounded-lg border border-white/10 p-3">
+          <p className="text-xs text-muted-foreground">
+            Start from a preset — then change anything you like. Presets only
+            fill the form; nothing stays linked to them afterwards.
+          </p>
+          <div className="flex flex-wrap gap-2">
+            {PROMO_PRESETS.map((preset) => (
+              <Button
+                className="h-8 px-3 text-xs"
+                key={preset.id}
+                onClick={() => applyPreset(preset)}
+                title={preset.description}
+                type="button"
+                variant="secondary"
+              >
+                {preset.name}
+              </Button>
+            ))}
+          </div>
+        </div>
 
         <div className="flex gap-2">
           <Button
@@ -217,6 +274,36 @@ export function PromoBannerForm({ banner }: { banner?: PromoBannerRow }) {
             ]}
             value={imageMode}
           />
+
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="w-24 shrink-0 text-xs text-muted-foreground">
+              Icon
+            </span>
+            <Button
+              className="h-7 px-2.5 text-xs"
+              onClick={() => setIcon("")}
+              type="button"
+              variant={icon === "" ? "default" : "secondary"}
+            >
+              None
+            </Button>
+            {PROMO_ICONS.map((option) => (
+              <Button
+                className="h-7 px-2.5 text-xs"
+                key={option.value}
+                onClick={() => setIcon(option.value)}
+                type="button"
+                variant={icon === option.value ? "default" : "secondary"}
+              >
+                {option.label}
+              </Button>
+            ))}
+          </div>
+          {icon && imageMode !== "side" ? (
+            <p className="text-xs text-muted-foreground">
+              An icon only draws in the <em>beside the copy</em> layout.
+            </p>
+          ) : null}
 
           {imageMode === "side" ? (
             <>
@@ -395,6 +482,7 @@ export function PromoBannerForm({ banner }: { banner?: PromoBannerRow }) {
             bgLightTo,
             bgDarkFrom,
             bgDarkTo,
+            icon,
           }}
         />
         <p className="text-xs text-muted-foreground">

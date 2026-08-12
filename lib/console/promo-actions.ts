@@ -115,6 +115,9 @@ const bannerSchema = z.object({
   bg_light_to: hexColour,
   bg_dark_from: hexColour,
   bg_dark_to: hexColour,
+  // Empty means "no icon"; anything else must be one the preview can
+  // also draw, so it is checked here and by the CHECK constraint.
+  icon: z.string().trim().max(40).optional(),
   show_on_home: checkbox,
   show_on_skills: checkbox,
   show_on_hustles: checkbox,
@@ -145,6 +148,7 @@ function parse(formData: FormData) {
     bg_light_to: formData.get("bg_light_to") ?? "#081A1A",
     bg_dark_from: formData.get("bg_dark_from") ?? "#0F2E2E",
     bg_dark_to: formData.get("bg_dark_to") ?? "#081A1A",
+    icon: formData.get("icon") ?? undefined,
     show_on_home: formData.get("show_on_home"),
     show_on_skills: formData.get("show_on_skills"),
     show_on_hustles: formData.get("show_on_hustles"),
@@ -201,6 +205,7 @@ export async function savePromoBanner(
     bg_light_to: v.bg_light_to,
     bg_dark_from: v.bg_dark_from,
     bg_dark_to: v.bg_dark_to,
+    icon: nullify(v.icon),
     show_on_home: v.show_on_home,
     show_on_skills: v.show_on_skills,
     show_on_hustles: v.show_on_hustles,
