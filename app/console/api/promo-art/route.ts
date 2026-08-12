@@ -16,7 +16,15 @@ import { createServerSupabaseClient } from "@/lib/supabase/server";
  * A plain `fetch` from the client touches none of that: it returns a
  * URL, the form puts it in state, and nothing else on the page moves.
  *
- * Auth is checked here rather than by `requireConsole`, which
+ * It lives UNDER `/console` on purpose. The operator cookie is scoped
+ * `path: "/console"`, so a handler at `/api/...` never receives it and
+ * every upload came back "Not signed in." Widening the cookie to `/`
+ * would have fixed the symptom by sending an operator session to every
+ * public page on the site — the wrong trade for a file upload. Moving
+ * the route keeps the cookie's scope exactly as narrow as it was, and
+ * the middleware's `/console/:path*` matcher now guards it too.
+ *
+ * Auth is still checked here rather than by `requireConsole`, which
  * `redirect()`s — correct for a page, useless for a POST that wants a
  * status code back.
  */

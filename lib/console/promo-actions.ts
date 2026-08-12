@@ -8,7 +8,7 @@ import { createServerSupabaseClient } from "@/lib/supabase/server";
 
 export type PromoActionState = { error: string | null; done: boolean };
 
-// Artwork upload lives in app/api/console/promo-art/route.ts — a
+// Artwork upload lives in app/console/api/promo-art/route.ts — a
 // server action there would re-render the page and collapse the form
 // mid-edit.
 

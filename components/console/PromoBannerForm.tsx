@@ -873,7 +873,7 @@ function ArtPicker({
     try {
       const body = new FormData();
       body.append("file", file);
-      const response = await fetch("/api/console/promo-art", {
+      const response = await fetch("/console/api/promo-art", {
         body,
         method: "POST",
       });
