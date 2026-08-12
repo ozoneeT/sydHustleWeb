@@ -217,14 +217,16 @@ export function PromoBannerForm({ banner }: { banner?: PromoBannerRow }) {
                 ]}
                 value={imageSide}
               />
+              {/* Percent in the UI, fraction in the column — the
+                  conversion lives here so nothing downstream deals in
+                  0.36. */}
               <Slider
-                display={`${Math.round(imageScale * 100)}%`}
                 label="Image width"
-                max={0.6}
-                min={0.15}
-                onChange={setImageScale}
-                step={0.01}
-                value={imageScale}
+                max={60}
+                min={15}
+                onChange={(next) => setImageScale(next / 100)}
+                unit="%"
+                value={Math.round(imageScale * 100)}
               />
             </>
           ) : null}
@@ -242,23 +244,22 @@ export function PromoBannerForm({ banner }: { banner?: PromoBannerRow }) {
           ) : null}
 
           <Slider
-            display={`${height}pt`}
             label="Card height"
             max={320}
             min={90}
             name="height"
             onChange={setHeight}
             step={2}
+            unit="pt"
             value={height}
           />
           <Slider
-            display={`${widthPct}%`}
             label="Card width"
             max={100}
             min={60}
             name="width_pct"
             onChange={setWidthPct}
-            step={1}
+            unit="%"
             value={widthPct}
           />
         </fieldset>
@@ -394,8 +395,8 @@ function Slider({
   value,
   min,
   max,
-  step,
-  display,
+  step = 1,
+  unit,
   name,
   onChange,
 }: {
@@ -403,31 +404,58 @@ function Slider({
   value: number;
   min: number;
   max: number;
-  step: number;
-  display: string;
-  /** Present only when the value posts directly; the rest are mirrored
-   * into hidden inputs alongside their control. */
+  step?: number;
+  unit: string;
+  /** Present when the value posts directly under this name. */
   name?: string;
   onChange: (value: number) => void;
 }) {
+  const clamp = (next: number) => Math.min(max, Math.max(min, next));
+
   return (
     <div className="flex flex-wrap items-center gap-3">
       <span className="w-24 shrink-0 text-xs text-muted-foreground">
         {label}
       </span>
+
+      {/*
+        No `appearance-none` here, deliberately. It strips a range
+        input's thumb entirely, and Tailwind's `accent-*` only colours a
+        control whose native appearance is intact — together they render
+        a bare track with nothing to grab, which reads as a slider that
+        has stopped updating rather than one that was never draggable.
+        Native appearance plus `accent-color` gets a brand-tinted thumb
+        that works in every browser.
+      */}
       <input
-        className="h-1.5 min-w-[10rem] flex-1 cursor-pointer appearance-none rounded-full bg-white/10 accent-accent"
+        className="min-w-[9rem] flex-1 cursor-pointer accent-accent"
         max={max}
         min={min}
-        name={name}
-        onChange={(event) => onChange(Number(event.target.value))}
+        onChange={(event) => onChange(clamp(Number(event.target.value)))}
         step={step}
         type="range"
         value={value}
       />
-      <span className="w-14 shrink-0 text-right text-xs tabular-nums text-foreground">
-        {display}
-      </span>
+
+      {/* Typed as well as dragged: a slider is quick and imprecise, and
+          sometimes you know you want exactly 200. */}
+      <input
+        className="w-16 shrink-0 rounded-md border border-white/10 bg-transparent px-2 py-1 text-right text-xs tabular-nums outline-none focus:border-accent/50"
+        max={max}
+        min={min}
+        onChange={(event) => {
+          const next = Number(event.target.value);
+          if (Number.isFinite(next)) onChange(clamp(next));
+        }}
+        step={step}
+        type="number"
+        value={value}
+      />
+      <span className="w-6 shrink-0 text-xs text-muted-foreground">{unit}</span>
+
+      {/* Posts from here rather than from either control, so the pair
+          reads as one field to the form. */}
+      {name ? <input name={name} type="hidden" value={value} /> : null}
     </div>
   );
 }
