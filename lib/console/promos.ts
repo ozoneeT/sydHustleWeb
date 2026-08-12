@@ -57,6 +57,13 @@ export type PromoBannerRow = {
   image_focus_y: number;
   art_pad_left: number;
   art_pad_right: number;
+  eyebrow_size: number;
+  title_size: number;
+  subtitle_size: number;
+  /** #RRGGBB, or null for the colour derived from the background. */
+  eyebrow_color: string | null;
+  title_color: string | null;
+  subtitle_color: string | null;
   is_active: boolean;
   sort_order: number;
   starts_at: string | null;

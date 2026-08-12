@@ -81,6 +81,17 @@ const bannerSchema = z.object({
   image_focus_y: z.coerce.number().int().min(0).max(100),
   art_pad_left: z.coerce.number().int().min(0).max(48),
   art_pad_right: z.coerce.number().int().min(0).max(48),
+  // Type size per line, in points — the same numbers the app passes to
+  // `fontSize`. Bounds mirror the CHECK constraints.
+  eyebrow_size: z.coerce.number().int().min(8).max(24),
+  title_size: z.coerce.number().int().min(12).max(40),
+  subtitle_size: z.coerce.number().int().min(9).max(28),
+  // Empty means "derive it from the background", which is both the
+  // default and the thing that guarantees a pale card never gets white
+  // text on it. A hex here is a deliberate override.
+  eyebrow_color: z.union([z.literal(""), hexColour]).optional(),
+  title_color: z.union([z.literal(""), hexColour]).optional(),
+  subtitle_color: z.union([z.literal(""), hexColour]).optional(),
   show_on_home: checkbox,
   show_on_skills: checkbox,
   show_on_hustles: checkbox,
@@ -117,6 +128,12 @@ function parse(formData: FormData) {
     image_focus_y: formData.get("image_focus_y") ?? 50,
     art_pad_left: formData.get("art_pad_left") ?? 10,
     art_pad_right: formData.get("art_pad_right") ?? 10,
+    eyebrow_size: formData.get("eyebrow_size") ?? 10,
+    title_size: formData.get("title_size") ?? 19,
+    subtitle_size: formData.get("subtitle_size") ?? 13,
+    eyebrow_color: formData.get("eyebrow_color") ?? undefined,
+    title_color: formData.get("title_color") ?? undefined,
+    subtitle_color: formData.get("subtitle_color") ?? undefined,
     show_on_home: formData.get("show_on_home"),
     show_on_skills: formData.get("show_on_skills"),
     show_on_hustles: formData.get("show_on_hustles"),
@@ -179,6 +196,12 @@ export async function savePromoBanner(
     image_focus_y: v.image_focus_y,
     art_pad_left: v.art_pad_left,
     art_pad_right: v.art_pad_right,
+    eyebrow_size: v.eyebrow_size,
+    title_size: v.title_size,
+    subtitle_size: v.subtitle_size,
+    eyebrow_color: nullify(v.eyebrow_color),
+    title_color: nullify(v.title_color),
+    subtitle_color: nullify(v.subtitle_color),
     show_on_home: v.show_on_home,
     show_on_skills: v.show_on_skills,
     show_on_hustles: v.show_on_hustles,

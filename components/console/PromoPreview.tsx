@@ -72,7 +72,7 @@ const FEED = {
  * repo — same WCAG luminance formula, same threshold. If one changes,
  * the other has to, or the preview starts lying about legibility.
  */
-function contrastText(hex: string): string {
+export function contrastText(hex: string): string {
   const value = hex.replace("#", "");
   if (value.length !== 6) return BRAND.white;
 
@@ -115,7 +115,25 @@ export type PreviewValues = {
   imageFocusY: number;
   artPadLeft: number;
   artPadRight: number;
+  eyebrowSize: number;
+  titleSize: number;
+  subtitleSize: number;
+  /** Empty string = derive it from the background, the default. */
+  eyebrowColor: string;
+  titleColor: string;
+  subtitleColor: string;
 };
+
+/**
+ * How big the stand-in icon is drawn.
+ *
+ * Mirrors `iconGlyphSize` in `promo-banner.tsx` in the mobile repo.
+ * Width leads because width is what the slider drags; height is a
+ * ceiling so a wide box can't produce a glyph taller than its card.
+ */
+function iconGlyphSize(boxWidth: number, cardHeight: number): number {
+  return Math.max(14, Math.min(boxWidth * 0.8, cardHeight * 0.62, 200));
+}
 
 /** Both schemes, side by side — the only honest way to check a colour
  * pair, since one set has to work on two very different feeds. */
@@ -226,8 +244,8 @@ function PromoPreviewPane({
                 <p
                   className="truncate"
                   style={{
-                    color: BRAND.primary,
-                    fontSize: 10,
+                    color: values.eyebrowColor || BRAND.primary,
+                    fontSize: values.eyebrowSize,
                     fontWeight: 900,
                     letterSpacing: 1,
                   }}
@@ -239,10 +257,11 @@ function PromoPreviewPane({
               {values.title ? (
                 <p
                   style={{
-                    color: ink,
-                    fontSize: 19,
+                    color: values.titleColor || ink,
+                    fontSize: values.titleSize,
                     fontWeight: 800,
-                    lineHeight: "24px",
+                    // Leading follows the size, as it does in the app.
+                    lineHeight: `${Math.round(values.titleSize * 1.26)}px`,
                     letterSpacing: "-0.4px",
                     display: "-webkit-box",
                     WebkitLineClamp: 2,
@@ -257,9 +276,9 @@ function PromoPreviewPane({
               {values.subtitle ? (
                 <p
                   style={{
-                    color: ink,
-                    opacity: 0.75,
-                    fontSize: 13,
+                    color: values.subtitleColor || ink,
+                    opacity: values.subtitleColor ? 1 : 0.75,
+                    fontSize: values.subtitleSize,
                     display: "-webkit-box",
                     WebkitLineClamp: 2,
                     WebkitBoxOrient: "vertical",
@@ -293,11 +312,18 @@ function PromoPreviewPane({
                   width: `${values.imageScale * 100}%`,
                   marginLeft: values.artPadLeft,
                   marginRight: values.artPadRight,
-                  color: ink,
+                  color: values.titleColor || ink,
                   opacity: 0.9,
                 }}
               >
-                <Icon size={Math.min(96, values.height * 0.5)} />
+                <Icon
+                  size={iconGlyphSize(
+                    (cardWidth * values.imageScale) -
+                      values.artPadLeft -
+                      values.artPadRight,
+                    values.height,
+                  )}
+                />
               </div>
             ) : isSide ? (
               // `contain`, matching the app: a side image is usually an

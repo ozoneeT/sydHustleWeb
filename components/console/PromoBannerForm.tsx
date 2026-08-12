@@ -3,7 +3,7 @@
 import { useActionState, useRef, useState } from "react";
 
 import { ImagePlacer } from "@/components/console/ImagePlacer";
-import { PromoPreview } from "@/components/console/PromoPreview";
+import { contrastText, PromoPreview } from "@/components/console/PromoPreview";
 import { PromoSizePreview } from "@/components/console/PromoSizePreview";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -108,6 +108,21 @@ export function PromoBannerForm({ banner }: { banner?: PromoBannerRow }) {
   const [padLeft, setPadLeft] = useState(banner?.art_pad_left ?? 10);
   const [padRight, setPadRight] = useState(banner?.art_pad_right ?? 10);
 
+  // Type. The size defaults are what these lines were hard-coded at
+  // before they were editable, so an untouched banner is unchanged.
+  // An empty colour means "derive it from the background" — see
+  // TextLine.
+  const [eyebrowSize, setEyebrowSize] = useState(banner?.eyebrow_size ?? 10);
+  const [titleSize, setTitleSize] = useState(banner?.title_size ?? 19);
+  const [subtitleSize, setSubtitleSize] = useState(
+    banner?.subtitle_size ?? 13,
+  );
+  const [eyebrowColor, setEyebrowColor] = useState(banner?.eyebrow_color ?? "");
+  const [titleColor, setTitleColor] = useState(banner?.title_color ?? "");
+  const [subtitleColor, setSubtitleColor] = useState(
+    banner?.subtitle_color ?? "",
+  );
+
   /**
    * Fill the form from a preset.
    *
@@ -137,6 +152,13 @@ export function PromoBannerForm({ banner }: { banner?: PromoBannerRow }) {
     if (v.bg_light_to) setBgLightTo(v.bg_light_to);
   };
 
+  /** What an auto line resolves to on the dark card. Used as the seed
+   * when someone turns auto off, so the picker opens on the colour
+   * already on screen rather than jumping to black. */
+  const autoInk = contrastText(
+    backgroundMode === "solid" ? bgDarkFrom : bgDarkTo,
+  );
+
   return (
     <div className="grid gap-6 lg:grid-cols-[1fr_420px]">
       <form action={action} className="space-y-4">
@@ -155,6 +177,9 @@ export function PromoBannerForm({ banner }: { banner?: PromoBannerRow }) {
         <input name="image_zoom" type="hidden" value={imageZoom} />
         <input name="image_focus_x" type="hidden" value={focusX} />
         <input name="image_focus_y" type="hidden" value={focusY} />
+        <input name="eyebrow_color" type="hidden" value={eyebrowColor} />
+        <input name="title_color" type="hidden" value={titleColor} />
+        <input name="subtitle_color" type="hidden" value={subtitleColor} />
 
         <Section
           hint="Start from one, then change anything you like. Presets only fill the form; nothing stays linked to them afterwards."
@@ -255,6 +280,54 @@ export function PromoBannerForm({ banner }: { banner?: PromoBannerRow }) {
           </label>
           )}
         </div>
+
+        {kind === "custom" ? (
+          <div className="space-y-3 rounded-lg border border-white/5 bg-white/[0.02] p-3">
+            <p className="text-xs font-medium">Text style</p>
+            <TextLine
+              autoColour={ACCENT}
+              colour={eyebrowColor}
+              defaultSize={10}
+              label="Eyebrow"
+              max={24}
+              min={8}
+              onColour={setEyebrowColor}
+              onSize={setEyebrowSize}
+              size={eyebrowSize}
+              sizeName="eyebrow_size"
+            />
+            <TextLine
+              autoColour={autoInk}
+              colour={titleColor}
+              defaultSize={19}
+              label="Headline"
+              max={40}
+              min={12}
+              onColour={setTitleColor}
+              onSize={setTitleSize}
+              size={titleSize}
+              sizeName="title_size"
+            />
+            <TextLine
+              autoColour={autoInk}
+              colour={subtitleColor}
+              defaultSize={13}
+              label="Subtitle"
+              max={28}
+              min={9}
+              onColour={setSubtitleColor}
+              onSize={setSubtitleSize}
+              size={subtitleSize}
+              sizeName="subtitle_size"
+            />
+            <p className="text-xs text-muted-foreground">
+              <em>Auto</em> derives the colour from the background — the
+              eyebrow takes the brand teal, the headline and subtitle take
+              black or white, whichever stays readable. Set one and you own
+              it in both schemes, so check the light preview before you do.
+            </p>
+          </div>
+        ) : null}
 
         {kind === "featured" ? (
           <div className="grid gap-3 sm:grid-cols-2">
@@ -683,6 +756,12 @@ export function PromoBannerForm({ banner }: { banner?: PromoBannerRow }) {
             imageFocusY: focusY,
             artPadLeft: padLeft,
             artPadRight: padRight,
+            eyebrowSize,
+            titleSize,
+            subtitleSize,
+            eyebrowColor,
+            titleColor,
+            subtitleColor,
           }}
         />
         <p className="text-xs text-muted-foreground">
@@ -691,6 +770,105 @@ export function PromoBannerForm({ banner }: { banner?: PromoBannerRow }) {
         </>
         )}
       </div>
+    </div>
+  );
+}
+
+/** The app's brand teal — an eyebrow's derived colour. */
+const ACCENT = "#14B8A6";
+
+/**
+ * Size and colour for one line of copy.
+ *
+ * Colour is a two-state control rather than a plain picker, because
+ * "derived from the background" is not a colour and cannot be
+ * expressed as one. Auto is the default and stays the default: it is
+ * what guarantees a pale card never gets white text on it. Touching
+ * the picker takes the line off auto, since that is plainly what
+ * someone reaching for it means; the Auto chip puts it back.
+ */
+function TextLine({
+  label,
+  size,
+  min,
+  max,
+  defaultSize,
+  sizeName,
+  onSize,
+  colour,
+  onColour,
+  autoColour,
+}: {
+  label: string;
+  size: number;
+  min: number;
+  max: number;
+  /** Where the shipped size sits, drawn as a tick on the track. */
+  defaultSize: number;
+  sizeName: string;
+  onSize: (value: number) => void;
+  /** "" means auto. */
+  colour: string;
+  onColour: (value: string) => void;
+  /** What auto resolves to right now — the picker's starting point. */
+  autoColour: string;
+}) {
+  const auto = colour === "";
+  const markPct = ((defaultSize - min) / (max - min)) * 100;
+
+  return (
+    <div className="flex flex-wrap items-center gap-3">
+      <span className="w-16 shrink-0 text-xs text-muted-foreground">
+        {label}
+      </span>
+
+      <div className="relative min-w-[8rem] flex-1">
+        <input
+          className="w-full cursor-pointer accent-accent"
+          max={max}
+          min={min}
+          onChange={(event) =>
+            onSize(Math.min(max, Math.max(min, Number(event.target.value))))
+          }
+          type="range"
+          value={size}
+        />
+        <div
+          aria-hidden
+          className="pointer-events-none absolute inset-x-[7px] top-0 bottom-0"
+        >
+          <span
+            className="absolute top-1/2 h-3 w-px -translate-x-1/2 -translate-y-1/2 bg-white/40"
+            style={{ left: `${markPct}%` }}
+            title={`Default: ${defaultSize}pt`}
+          />
+        </div>
+      </div>
+
+      <span className="w-10 shrink-0 text-right font-mono text-[11px] tabular-nums text-muted-foreground">
+        {size}pt
+      </span>
+      <input name={sizeName} type="hidden" value={size} />
+
+      <button
+        className={`shrink-0 rounded-md border px-2 py-1 text-[11px] ${
+          auto
+            ? "border-accent/50 bg-accent/10 text-accent"
+            : "border-white/10 text-muted-foreground hover:border-white/25"
+        }`}
+        onClick={() => onColour("")}
+        title="Derive the colour from the background"
+        type="button"
+      >
+        Auto
+      </button>
+      <input
+        className="h-7 w-8 shrink-0 cursor-pointer rounded border border-white/10 bg-transparent p-0.5"
+        onChange={(event) => onColour(event.target.value.toUpperCase())}
+        title={auto ? "Pick a colour to override" : colour}
+        type="color"
+        value={auto ? autoColour : colour}
+      />
     </div>
   );
 }
