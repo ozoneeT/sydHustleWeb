@@ -4,6 +4,7 @@ import { useActionState, useRef, useState } from "react";
 
 import { ImagePlacer } from "@/components/console/ImagePlacer";
 import { PromoPreview } from "@/components/console/PromoPreview";
+import { PromoSizePreview } from "@/components/console/PromoSizePreview";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { APP_ROUTE_PATHS, PROMO_SURFACES } from "@/lib/console/app-routes";
@@ -642,18 +643,16 @@ export function PromoBannerForm({ banner }: { banner?: PromoBannerRow }) {
           Preview
         </p>
         {kind === "featured" ? (
-          <div className="rounded-xl border border-white/10 p-4 text-sm text-muted-foreground">
-            <p className="mb-2 font-medium text-foreground">
-              Nothing to preview here.
+          <>
+            <PromoSizePreview height={height} widthPct={widthPct} />
+            <p className="text-xs text-muted-foreground">
+              Card size only. Which listings appear is decided at the moment
+              the banner is shown — whichever boosted subscribers are furthest
+              below their fair share of exposure and aren&apos;t already in the
+              main carousel — so sample content would show a set that
+              won&apos;t be the set.
             </p>
-            <p>
-              A Featured banner renders as a carousel of Featured cards, and
-              which listings appear is decided at the moment it is shown —
-              whichever boosted subscribers are furthest below their fair share
-              of exposure and are not already in the main carousel. Drawing a
-              mock-up would only show a set that will not be the set.
-            </p>
-          </div>
+          </>
         ) : (
         <>
         <PromoPreview
