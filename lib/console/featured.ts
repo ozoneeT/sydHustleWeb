@@ -18,7 +18,30 @@ export type BoostRow = {
   skill_name: string | null;
   display_name: string | null;
   cover_photo: string | null;
+
+  /* What the rotation has actually given this listing ------------- */
+  /** Times it was picked into a slot, whether or not anyone looked. */
+  appearances: number;
+  /** Accumulated on-screen time, seconds. */
+  seconds_shown: number;
+  /** On screen long enough to have been seen. */
+  impressions: number;
+  clicks: number;
+  /** Ratings on the Skill itself — the nearest thing sydHustle has to
+   * a "like", since there is no like button. Reviews come from settled
+   * work, so they say more than a tap would anyway. */
+  rating_avg: number;
+  rating_count: number;
 };
+
+/** Clicks per impression. The number a subscriber actually cares
+ * about: being shown is what they bought, being tapped is what they
+ * wanted. Null when nothing has been seen yet — 0% would imply a
+ * failure rather than an absence of data. */
+export function clickThrough(row: BoostRow): number | null {
+  if (row.impressions <= 0) return null;
+  return row.clicks / row.impressions;
+}
 
 export const PERIOD_DAYS: Record<BoostRow["period"], number> = {
   week: 7,
@@ -48,7 +71,16 @@ export async function listBoosts(): Promise<BoostRow[]> {
 
   type Row = Omit<
     BoostRow,
-    "hustler_name" | "skill_name" | "display_name" | "cover_photo"
+    | "hustler_name"
+    | "skill_name"
+    | "display_name"
+    | "cover_photo"
+    | "appearances"
+    | "seconds_shown"
+    | "impressions"
+    | "clicks"
+    | "rating_avg"
+    | "rating_count"
   >;
   const rows = (data ?? []) as Row[];
   if (rows.length === 0) return [];
@@ -56,13 +88,21 @@ export async function listBoosts(): Promise<BoostRow[]> {
   const skillIds = [...new Set(rows.map((row) => row.skill_id))];
   const profileIds = [...new Set(rows.map((row) => row.hustler_id))];
 
-  const [skills, profiles] = await Promise.all([
+  const [skills, profiles, exposure] = await Promise.all([
     supabase
       .from("hustler_skills")
-      .select("id, skill_name, display_name, cover_photo")
+      .select("id, skill_name, display_name, cover_photo, rating_avg, rating_count")
       .in("id", skillIds),
     supabase.from("profiles").select("id, full_name").in("id", profileIds),
+    supabase
+      .from("boost_exposure")
+      .select("skill_id, appearances, seconds_shown, impressions, clicks")
+      .in("skill_id", skillIds),
   ]);
+
+  const exposureById = new Map(
+    (exposure.data ?? []).map((row) => [row.skill_id as string, row]),
+  );
 
   const skillById = new Map(
     (skills.data ?? []).map((skill) => [skill.id as string, skill])
@@ -76,12 +116,22 @@ export async function listBoosts(): Promise<BoostRow[]> {
 
   return rows.map((row) => {
     const skill = skillById.get(row.skill_id);
+    // No exposure row yet simply means nothing has been shown — zeroes,
+    // not nulls, so the table reads as "none so far" rather than
+    // "unknown".
+    const seen = exposureById.get(row.skill_id);
     return {
       ...row,
       hustler_name: nameById.get(row.hustler_id) ?? null,
       skill_name: (skill?.skill_name as string | null) ?? null,
       display_name: (skill?.display_name as string | null) ?? null,
       cover_photo: (skill?.cover_photo as string | null) ?? null,
+      appearances: Number(seen?.appearances ?? 0),
+      seconds_shown: Number(seen?.seconds_shown ?? 0),
+      impressions: Number(seen?.impressions ?? 0),
+      clicks: Number(seen?.clicks ?? 0),
+      rating_avg: Number(skill?.rating_avg ?? 0),
+      rating_count: Number(skill?.rating_count ?? 0),
     };
   });
 }
