@@ -79,6 +79,11 @@ const ctaUrl = z
     "Link must start with / for an in-app screen, or https://",
   );
 
+const hexColour = z
+  .string()
+  .trim()
+  .regex(/^#[0-9A-Fa-f]{6}$/, "Colours must be a 6-digit hex like #0F2E2E");
+
 const bannerSchema = z.object({
   kind: z.enum(["custom", "featured"]),
   eyebrow: z.string().trim().max(60).optional(),
@@ -102,6 +107,14 @@ const bannerSchema = z.object({
   height: z.coerce.number().int().min(90).max(320),
   width_pct: z.coerce.number().int().min(60).max(100),
   background_mode: z.enum(["solid", "gradient"]),
+  // #RRGGBB only, matching the CHECK constraint. Short hex and named
+  // colours would have to be parsed by two renderers, and the first
+  // thing to disagree about a colour format is what makes the preview
+  // a liar.
+  bg_light_from: hexColour,
+  bg_light_to: hexColour,
+  bg_dark_from: hexColour,
+  bg_dark_to: hexColour,
   show_on_home: checkbox,
   show_on_skills: checkbox,
   show_on_hustles: checkbox,
@@ -128,6 +141,10 @@ function parse(formData: FormData) {
     height: formData.get("height") ?? 150,
     width_pct: formData.get("width_pct") ?? 100,
     background_mode: formData.get("background_mode") ?? "gradient",
+    bg_light_from: formData.get("bg_light_from") ?? "#0F2E2E",
+    bg_light_to: formData.get("bg_light_to") ?? "#081A1A",
+    bg_dark_from: formData.get("bg_dark_from") ?? "#0F2E2E",
+    bg_dark_to: formData.get("bg_dark_to") ?? "#081A1A",
     show_on_home: formData.get("show_on_home"),
     show_on_skills: formData.get("show_on_skills"),
     show_on_hustles: formData.get("show_on_hustles"),
@@ -180,6 +197,10 @@ export async function savePromoBanner(
     height: v.height,
     width_pct: v.width_pct,
     background_mode: v.background_mode,
+    bg_light_from: v.bg_light_from,
+    bg_light_to: v.bg_light_to,
+    bg_dark_from: v.bg_dark_from,
+    bg_dark_to: v.bg_dark_to,
     show_on_home: v.show_on_home,
     show_on_skills: v.show_on_skills,
     show_on_hustles: v.show_on_hustles,

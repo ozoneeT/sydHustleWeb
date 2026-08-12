@@ -18,14 +18,40 @@
 /** Brand constants, copied from the app's `Colors`. */
 const BRAND = {
   primary: "#14B8A6",
-  secondary: "#0F2E2E",
   secondaryDark: "#081A1A",
   white: "#FFFFFF",
   scrimSoft: "rgba(8,26,26,0.6)",
   scrim: "rgba(8,26,26,0.94)",
-  cardOutline: "rgba(20,184,166,0.30)",
-  feedBackground: "#081D1C",
 };
+
+/** The feed behind the card, per scheme — from the app's palette. */
+const FEED = {
+  dark: { background: "#081D1C", outline: "rgba(20,184,166,0.30)" },
+  light: { background: "#F8FAFC", outline: "#E2E8F0" },
+};
+
+/**
+ * Black or white, whichever stays readable on `hex`.
+ *
+ * Mirrors `contrastText` in `src/shared/lib/color.ts` in the mobile
+ * repo — same WCAG luminance formula, same threshold. If one changes,
+ * the other has to, or the preview starts lying about legibility.
+ */
+function contrastText(hex: string): string {
+  const value = hex.replace("#", "");
+  if (value.length !== 6) return BRAND.white;
+
+  const channel = (start: number) => {
+    const srgb = parseInt(value.slice(start, start + 2), 16) / 255;
+    return srgb <= 0.03928
+      ? srgb / 12.92
+      : Math.pow((srgb + 0.055) / 1.055, 2.4);
+  };
+
+  const luminance =
+    0.2126 * channel(0) + 0.7152 * channel(2) + 0.0722 * channel(4);
+  return luminance > 0.4 ? "#0F172A" : BRAND.white;
+}
 
 /** The app's feed gutter — `FEED_INSET` in the mobile repo. */
 const FEED_INSET = 16;
@@ -44,9 +70,30 @@ export type PreviewValues = {
   height: number;
   widthPct: number;
   backgroundMode: "solid" | "gradient";
+  bgLightFrom: string;
+  bgLightTo: string;
+  bgDarkFrom: string;
+  bgDarkTo: string;
 };
 
+/** Both schemes, side by side — the only honest way to check a colour
+ * pair, since one set has to work on two very different feeds. */
 export function PromoPreview({ values }: { values: PreviewValues }) {
+  return (
+    <div className="space-y-3">
+      <PromoPreviewPane scheme="dark" values={values} />
+      <PromoPreviewPane scheme="light" values={values} />
+    </div>
+  );
+}
+
+function PromoPreviewPane({
+  values,
+  scheme,
+}: {
+  values: PreviewValues;
+  scheme: "light" | "dark";
+}) {
   const hasImage = Boolean(values.imageUrl) && values.imageMode !== "none";
   const isBackground = hasImage && values.imageMode === "background";
   const isSide = hasImage && values.imageMode === "side";
@@ -54,16 +101,26 @@ export function PromoPreview({ values }: { values: PreviewValues }) {
   const available = PHONE_WIDTH - FEED_INSET * 2;
   const cardWidth = Math.round((available * values.widthPct) / 100);
 
+  const from = scheme === "dark" ? values.bgDarkFrom : values.bgLightFrom;
+  const to = scheme === "dark" ? values.bgDarkTo : values.bgLightTo;
+  const feed = FEED[scheme];
+
   const background = isBackground
     ? `linear-gradient(135deg, ${BRAND.scrimSoft}, ${BRAND.scrim})`
     : values.backgroundMode === "solid"
-      ? BRAND.secondary
-      : `linear-gradient(135deg, ${BRAND.secondary}, ${BRAND.secondaryDark})`;
+      ? from
+      : `linear-gradient(135deg, ${from}, ${to})`;
+
+  // A photo background always carries the dark scrim, so text stays
+  // white there whatever the colour fields say.
+  const ink = isBackground
+    ? BRAND.white
+    : contrastText(values.backgroundMode === "solid" ? from : to);
 
   return (
     <div
       className="flex justify-center rounded-2xl p-4"
-      style={{ background: BRAND.feedBackground }}
+      style={{ background: feed.background }}
     >
       <div style={{ width: PHONE_WIDTH }}>
         <div
@@ -73,8 +130,8 @@ export function PromoPreview({ values }: { values: PreviewValues }) {
             height: values.height,
             margin: "0 auto",
             borderRadius: 20,
-            border: `1px solid ${BRAND.cardOutline}`,
-            backgroundColor: BRAND.secondary,
+            border: `1px solid ${feed.outline}`,
+            backgroundColor: from,
             backgroundImage: isBackground
               ? `url(${values.imageUrl})`
               : undefined,
@@ -125,7 +182,7 @@ export function PromoPreview({ values }: { values: PreviewValues }) {
               {values.title ? (
                 <p
                   style={{
-                    color: BRAND.white,
+                    color: ink,
                     fontSize: 19,
                     fontWeight: 800,
                     lineHeight: "24px",
@@ -143,7 +200,8 @@ export function PromoPreview({ values }: { values: PreviewValues }) {
               {values.subtitle ? (
                 <p
                   style={{
-                    color: "rgba(255,255,255,0.75)",
+                    color: ink,
+                    opacity: 0.75,
                     fontSize: 13,
                     display: "-webkit-box",
                     WebkitLineClamp: 2,
@@ -191,8 +249,8 @@ export function PromoPreview({ values }: { values: PreviewValues }) {
         </div>
 
         <p className="mt-3 text-center text-xs text-muted-foreground">
-          {cardWidth} × {values.height} pt on a 390pt screen
-          {values.widthPct < 100 ? ` · ${values.widthPct}% width` : ""}
+          {scheme === "dark" ? "Dark mode" : "Light mode"} · {cardWidth} ×{" "}
+          {values.height} pt on a 390pt screen
         </p>
       </div>
     </div>

@@ -47,6 +47,10 @@ export type PromoBannerRow = {
   height: number;
   width_pct: number;
   background_mode: "solid" | "gradient";
+  bg_light_from: string;
+  bg_light_to: string;
+  bg_dark_from: string;
+  bg_dark_to: string;
   is_active: boolean;
   sort_order: number;
   starts_at: string | null;

@@ -59,6 +59,14 @@ export function PromoBannerForm({ banner }: { banner?: PromoBannerRow }) {
   const [backgroundMode, setBackgroundMode] = useState<"solid" | "gradient">(
     banner?.background_mode ?? "gradient",
   );
+  const [bgLightFrom, setBgLightFrom] = useState(
+    banner?.bg_light_from ?? "#0F2E2E",
+  );
+  const [bgLightTo, setBgLightTo] = useState(banner?.bg_light_to ?? "#081A1A");
+  const [bgDarkFrom, setBgDarkFrom] = useState(
+    banner?.bg_dark_from ?? "#0F2E2E",
+  );
+  const [bgDarkTo, setBgDarkTo] = useState(banner?.bg_dark_to ?? "#081A1A");
 
   return (
     <div className="grid gap-6 lg:grid-cols-[1fr_420px]">
@@ -70,6 +78,10 @@ export function PromoBannerForm({ banner }: { banner?: PromoBannerRow }) {
         <input name="image_side" type="hidden" value={imageSide} />
         <input name="image_scale" type="hidden" value={imageScale} />
         <input name="background_mode" type="hidden" value={backgroundMode} />
+        <input name="bg_light_from" type="hidden" value={bgLightFrom} />
+        <input name="bg_light_to" type="hidden" value={bgLightTo} />
+        <input name="bg_dark_from" type="hidden" value={bgDarkFrom} />
+        <input name="bg_dark_to" type="hidden" value={bgDarkTo} />
 
         <div className="flex gap-2">
           <Button
@@ -232,18 +244,51 @@ export function PromoBannerForm({ banner }: { banner?: PromoBannerRow }) {
           ) : null}
 
           {imageMode !== "background" ? (
-            <Choice
-              label="Background"
-              onChange={(v) => setBackgroundMode(v as typeof backgroundMode)}
-              options={[
-                { value: "gradient", label: "Gradient" },
-                { value: "solid", label: "Solid" },
-              ]}
-              value={backgroundMode}
-            />
-          ) : null}
+            <>
+              <Choice
+                label="Background"
+                onChange={(v) => setBackgroundMode(v as typeof backgroundMode)}
+                options={[
+                  { value: "gradient", label: "Gradient" },
+                  { value: "solid", label: "Solid" },
+                ]}
+                value={backgroundMode}
+              />
+
+              <div className="space-y-3 rounded-lg border border-white/5 bg-white/[0.02] p-3">
+                <ColourRow
+                  from={bgDarkFrom}
+                  isGradient={backgroundMode === "gradient"}
+                  label="Dark mode"
+                  onFrom={setBgDarkFrom}
+                  onTo={setBgDarkTo}
+                  to={bgDarkTo}
+                />
+                <ColourRow
+                  from={bgLightFrom}
+                  isGradient={backgroundMode === "gradient"}
+                  label="Light mode"
+                  onFrom={setBgLightFrom}
+                  onTo={setBgLightTo}
+                  to={bgLightTo}
+                />
+                <p className="text-xs text-muted-foreground">
+                  Headline and subtitle colour is derived from the background,
+                  so a pale choice gets dark text automatically — there is no
+                  way to end up with white on white.
+                </p>
+              </div>
+            </>
+          ) : (
+            <p className="text-xs text-muted-foreground">
+              A background image covers the whole card, so its colours
+              aren&apos;t used. Switch artwork to <em>beside the copy</em> or{" "}
+              <em>no image</em> to set them.
+            </p>
+          )}
 
           <Slider
+            defaultMark={150}
             label="Card height"
             max={320}
             min={90}
@@ -254,6 +299,7 @@ export function PromoBannerForm({ banner }: { banner?: PromoBannerRow }) {
             value={height}
           />
           <Slider
+            defaultMark={100}
             label="Card width"
             max={100}
             min={60}
@@ -345,6 +391,10 @@ export function PromoBannerForm({ banner }: { banner?: PromoBannerRow }) {
             height,
             widthPct,
             backgroundMode,
+            bgLightFrom,
+            bgLightTo,
+            bgDarkFrom,
+            bgDarkTo,
           }}
         />
         <p className="text-xs text-muted-foreground">
@@ -398,6 +448,7 @@ function Slider({
   step = 1,
   unit,
   name,
+  defaultMark,
   onChange,
 }: {
   label: string;
@@ -408,9 +459,18 @@ function Slider({
   unit: string;
   /** Present when the value posts directly under this name. */
   name?: string;
+  /** Where the shipped default sits, drawn as a tick on the track.
+   * Without it there is no way to tell whether you are extending past
+   * the size everything else on the feed was designed around, or
+   * pulling back from it. */
+  defaultMark?: number;
   onChange: (value: number) => void;
 }) {
   const clamp = (next: number) => Math.min(max, Math.max(min, next));
+  const markPct =
+    defaultMark === undefined
+      ? null
+      : ((defaultMark - min) / (max - min)) * 100;
 
   return (
     <div className="flex flex-wrap items-center gap-3">
@@ -427,15 +487,38 @@ function Slider({
         Native appearance plus `accent-color` gets a brand-tinted thumb
         that works in every browser.
       */}
-      <input
-        className="min-w-[9rem] flex-1 cursor-pointer accent-accent"
-        max={max}
-        min={min}
-        onChange={(event) => onChange(clamp(Number(event.target.value)))}
-        step={step}
-        type="range"
-        value={value}
-      />
+      <div className="relative min-w-[9rem] flex-1">
+        <input
+          className="w-full cursor-pointer accent-accent"
+          max={max}
+          min={min}
+          onChange={(event) => onChange(clamp(Number(event.target.value)))}
+          step={step}
+          type="range"
+          value={value}
+        />
+        {markPct !== null ? (
+          // Sits under the thumb's travel, inset by half a thumb at each
+          // end so the tick lines up with the value rather than the raw
+          // track — a range input's thumb never reaches the edges.
+          <div
+            aria-hidden
+            className="pointer-events-none absolute inset-x-[7px] top-0 bottom-0"
+          >
+            <span
+              className="absolute top-1/2 h-3 w-px -translate-x-1/2 -translate-y-1/2 bg-white/40"
+              style={{ left: `${markPct}%` }}
+              title={`Default: ${defaultMark}${unit}`}
+            />
+            <span
+              className="absolute top-[calc(50%+9px)] -translate-x-1/2 whitespace-nowrap text-[10px] text-muted-foreground"
+              style={{ left: `${markPct}%` }}
+            >
+              default
+            </span>
+          </div>
+        ) : null}
+      </div>
 
       {/* Typed as well as dragged: a slider is quick and imprecise, and
           sometimes you know you want exactly 200. */}
@@ -457,6 +540,75 @@ function Slider({
           reads as one field to the form. */}
       {name ? <input name={name} type="hidden" value={value} /> : null}
     </div>
+  );
+}
+
+/**
+ * One scheme's background colours.
+ *
+ * A swatch and a hex box for each end, because both ways of choosing a
+ * colour are the one people reach for: the picker when exploring, the
+ * hex when matching something that already exists.
+ */
+function ColourRow({
+  label,
+  from,
+  to,
+  isGradient,
+  onFrom,
+  onTo,
+}: {
+  label: string;
+  from: string;
+  to: string;
+  isGradient: boolean;
+  onFrom: (value: string) => void;
+  onTo: (value: string) => void;
+}) {
+  return (
+    <div className="flex flex-wrap items-center gap-3">
+      <span className="w-24 shrink-0 text-xs text-muted-foreground">
+        {label}
+      </span>
+      <ColourField label="From" onChange={onFrom} value={from} />
+      {isGradient ? <ColourField label="To" onChange={onTo} value={to} /> : null}
+      <span
+        className="h-7 w-16 shrink-0 rounded-md border border-white/10"
+        style={{
+          background: isGradient
+            ? `linear-gradient(135deg, ${from}, ${to})`
+            : from,
+        }}
+      />
+    </div>
+  );
+}
+
+function ColourField({
+  label,
+  value,
+  onChange,
+}: {
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+}) {
+  return (
+    <label className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
+      {label}
+      <input
+        className="h-7 w-8 cursor-pointer rounded border border-white/10 bg-transparent p-0.5"
+        onChange={(event) => onChange(event.target.value.toUpperCase())}
+        type="color"
+        value={value}
+      />
+      <input
+        className="w-[5.5rem] rounded-md border border-white/10 bg-transparent px-2 py-1 font-mono text-[11px] uppercase outline-none focus:border-accent/50"
+        maxLength={7}
+        onChange={(event) => onChange(event.target.value.toUpperCase())}
+        value={value}
+      />
+    </label>
   );
 }
 
