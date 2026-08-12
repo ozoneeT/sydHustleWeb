@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { useActionState, useRef, useState } from "react";
 
 import { ImagePlacer } from "@/components/console/ImagePlacer";
 import { PromoPreview } from "@/components/console/PromoPreview";
@@ -16,14 +16,11 @@ import {
   deletePromoBanner,
   savePromoBanner,
   togglePromoBanner,
-  uploadPromoArt,
   type PromoActionState,
-  type PromoUploadState,
 } from "@/lib/console/promo-actions";
 import type { PromoBannerRow } from "@/lib/console/promos";
 
 const INITIAL: PromoActionState = { error: null, done: false };
-const UPLOAD_INITIAL: PromoUploadState = { error: null, url: null };
 
 /**
  * One titled group of fields.
@@ -305,18 +302,45 @@ export function PromoBannerForm({ banner }: { banner?: PromoBannerRow }) {
         </Section>
 
         <Section
-          hint="An icon needs no upload and always looks finished. An image gives you a photo to place."
+          hint="An icon needs no upload and always looks finished. An image gives you a photo to place and zoom."
           title="Artwork"
         >
         <ArtPicker onChange={setImageUrl} value={imageUrl} />
 
-        {imageUrl && imageMode === "background" ? (
+        {imageUrl ? (
           <div className="space-y-3 rounded-lg border border-white/10 p-3">
-            <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-              Place the image
-            </p>
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                Place the image
+              </p>
+              {imageMode !== "background" ? (
+                <Button
+                  className="h-7 px-2.5 text-xs"
+                  onClick={() => setImageMode("background")}
+                  type="button"
+                  variant="secondary"
+                >
+                  Switch to fills-the-card
+                </Button>
+              ) : null}
+            </div>
+
+            {/* Shown whatever the layout, because hiding it was the
+                reason nobody could find it. Cropping only has meaning
+                when the image fills the card — a side image is drawn
+                `contain`, with nothing cropped away — so it says so
+                rather than disappearing. */}
+            {imageMode !== "background" ? (
+              <p className="rounded-lg border border-amber-500/30 bg-amber-500/5 p-2.5 text-xs text-amber-300">
+                Zoom and position only apply when the artwork{" "}
+                <strong>fills the card</strong>. In the{" "}
+                {imageMode === "side" ? "beside-the-copy" : "no image"} layout
+                the whole picture is shown, so there is nothing to crop.
+              </p>
+            ) : null}
             <ImagePlacer
               aspect={(390 - 32) / height}
+              disabled={imageMode !== "background"}
               focusX={focusX}
               focusY={focusY}
               onFocus={(x, y) => {
@@ -824,33 +848,57 @@ function ArtPicker({
   value: string;
   onChange: (url: string) => void;
 }) {
-  const [state, action, pending] = useActionState(
-    uploadPromoArt,
-    UPLOAD_INITIAL,
-  );
-  const [lastUploaded, setLastUploaded] = useState<string | null>(null);
+  const input = useRef<HTMLInputElement>(null);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  // Lift a finished upload into the parent once, during render rather
-  // than in an effect — writing state during render is allowed when
-  // it's derived from a prop/result change and guarded against
-  // repeating, which `lastUploaded` does.
-  if (state.url && state.url !== lastUploaded) {
-    setLastUploaded(state.url);
-    onChange(state.url);
-  }
+  /**
+   * Uploads with `fetch`, deliberately — not a server action.
+   *
+   * A server action submission makes Next re-render the route's server
+   * components, which collapsed the `<details>` this form sits inside
+   * and remounted it, throwing away every unsaved field. Picking a
+   * picture should not cost someone the copy they just wrote. A plain
+   * request returns a URL and nothing else on the page moves.
+   */
+  const upload = async () => {
+    const file = input.current?.files?.[0];
+    if (!file) {
+      setError("Choose an image first.");
+      return;
+    }
+
+    setBusy(true);
+    setError(null);
+    try {
+      const body = new FormData();
+      body.append("file", file);
+      const response = await fetch("/api/console/promo-art", {
+        body,
+        method: "POST",
+      });
+      const result = (await response.json()) as { url?: string; error?: string };
+      if (!response.ok || !result.url) {
+        setError(result.error ?? "Upload failed.");
+        return;
+      }
+      onChange(result.url);
+      if (input.current) input.current.value = "";
+    } catch {
+      setError("Upload failed — check your connection.");
+    } finally {
+      setBusy(false);
+    }
+  };
 
   return (
     <div className="space-y-2">
-      <p className="text-xs text-muted-foreground">
-        Artwork — optional. A transparent PNG works well beside the copy.
-      </p>
-
       <div className="flex flex-wrap items-center gap-3">
         {value ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img
             alt="Banner artwork"
-            className="h-16 w-28 rounded-lg object-contain"
+            className="h-16 w-28 rounded-lg border border-white/10 object-contain"
             src={value}
           />
         ) : (
@@ -863,23 +911,21 @@ function ArtPicker({
           <input
             accept="image/jpeg,image/png,image/webp"
             className="block text-xs text-muted-foreground file:mr-3 file:rounded-lg file:border-0 file:bg-white/10 file:px-3 file:py-1.5 file:text-xs file:text-foreground"
-            form="promo-art-upload"
-            name="file"
+            // Uploads as soon as a file is chosen. The two-step
+            // "choose, then press Upload" was one step too many, and
+            // leaving a chosen-but-unuploaded file on screen looked
+            // exactly like an upload that had silently failed.
+            onChange={() => void upload()}
+            ref={input}
             type="file"
           />
           <div className="flex items-center gap-2">
-            <Button
-              className="h-8 px-3 text-xs"
-              disabled={pending}
-              form="promo-art-upload"
-              type="submit"
-              variant="secondary"
-            >
-              {pending ? "Uploading…" : "Upload"}
-            </Button>
-            {value ? (
+            {busy ? (
+              <span className="text-xs text-muted-foreground">Uploading…</span>
+            ) : null}
+            {value && !busy ? (
               <Button
-                className="h-8 px-2 text-xs"
+                className="h-7 px-2 text-xs"
                 onClick={() => onChange("")}
                 type="button"
                 variant="ghost"
@@ -887,8 +933,8 @@ function ArtPicker({
                 Remove
               </Button>
             ) : null}
-            {state.error ? (
-              <span className="text-xs text-red-400">{state.error}</span>
+            {error ? (
+              <span className="text-xs text-red-400">{error}</span>
             ) : null}
           </div>
         </div>
@@ -903,12 +949,6 @@ function ArtPicker({
           value={value}
         />
       </label>
-
-      {/* Sits outside the banner form: nesting one form inside another
-          is invalid HTML, and the upload has to submit on its own
-          without taking the half-filled banner with it. The file input
-          and its button reach it by `form=`. */}
-      <form action={action} id="promo-art-upload" />
     </div>
   );
 }

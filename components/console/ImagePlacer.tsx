@@ -26,6 +26,7 @@ export function ImagePlacer({
   focusX,
   focusY,
   aspect,
+  disabled = false,
   onFocus,
 }: {
   url: string;
@@ -34,12 +35,17 @@ export function ImagePlacer({
   focusY: number;
   /** width / height of the card being previewed. */
   aspect: number;
+  /** Shown but inert — the layout in use doesn't crop, so there is
+   * nothing to position. Visible rather than hidden so the control is
+   * findable before the layout is switched. */
+  disabled?: boolean;
   onFocus: (x: number, y: number) => void;
 }) {
   const frame = useRef<HTMLDivElement>(null);
   const [dragging, setDragging] = useState(false);
 
   const setFromPointer = (clientX: number, clientY: number) => {
+    if (disabled) return;
     const box = frame.current?.getBoundingClientRect();
     if (!box) return;
     // Clamped: dragging past the edge should stop at the edge rather
@@ -56,7 +62,9 @@ export function ImagePlacer({
   return (
     <div className="space-y-1.5">
       <div
-        className="relative w-full cursor-move overflow-hidden rounded-lg border border-white/15 bg-black/30 select-none"
+        className={`relative w-full overflow-hidden rounded-lg border border-white/15 bg-black/30 select-none ${
+          disabled ? "cursor-not-allowed opacity-50" : "cursor-move"
+        }`}
         onPointerDown={(event) => {
           // Pointer capture, so a drag that leaves the frame keeps
           // tracking instead of stopping dead at the border.
@@ -103,7 +111,9 @@ export function ImagePlacer({
         ) : null}
       </div>
       <p className="text-xs text-muted-foreground">
-        Drag to choose what stays in view · {focusX}% / {focusY}%
+        {disabled
+          ? "Positioning applies to the fills-the-card layout."
+          : `Drag to choose what stays in view · ${focusX}% / ${focusY}%`}
       </p>
     </div>
   );
