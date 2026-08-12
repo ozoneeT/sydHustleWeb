@@ -208,7 +208,14 @@ export function PromoBannerForm({ banner }: { banner?: PromoBannerRow }) {
         ) : null}
         </Section>
 
-        <Section title="Content">
+        <Section
+          hint={
+            kind === "featured"
+              ? "Only a heading — the cards themselves are the boosted listings."
+              : undefined
+          }
+          title="Content"
+        >
         <div className="grid gap-3 sm:grid-cols-2">
           {kind === "custom" ? (
             <label className={labelClass}>
@@ -234,6 +241,7 @@ export function PromoBannerForm({ banner }: { banner?: PromoBannerRow }) {
               value={title}
             />
           </label>
+          {kind === "featured" ? null : (
           <label className={`${labelClass} sm:col-span-2`}>
             Subtitle
             <input
@@ -244,6 +252,7 @@ export function PromoBannerForm({ banner }: { banner?: PromoBannerRow }) {
               value={subtitle}
             />
           </label>
+          )}
         </div>
 
         {kind === "featured" ? (
@@ -271,6 +280,7 @@ export function PromoBannerForm({ banner }: { banner?: PromoBannerRow }) {
           </div>
         ) : null}
 
+        {kind === "featured" ? null : (
         <div className="grid gap-3 sm:grid-cols-2">
           <label className={labelClass}>
             Button label
@@ -299,8 +309,21 @@ export function PromoBannerForm({ banner }: { banner?: PromoBannerRow }) {
             </datalist>
           </label>
         </div>
+        )}
         </Section>
 
+        {kind === "featured" ? (
+          <p className="rounded-xl border border-white/10 bg-white/[0.015] p-4 text-sm text-muted-foreground">
+            Nothing else to set. A Featured banner draws the boosted listings
+            the carousel has no room for, and renders them with{" "}
+            <strong>exactly the same card</strong> — same size, same layout,
+            same PROMOTED badge. Artwork, colours and card size belong to
+            custom banners; here they would only be ways of making the overflow
+            surface look like a lesser version of what these subscribers paid
+            for.
+          </p>
+        ) : (
+        <>
         <Section
           hint="An icon needs no upload and always looks finished. An image gives you a photo to place and zoom."
           title="Artwork"
@@ -526,6 +549,8 @@ export function PromoBannerForm({ banner }: { banner?: PromoBannerRow }) {
             value={widthPct}
           />
         </Section>
+        </>
+        )}
 
         <Section title="Where it appears">
           <div className="flex flex-wrap items-center gap-5">
@@ -591,6 +616,21 @@ export function PromoBannerForm({ banner }: { banner?: PromoBannerRow }) {
         <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
           Preview
         </p>
+        {kind === "featured" ? (
+          <div className="rounded-xl border border-white/10 p-4 text-sm text-muted-foreground">
+            <p className="mb-2 font-medium text-foreground">
+              Nothing to preview here.
+            </p>
+            <p>
+              A Featured banner renders as a carousel of Featured cards, and
+              which listings appear is decided at the moment it is shown —
+              whichever boosted subscribers are furthest below their fair share
+              of exposure and are not already in the main carousel. Drawing a
+              mock-up would only show a set that will not be the set.
+            </p>
+          </div>
+        ) : (
+        <>
         <PromoPreview
           values={{
             eyebrow,
@@ -598,7 +638,11 @@ export function PromoBannerForm({ banner }: { banner?: PromoBannerRow }) {
             subtitle,
             imageUrl,
             ctaLabel,
-            isPaid: kind === "featured",
+            // Always false here: this branch only renders for a custom
+            // banner, and a custom banner is house content nobody paid
+            // to place. The PROMOTED badge belongs to the featured kind,
+            // which doesn't use this preview at all.
+            isPaid: false,
             imageMode,
             imageSide,
             imageScale,
@@ -618,11 +662,10 @@ export function PromoBannerForm({ banner }: { banner?: PromoBannerRow }) {
           }}
         />
         <p className="text-xs text-muted-foreground">
-          Drawn at a phone&apos;s real proportions. A <strong>featured</strong>{" "}
-          banner also shows a strip of the boosted listings underneath, which
-          can&apos;t be previewed here because the set is picked at the moment
-          it&apos;s shown.
+          Drawn at a phone&apos;s real proportions.
         </p>
+        </>
+        )}
       </div>
     </div>
   );
