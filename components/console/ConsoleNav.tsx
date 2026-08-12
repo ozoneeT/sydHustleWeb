@@ -5,6 +5,7 @@ import { useLinkStatus } from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState, type ComponentType, type ReactNode } from "react";
 import {
+  BadgePercent,
   Banknote,
   CircleDollarSign,
   Fingerprint,
@@ -14,8 +15,10 @@ import {
   MapPin,
   Megaphone,
   Menu,
+  MessageSquareWarning,
   Receipt,
   ShieldAlert,
+  Sparkles,
   Users,
   Wallet,
   X,
@@ -73,6 +76,11 @@ const GROUPS: NavGroup[] = [
     label: "Risk",
     links: [
       { href: "/console/appeals", label: "Appeals", icon: Gavel },
+      {
+        href: "/console/review-appeals",
+        label: "Review appeals",
+        icon: MessageSquareWarning,
+      },
       { href: "/console/moderation", label: "Moderation", icon: ShieldAlert },
       { href: "/console/location", label: "Location", icon: MapPin },
     ],
@@ -80,6 +88,8 @@ const GROUPS: NavGroup[] = [
   {
     label: "Ops",
     links: [
+      { href: "/console/featured", label: "Subscriptions", icon: Sparkles },
+      { href: "/console/promos", label: "Promotions", icon: BadgePercent },
       { href: "/console/broadcast", label: "Broadcast", icon: Megaphone },
     ],
   },
