@@ -313,15 +313,40 @@ export function PromoBannerForm({ banner }: { banner?: PromoBannerRow }) {
         </Section>
 
         {kind === "featured" ? (
-          <p className="rounded-xl border border-white/10 bg-white/[0.015] p-4 text-sm text-muted-foreground">
-            Nothing else to set. A Featured banner draws the boosted listings
-            the carousel has no room for, and renders them with{" "}
-            <strong>exactly the same card</strong> — same size, same layout,
-            same PROMOTED badge. Artwork, colours and card size belong to
-            custom banners; here they would only be ways of making the overflow
-            surface look like a lesser version of what these subscribers paid
-            for.
-          </p>
+          <Section
+            hint="The cards themselves are fixed — same design as the main carousel. Only how much room they get is yours to set."
+            title="Size"
+          >
+            <Slider
+              defaultMark={184}
+              label="Card height"
+              max={320}
+              min={90}
+              name="height"
+              onChange={setHeight}
+              step={2}
+              unit="pt"
+              value={height}
+            />
+            <Slider
+              defaultMark={100}
+              label="Card width"
+              max={100}
+              min={60}
+              name="width_pct"
+              onChange={setWidthPct}
+              unit="%"
+              value={widthPct}
+            />
+            <p className="text-xs text-muted-foreground">
+              Artwork, colours and layout aren&apos;t offered here on purpose:
+              a Featured banner shows listings people <em>paid</em> to place,
+              and restyling them would make the overflow surface a lesser
+              version of what the main carousel gives. The default marker sits
+              at the carousel&apos;s own height, so you can see when
+              you&apos;re diverging from it.
+            </p>
+          </Section>
         ) : (
         <>
         <Section
