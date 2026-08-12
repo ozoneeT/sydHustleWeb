@@ -2,6 +2,7 @@
 
 import { useActionState, useState } from "react";
 
+import { ImagePlacer } from "@/components/console/ImagePlacer";
 import { PromoPreview } from "@/components/console/PromoPreview";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -23,6 +24,36 @@ import type { PromoBannerRow } from "@/lib/console/promos";
 
 const INITIAL: PromoActionState = { error: null, done: false };
 const UPLOAD_INITIAL: PromoUploadState = { error: null, url: null };
+
+/**
+ * One titled group of fields.
+ *
+ * The form had grown to roughly thirty controls in a single column,
+ * where the only grouping was a couple of bare fieldsets — so finding
+ * "the colour of the light-mode gradient" meant scanning the whole
+ * thing. Titled sections give each decision a place to live.
+ */
+function Section({
+  title,
+  hint,
+  children,
+}: {
+  title: string;
+  hint?: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <section className="space-y-3 rounded-xl border border-white/10 bg-white/[0.015] p-4">
+      <div>
+        <h3 className="text-sm font-semibold">{title}</h3>
+        {hint ? (
+          <p className="text-xs text-muted-foreground">{hint}</p>
+        ) : null}
+      </div>
+      {children}
+    </section>
+  );
+}
 
 const field =
   "w-full rounded-lg border border-white/10 bg-transparent px-3 py-2 text-sm outline-none focus:border-accent/50";
@@ -73,6 +104,11 @@ export function PromoBannerForm({ banner }: { banner?: PromoBannerRow }) {
   );
   const [bgDarkTo, setBgDarkTo] = useState(banner?.bg_dark_to ?? "#081A1A");
   const [icon, setIcon] = useState(banner?.icon ?? "");
+  const [imageZoom, setImageZoom] = useState(Number(banner?.image_zoom ?? 1));
+  const [focusX, setFocusX] = useState(banner?.image_focus_x ?? 50);
+  const [focusY, setFocusY] = useState(banner?.image_focus_y ?? 50);
+  const [padLeft, setPadLeft] = useState(banner?.art_pad_left ?? 10);
+  const [padRight, setPadRight] = useState(banner?.art_pad_right ?? 10);
 
   /**
    * Fill the form from a preset.
@@ -118,12 +154,14 @@ export function PromoBannerForm({ banner }: { banner?: PromoBannerRow }) {
         <input name="bg_dark_from" type="hidden" value={bgDarkFrom} />
         <input name="bg_dark_to" type="hidden" value={bgDarkTo} />
         <input name="icon" type="hidden" value={icon} />
+        <input name="image_zoom" type="hidden" value={imageZoom} />
+        <input name="image_focus_x" type="hidden" value={focusX} />
+        <input name="image_focus_y" type="hidden" value={focusY} />
 
-        <div className="space-y-2 rounded-lg border border-white/10 p-3">
-          <p className="text-xs text-muted-foreground">
-            Start from a preset — then change anything you like. Presets only
-            fill the form; nothing stays linked to them afterwards.
-          </p>
+        <Section
+          hint="Start from one, then change anything you like. Presets only fill the form; nothing stays linked to them afterwards."
+          title="Preset"
+        >
           <div className="flex flex-wrap gap-2">
             {PROMO_PRESETS.map((preset) => (
               <Button
@@ -138,9 +176,13 @@ export function PromoBannerForm({ banner }: { banner?: PromoBannerRow }) {
               </Button>
             ))}
           </div>
-        </div>
+        </Section>
 
-        <div className="flex gap-2">
+        <Section
+          hint="Custom is typed copy. Featured draws live hustleBoost placements instead."
+          title="Type"
+        >
+          <div className="flex gap-2">
           <Button
             className="h-8 px-3 text-xs"
             onClick={() => setKind("custom")}
@@ -157,7 +199,7 @@ export function PromoBannerForm({ banner }: { banner?: PromoBannerRow }) {
           >
             Featured listings
           </Button>
-        </div>
+          </div>
 
         {kind === "featured" ? (
           <p className="rounded-lg border border-amber-500/30 bg-amber-500/5 p-3 text-xs text-amber-300">
@@ -167,7 +209,9 @@ export function PromoBannerForm({ banner }: { banner?: PromoBannerRow }) {
             claiming a commercial relationship that doesn&apos;t exist.
           </p>
         ) : null}
+        </Section>
 
+        <Section title="Content">
         <div className="grid gap-3 sm:grid-cols-2">
           {kind === "custom" ? (
             <label className={labelClass}>
@@ -258,11 +302,50 @@ export function PromoBannerForm({ banner }: { banner?: PromoBannerRow }) {
             </datalist>
           </label>
         </div>
+        </Section>
 
+        <Section
+          hint="An icon needs no upload and always looks finished. An image gives you a photo to place."
+          title="Artwork"
+        >
         <ArtPicker onChange={setImageUrl} value={imageUrl} />
 
-        <fieldset className="space-y-3 rounded-lg border border-white/10 p-3">
-          <legend className="px-1 text-xs text-muted-foreground">Layout</legend>
+        {imageUrl && imageMode === "background" ? (
+          <div className="space-y-3 rounded-lg border border-white/10 p-3">
+            <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+              Place the image
+            </p>
+            <ImagePlacer
+              aspect={(390 - 32) / height}
+              focusX={focusX}
+              focusY={focusY}
+              onFocus={(x, y) => {
+                setFocusX(x);
+                setFocusY(y);
+              }}
+              url={imageUrl}
+              zoom={imageZoom}
+            />
+            <Slider
+              defaultMark={100}
+              label="Zoom"
+              max={300}
+              min={100}
+              onChange={(next) => setImageZoom(next / 100)}
+              unit="%"
+              value={Math.round(imageZoom * 100)}
+            />
+            <p className="text-xs text-muted-foreground">
+              The frame is the card&apos;s real shape, so what you see inside it
+              is what a phone shows. Zooming crops further in around the point
+              you dragged to.
+            </p>
+          </div>
+        ) : null}
+
+        </Section>
+
+        <Section title="Layout">
 
           <Choice
             label="Artwork"
@@ -326,6 +409,29 @@ export function PromoBannerForm({ banner }: { banner?: PromoBannerRow }) {
                 onChange={(next) => setImageScale(next / 100)}
                 unit="%"
                 value={Math.round(imageScale * 100)}
+              />
+              {/* Separate per side because the art sits against one
+                  edge: the gap to the card's edge and the gap to the
+                  copy are different decisions. */}
+              <Slider
+                defaultMark={10}
+                label="Pad left"
+                max={48}
+                min={0}
+                name="art_pad_left"
+                onChange={setPadLeft}
+                unit="pt"
+                value={padLeft}
+              />
+              <Slider
+                defaultMark={10}
+                label="Pad right"
+                max={48}
+                min={0}
+                name="art_pad_right"
+                onChange={setPadRight}
+                unit="pt"
+                value={padRight}
               />
             </>
           ) : null}
@@ -395,12 +501,9 @@ export function PromoBannerForm({ banner }: { banner?: PromoBannerRow }) {
             unit="%"
             value={widthPct}
           />
-        </fieldset>
+        </Section>
 
-        <fieldset className="space-y-2 rounded-lg border border-white/10 p-3">
-          <legend className="px-1 text-xs text-muted-foreground">
-            Where it appears
-          </legend>
+        <Section title="Where it appears">
           <div className="flex flex-wrap items-center gap-5">
             {PROMO_SURFACES.map((surface) => (
               <label
@@ -445,7 +548,7 @@ export function PromoBannerForm({ banner }: { banner?: PromoBannerRow }) {
             and Messages start off: Messages is a private conversation list, and
             an advert landing there should be a deliberate act.
           </p>
-        </fieldset>
+        </Section>
 
         <div className="flex flex-wrap items-center gap-2">
           <Button disabled={pending} type="submit">
@@ -483,6 +586,11 @@ export function PromoBannerForm({ banner }: { banner?: PromoBannerRow }) {
             bgDarkFrom,
             bgDarkTo,
             icon,
+            imageZoom,
+            imageFocusX: focusX,
+            imageFocusY: focusY,
+            artPadLeft: padLeft,
+            artPadRight: padRight,
           }}
         />
         <p className="text-xs text-muted-foreground">

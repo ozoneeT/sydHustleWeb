@@ -118,6 +118,13 @@ const bannerSchema = z.object({
   // Empty means "no icon"; anything else must be one the preview can
   // also draw, so it is checked here and by the CHECK constraint.
   icon: z.string().trim().max(40).optional(),
+  // Bounds mirror the CHECK constraints, so a bad value is a sentence
+  // here rather than a Postgres error there.
+  image_zoom: z.coerce.number().min(1).max(3),
+  image_focus_x: z.coerce.number().int().min(0).max(100),
+  image_focus_y: z.coerce.number().int().min(0).max(100),
+  art_pad_left: z.coerce.number().int().min(0).max(48),
+  art_pad_right: z.coerce.number().int().min(0).max(48),
   show_on_home: checkbox,
   show_on_skills: checkbox,
   show_on_hustles: checkbox,
@@ -149,6 +156,11 @@ function parse(formData: FormData) {
     bg_dark_from: formData.get("bg_dark_from") ?? "#0F2E2E",
     bg_dark_to: formData.get("bg_dark_to") ?? "#081A1A",
     icon: formData.get("icon") ?? undefined,
+    image_zoom: formData.get("image_zoom") ?? 1,
+    image_focus_x: formData.get("image_focus_x") ?? 50,
+    image_focus_y: formData.get("image_focus_y") ?? 50,
+    art_pad_left: formData.get("art_pad_left") ?? 10,
+    art_pad_right: formData.get("art_pad_right") ?? 10,
     show_on_home: formData.get("show_on_home"),
     show_on_skills: formData.get("show_on_skills"),
     show_on_hustles: formData.get("show_on_hustles"),
@@ -206,6 +218,11 @@ export async function savePromoBanner(
     bg_dark_from: v.bg_dark_from,
     bg_dark_to: v.bg_dark_to,
     icon: nullify(v.icon),
+    image_zoom: v.image_zoom,
+    image_focus_x: v.image_focus_x,
+    image_focus_y: v.image_focus_y,
+    art_pad_left: v.art_pad_left,
+    art_pad_right: v.art_pad_right,
     show_on_home: v.show_on_home,
     show_on_skills: v.show_on_skills,
     show_on_hustles: v.show_on_hustles,

@@ -52,6 +52,11 @@ export type PromoBannerRow = {
   bg_dark_from: string;
   bg_dark_to: string;
   icon: string | null;
+  image_zoom: number;
+  image_focus_x: number;
+  image_focus_y: number;
+  art_pad_left: number;
+  art_pad_right: number;
   is_active: boolean;
   sort_order: number;
   starts_at: string | null;

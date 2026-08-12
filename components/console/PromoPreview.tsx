@@ -110,6 +110,11 @@ export type PreviewValues = {
   bgDarkFrom: string;
   bgDarkTo: string;
   icon: string;
+  imageZoom: number;
+  imageFocusX: number;
+  imageFocusY: number;
+  artPadLeft: number;
+  artPadRight: number;
 };
 
 /** Both schemes, side by side — the only honest way to check a colour
@@ -171,13 +176,26 @@ function PromoPreviewPane({
             borderRadius: 20,
             border: `1px solid ${feed.outline}`,
             backgroundColor: from,
-            backgroundImage: isBackground
-              ? `url(${values.imageUrl})`
-              : undefined,
-            backgroundSize: "cover",
-            backgroundPosition: "center",
           }}
         >
+          {/* An <img> rather than a background, so zoom and focal point
+              use the same `object-fit`/`object-position` the app's
+              `contentFit`/`contentPosition` map onto. */}
+          {isBackground ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              alt=""
+              className="absolute inset-0 h-full w-full object-cover"
+              src={values.imageUrl}
+              style={{
+                objectPosition: `${values.imageFocusX}% ${values.imageFocusY}%`,
+                transform:
+                  values.imageZoom !== 1
+                    ? `scale(${values.imageZoom})`
+                    : undefined,
+              }}
+            />
+          ) : null}
           <div className="absolute inset-0" style={{ background }} />
 
           <div
@@ -273,6 +291,8 @@ function PromoPreviewPane({
                 className="flex items-center justify-center"
                 style={{
                   width: `${values.imageScale * 100}%`,
+                  marginLeft: values.artPadLeft,
+                  marginRight: values.artPadRight,
                   color: ink,
                   opacity: 0.9,
                 }}
@@ -291,7 +311,8 @@ function PromoPreviewPane({
                 style={{
                   width: `${values.imageScale * 100}%`,
                   height: "82%",
-                  margin: "0 10px",
+                  marginLeft: values.artPadLeft,
+                  marginRight: values.artPadRight,
                 }}
               />
             ) : null}
