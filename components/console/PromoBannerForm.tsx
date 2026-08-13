@@ -23,6 +23,10 @@ import type { PromoBannerRow } from "@/lib/console/promos";
 
 const INITIAL: PromoActionState = { error: null, done: false };
 
+/** Mirrors `MIN_CARD_HEIGHT` in the app's featured carousel — the
+ * shortest a Featured card can be drawn with its price still on it. */
+const FEATURED_MIN_HEIGHT = 162;
+
 /**
  * One titled group of fields.
  *
@@ -88,7 +92,11 @@ export function PromoBannerForm({ banner }: { banner?: PromoBannerRow }) {
   const [imageScale, setImageScale] = useState(
     Number(banner?.image_scale ?? 0.36),
   );
-  const [height, setHeight] = useState(banner?.height ?? 150);
+  const [height, setHeight] = useState(
+    banner?.kind === "featured"
+      ? Math.max(banner.height ?? 184, FEATURED_MIN_HEIGHT)
+      : (banner?.height ?? 150),
+  );
   const [widthPct, setWidthPct] = useState(banner?.width_pct ?? 100);
   const [backgroundMode, setBackgroundMode] = useState<"solid" | "gradient">(
     banner?.background_mode ?? "gradient",
@@ -391,11 +399,18 @@ export function PromoBannerForm({ banner }: { banner?: PromoBannerRow }) {
             hint="The cards themselves are fixed — same design as the main carousel. Only how much room they get is yours to set."
             title="Size"
           >
+            {/* Floored at 162, not 90 like a custom banner's. This card
+                stacks a FEATURED badge, a name, a skill and a price row;
+                below that the price is clipped by the card's own edge,
+                and a paid placement drawn without its price is worse
+                than one drawn slightly taller than asked. The app clamps
+                to the same number, so the slider cannot promise a size
+                that will not be honoured. */}
             <Slider
               defaultMark={184}
               label="Card height"
               max={320}
-              min={90}
+              min={162}
               name="height"
               onChange={setHeight}
               step={2}

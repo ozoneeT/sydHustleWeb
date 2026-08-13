@@ -47,6 +47,10 @@ export function PromoSizePreview({
   const cardWidth = Math.round(
     ((PHONE_WIDTH - CAROUSEL_INSET * 2) * widthPct) / 100,
   );
+  // The app clamps to this, so drawing anything shorter would preview a
+  // size that never reaches a phone. See MIN_CARD_HEIGHT in the app's
+  // featured carousel.
+  const cardHeight = Math.max(height, 162);
 
   return (
     <div className="space-y-3">
@@ -63,7 +67,7 @@ export function PromoSizePreview({
                 className="relative"
                 style={{
                   width: cardWidth,
-                  height,
+                  height: cardHeight,
                   margin: "0 auto",
                   borderRadius: 22,
                   border: `2px solid ${s.ring}`,
@@ -89,7 +93,7 @@ export function PromoSizePreview({
                   className="absolute inset-0 flex items-center justify-center"
                   style={{ color: s.label, fontSize: 12 }}
                 >
-                  {cardWidth} × {height} pt
+                  {cardWidth} × {cardHeight} pt
                 </span>
               </div>
 
