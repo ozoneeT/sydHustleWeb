@@ -54,40 +54,6 @@ export function Footer() {
           </a>
         </div>
       </div>
-      {/* Linked brand marks so Google can crawl & index all logo variants */}
-      <div className="mx-auto mt-6 flex max-w-5xl flex-wrap items-center justify-center gap-8 border-t border-white/5 pt-6">
-        <a
-          href={BRAND_ASSETS.icon.path}
-          target="_blank"
-          rel="noopener noreferrer"
-          title={BRAND_ASSETS.icon.alt}
-        >
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src={BRAND_ASSETS.icon.path}
-            alt={BRAND_ASSETS.icon.alt}
-            width={48}
-            height={48}
-            className="h-12 w-12 object-contain opacity-80 transition-opacity hover:opacity-100"
-          />
-        </a>
-        <a
-          href={BRAND_ASSETS.logoLight.path}
-          target="_blank"
-          rel="noopener noreferrer"
-          title={BRAND_ASSETS.logoLight.alt}
-          className="rounded-md bg-white px-3 py-2"
-        >
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src={BRAND_ASSETS.logoLight.path}
-            alt={BRAND_ASSETS.logoLight.alt}
-            width={200}
-            height={70}
-            className="h-8 w-auto"
-          />
-        </a>
-      </div>
     </footer>
   );
 }
