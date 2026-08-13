@@ -23,16 +23,22 @@ export function Footer() {
         </div>
         <div className="flex gap-6 text-sm text-muted-foreground">
           <Link
-            href="/terms"
+            href="/policies_center"
             className="transition-colors hover:text-foreground"
           >
-            Terms &amp; Conditions
+            Terms and Policies
+          </Link>
+          <Link
+            href="/legal/terms"
+            className="transition-colors hover:text-foreground"
+          >
+            Terms
           </Link>
           <Link
             href="/privacy"
             className="transition-colors hover:text-foreground"
           >
-            Privacy Policy
+            Privacy
           </Link>
           <Link
             href="/survey"

@@ -8,7 +8,7 @@ export const metadata: Metadata = {
   title: "Terms & Conditions",
   description:
     "The Terms and Conditions governing use of the sydHustle platform, operated by SydHustle Limited (RC 9677465), a company incorporated in the Federal Republic of Nigeria.",
-  alternates: { canonical: "/terms" },
+  alternates: { canonical: "/legal/terms" },
 };
 
 /**
@@ -716,8 +716,21 @@ export default function TermsPage() {
               government.
             </Sub>
             <Sub n="20.6">
-              <Term>Entire agreement.</Term> These Terms, together with the
-              Privacy Policy and the Community Guidelines, constitute the
+              <Term>Entire agreement.</Term> These Terms, together with the{" "}
+              <a
+                className="text-accent underline-offset-4 hover:underline"
+                href="/privacy"
+              >
+                Privacy Policy
+              </a>{" "}
+              and the{" "}
+              <a
+                className="text-accent underline-offset-4 hover:underline"
+                href="/policies_center/community_standard"
+              >
+                Community Standards
+              </a>
+              , constitute the
               entire agreement between you and the Company concerning the
               Platform and supersede all prior understandings on that subject.
             </Sub>

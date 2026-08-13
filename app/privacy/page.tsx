@@ -59,7 +59,7 @@ export default function PrivacyPage() {
             uses the defined terms of, our{" "}
             <a
               className="text-accent underline-offset-4 hover:underline"
-              href="/terms"
+              href="/legal/terms"
             >
               Terms &amp; Conditions
             </a>
