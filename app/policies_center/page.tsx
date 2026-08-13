@@ -1,7 +1,5 @@
-import { FileText, ShieldCheck, Users } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
-import type { ReactNode } from "react";
 
 import { Footer } from "@/components/Footer";
 import { SiteHeader } from "@/components/SiteHeader";
@@ -21,25 +19,29 @@ export const metadata: Metadata = {
 
 const POLICIES: {
   href: string;
-  icon: ReactNode;
+  image: string;
+  alt: string;
   title: string;
   blurb: string;
 }[] = [
   {
     href: "/legal/terms",
-    icon: <FileText className="h-7 w-7" />,
+    image: "/policies/terms.webp",
+    alt: "Illustration of a Terms & Conditions document on a clipboard",
     title: "Terms & Conditions",
     blurb: "The agreement you accept when you use sydHustle.",
   },
   {
     href: "/privacy",
-    icon: <ShieldCheck className="h-7 w-7" />,
+    image: "/policies/privacy.webp",
+    alt: "Illustration of a Privacy Policy document with a shield and lock",
     title: "Privacy Policy",
     blurb: "The information we collect, and how it's used and protected.",
   },
   {
     href: "/policies_center/community_standard",
-    icon: <Users className="h-7 w-7" />,
+    image: "/policies/community.webp",
+    alt: "Illustration of three people standing together under a shield",
     title: "Community Standards",
     blurb: "What isn't allowed, and how to report it when you see it.",
   },
@@ -69,12 +71,21 @@ export default function PoliciesCenterPage() {
                 href={policy.href}
                 key={policy.href}
               >
-                {/* An icon tile stands where a photograph would: the
-                    site has no illustration library, and an empty image
-                    slot is worse than an honest glyph. */}
-                <div className="flex h-36 items-center justify-center rounded-xl bg-gradient-to-br from-accent/20 via-accent/5 to-transparent text-accent">
-                  {policy.icon}
-                </div>
+                {/* Square source shown square: the illustrations are
+                    complete compositions, and cropping one to a banner
+                    would cut the thing it is a picture of. 720px WebP —
+                    2x the card's rendered width — from the original
+                    2MB PNGs, so all three cost less than a tenth of one
+                    original. */}
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  alt={policy.alt}
+                  className="aspect-square w-full rounded-xl object-cover transition-transform duration-300 group-hover:scale-[1.02]"
+                  height={720}
+                  loading="lazy"
+                  src={policy.image}
+                  width={720}
+                />
                 <h2 className="mt-5 text-lg font-bold tracking-tight text-foreground group-hover:text-accent">
                   {policy.title}
                 </h2>
