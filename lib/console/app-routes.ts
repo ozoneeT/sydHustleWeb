@@ -91,12 +91,20 @@ export const APP_ROUTE_PATHS: string[] = APP_ROUTES.flatMap((group) =>
  * a browsing surface, and an advert appearing there should be a
  * deliberate act.
  */
+/**
+ * `hasList` is what decides how many banners a surface can carry.
+ *
+ * Skills and Hustles are lists, so a banner can name a position inside
+ * one and several can run at different depths. Home, Messages and
+ * Wallet are single screens with nowhere to interleave: they show the
+ * first two by order and ignore the position field entirely.
+ */
 export const PROMO_SURFACES = [
-  { field: "show_on_skills", label: "Skills", defaultOn: true },
-  { field: "show_on_home", label: "Home", defaultOn: false },
-  { field: "show_on_hustles", label: "Hustles", defaultOn: false },
-  { field: "show_on_wallet", label: "Wallet", defaultOn: false },
-  { field: "show_on_messages", label: "Messages", defaultOn: false },
+  { field: "show_on_skills", label: "Skills", defaultOn: true, hasList: true },
+  { field: "show_on_home", label: "Home", defaultOn: false, hasList: false },
+  { field: "show_on_hustles", label: "Hustles", defaultOn: false, hasList: true },
+  { field: "show_on_wallet", label: "Wallet", defaultOn: false, hasList: false },
+  { field: "show_on_messages", label: "Messages", defaultOn: false, hasList: false },
 ] as const;
 
 export type PromoSurfaceField = (typeof PROMO_SURFACES)[number]["field"];

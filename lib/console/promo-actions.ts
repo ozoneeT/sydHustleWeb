@@ -89,6 +89,9 @@ const bannerSchema = z.object({
   // Empty means "derive it from the background", which is both the
   // default and the thing that guarantees a pale card never gets white
   // text on it. A hex here is a deliberate override.
+  // Bounds mirror the CHECK constraint. 1 = straight after the first
+  // row; a slot deeper than the list simply waits for the list to grow.
+  feed_slot: z.coerce.number().int().min(1).max(60),
   eyebrow_color: z.union([z.literal(""), hexColour]).optional(),
   title_color: z.union([z.literal(""), hexColour]).optional(),
   subtitle_color: z.union([z.literal(""), hexColour]).optional(),
@@ -131,6 +134,7 @@ function parse(formData: FormData) {
     eyebrow_size: formData.get("eyebrow_size") ?? 10,
     title_size: formData.get("title_size") ?? 19,
     subtitle_size: formData.get("subtitle_size") ?? 13,
+    feed_slot: formData.get("feed_slot") ?? 4,
     eyebrow_color: formData.get("eyebrow_color") ?? undefined,
     title_color: formData.get("title_color") ?? undefined,
     subtitle_color: formData.get("subtitle_color") ?? undefined,
@@ -199,6 +203,7 @@ export async function savePromoBanner(
     eyebrow_size: v.eyebrow_size,
     title_size: v.title_size,
     subtitle_size: v.subtitle_size,
+    feed_slot: v.feed_slot,
     eyebrow_color: nullify(v.eyebrow_color),
     title_color: nullify(v.title_color),
     subtitle_color: nullify(v.subtitle_color),

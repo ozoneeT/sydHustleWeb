@@ -64,6 +64,9 @@ export type PromoBannerRow = {
   eyebrow_color: string | null;
   title_color: string | null;
   subtitle_color: string | null;
+  /** Position inside a list surface: drawn after this many rows, once.
+   * Ignored on Home, Messages and Wallet. */
+  feed_slot: number;
   is_active: boolean;
   sort_order: number;
   starts_at: string | null;
@@ -108,6 +111,13 @@ export function isLive(row: PromoBannerRow): boolean {
  * third live banner is not an error — it simply never appears — so the
  * console has to say so rather than letting someone wonder why their
  * new promo is invisible.
+ */
+/**
+ * Only the surfaces without a list are capped.
+ *
+ * Skills and Hustles place banners by position, so several can run at
+ * different depths — counting them against a limit of two would warn
+ * about a configuration that works.
  */
 export function surfaceCounts(
   rows: PromoBannerRow[],

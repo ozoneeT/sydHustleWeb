@@ -684,6 +684,32 @@ export function PromoBannerForm({ banner }: { banner?: PromoBannerRow }) {
               </label>
             ))}
           </div>
+          <div className="space-y-3 rounded-lg border border-white/5 bg-white/[0.02] p-3">
+            <label className="flex flex-wrap items-center gap-2 text-sm">
+              Position &mdash; show after
+              <Input
+                className="h-8 w-20"
+                defaultValue={banner?.feed_slot ?? 4}
+                max={60}
+                min={1}
+                name="feed_slot"
+                type="number"
+              />
+              rows of the list
+            </label>
+            <p className="text-xs text-muted-foreground">
+              <strong className="text-foreground/80">
+                Skills and Hustles only.
+              </strong>{" "}
+              The banner is drawn once, after that many rows &mdash; a pair of
+              skill cards on Skills, one Hustle on Hustles. Put one at 1,
+              another at 2, another at 6, and they land at three different
+              depths. If the list is shorter than the number, the banner waits
+              until there are enough listings rather than moving up. Home,
+              Wallet and Messages have no list, so this is ignored there.
+            </p>
+          </div>
+
           <div className="flex flex-wrap items-center gap-5 border-t border-white/5 pt-3">
             <label className="flex items-center gap-2 text-sm">
               <input
@@ -706,10 +732,13 @@ export function PromoBannerForm({ banner }: { banner?: PromoBannerRow }) {
             </label>
           </div>
           <p className="text-xs text-muted-foreground">
-            Nothing ticked means it runs nowhere. Each surface shows the first
-            two by order — a third stays here but never appears. Hustles, Wallet
-            and Messages start off: Messages is a private conversation list, and
-            an advert landing there should be a deliberate act.
+            Nothing ticked means it runs nowhere.{" "}
+            <strong className="text-foreground/80">Order</strong> breaks ties:
+            on Home, Wallet and Messages only the first two by order appear at
+            all, and on Skills and Hustles it decides which goes first when two
+            banners claim the same position. Hustles, Wallet and Messages start
+            off: Messages is a private conversation list, and an advert landing
+            there should be a deliberate act.
           </p>
         </Section>
 
