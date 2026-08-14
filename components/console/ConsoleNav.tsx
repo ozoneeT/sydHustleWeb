@@ -9,6 +9,7 @@ import {
   Banknote,
   CircleDollarSign,
   Fingerprint,
+  Flag,
   Gavel,
   LayoutDashboard,
   Mail,
@@ -75,6 +76,7 @@ const GROUPS: NavGroup[] = [
   {
     label: "Risk",
     links: [
+      { href: "/console/reports", label: "Reports", icon: Flag },
       { href: "/console/appeals", label: "Appeals", icon: Gavel },
       {
         href: "/console/review-appeals",
