@@ -1,4 +1,5 @@
 import { ReportDecision } from "@/components/console/ReportDecision";
+import { ReportEnforcement } from "@/components/console/ReportEnforcement";
 import { StatCard } from "@/components/moderator/StatCard";
 import { shortDate } from "@/lib/console/format";
 import {
@@ -21,6 +22,11 @@ const TARGET_LABELS: Record<string, string> = {
   review: "Review",
   conversation: "Conversation",
 };
+
+/** A conversation has nothing to take down on its own — its messages
+ * are each reportable, and removing a thread wholesale would hide both
+ * sides of an argument. Mirrors `enforce_report`. */
+const REMOVABLE = new Set(["skill", "hustle", "message", "review"]);
 
 type Search = { status?: string; type?: string };
 
@@ -54,12 +60,12 @@ export default async function ReportsPage({
         </p>
         <p className="mt-2 max-w-3xl text-sm text-muted-foreground">
           <strong className="text-foreground">
-            Nothing here has been acted on.
+            Everything below is live in the app right now
           </strong>{" "}
-          Every reported Hustle, Skill, profile and message below is live in the
-          app right now and stays live until somebody decides otherwise. Closing
-          a report records the decision — it does not remove anything, so if
-          something has to come down, go and take it down.
+          and stays live until somebody acts. Every action here tells the person
+          what happened and why — by push and by email, in your words — so write
+          the reason as something you would be happy for them to read, because
+          they will.
         </p>
       </div>
 
@@ -150,16 +156,39 @@ function ReportCard({ row }: { row: ReportRow }) {
               Snapshot at report time: {row.content_snapshot}
             </p>
           ) : null}
+          {/* The exact row, not just a description of it. A moderator
+              about to close somebody's account needs to be able to
+              prove they are looking at the right one, and a display
+              name is neither unique nor stable. */}
+          <p className="font-mono text-[11px] text-muted-foreground">
+            {row.target_type}:{row.target_id}
+          </p>
           {row.owner_name ? (
-            <p className="text-xs text-muted-foreground">
-              Posted by {row.owner_name}
-              {row.owner_total > 1 ? (
-                <span className="text-amber-400">
-                  {" "}
-                  · {row.owner_total} reports against them
-                </span>
+            <div className="space-y-0.5 pt-1">
+              <p className="text-xs text-muted-foreground">
+                Posted by{" "}
+                <a
+                  className="text-foreground underline decoration-white/20 underline-offset-2"
+                  href={`/console/users?q=${encodeURIComponent(row.owner_email ?? row.owner_name)}`}
+                >
+                  {row.owner_name}
+                </a>
+                {row.owner_total > 1 ? (
+                  <span className="text-amber-400">
+                    {" "}
+                    · {row.owner_total} reports against them
+                  </span>
+                ) : null}
+              </p>
+              {row.owner_email ? (
+                <p className="font-mono text-[11px] text-muted-foreground">
+                  {row.owner_email}
+                </p>
               ) : null}
-            </p>
+              <p className="font-mono text-[11px] text-muted-foreground">
+                account:{row.owner_id}
+              </p>
+            </div>
           ) : null}
         </div>
 
@@ -188,6 +217,21 @@ function ReportCard({ row }: { row: ReportRow }) {
         </p>
       ) : null}
 
+      {row.owner_id ? (
+        <ReportEnforcement
+          inFlight={row.owner_in_flight}
+          ownerName={row.owner_name}
+          removable={REMOVABLE.has(row.target_type)}
+          reportId={row.id}
+          suspendedUntil={row.owner_suspended_until}
+          targetType={row.target_type}
+          terminatedAt={row.owner_terminated_at}
+        />
+      ) : null}
+
+      {/* Closing without acting — the report was nothing, or it was
+          handled somewhere else. Enforcement above already closes the
+          report as part of doing the thing. */}
       <ReportDecision id={row.id} status={row.status} />
     </div>
   );

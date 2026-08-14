@@ -59,6 +59,26 @@ export const URGENT_REASONS = new Set([
   "explicit_content",
 ]);
 
+/** What an account is in the middle of. Mirrors `in_flight_for`. */
+export type InFlight = {
+  funded: {
+    kind: "hustle" | "booking";
+    source_id: string;
+    amount: number;
+    /** Which side of the money they are on. */
+    role: "paying" | "working";
+    counterparty: string | null;
+    counterparty_id: string | null;
+    title: string | null;
+  }[];
+  funded_total: number;
+  unfunded: number;
+  open_hustles: number;
+  skills: number;
+  wallet_balance: number;
+  pending_withdrawals: number;
+};
+
 export type ReportRow = {
   id: string;
   created_at: string;
@@ -83,9 +103,21 @@ export type ReportRow = {
   /** What was reported, in words. Null when the row it pointed at is
    * gone — which is itself worth showing rather than hiding. */
   target_label: string | null;
-  /** Who owns the reported thing, where that's knowable. */
+  /** Who owns the reported thing, where that's knowable. This is who
+   * an enforcement action lands on — never the reporter. */
   owner_id: string | null;
   owner_name: string | null;
+  /** For identifying the exact account beyond a display name, which is
+   * neither unique nor stable. */
+  owner_email: string | null;
+  /** Current standing, so a moderator can see they're already suspended
+   * before suspending them again. */
+  owner_suspended_until: string | null;
+  owner_terminated_at: string | null;
+  /** What suspending this owner would interrupt. Only fetched for
+   * reports still waiting on a decision — it is context for an action,
+   * not something to compute for rows already closed. */
+  owner_in_flight: InFlight | null;
   /** Reports filed against this owner across everything they've posted.
    * One report is an incident; five is a pattern, and the pattern is
    * usually the actual decision. */
@@ -234,11 +266,41 @@ export async function listReports(): Promise<ReportRow[]> {
 
   const { data: nameRows } = await supabase
     .from("profiles")
-    .select("id, full_name, display_name")
+    .select("id, full_name, display_name, suspended_until, terminated_at")
     .in("id", nameIds);
 
+  const profileById = new Map(
+    (nameRows ?? []).map((row) => [row.id as string, row])
+  );
   const nameById = new Map(
     (nameRows ?? []).map((row) => [row.id as string, displayName(row)])
+  );
+
+  // Emails live in `auth.users`, which PostgREST does not expose — the
+  // Admin API is the way in. Only for the accounts actually on screen,
+  // and only the owners: a reporter's address is not part of judging
+  // what they reported.
+  const emailById = await emailsFor(supabase, [...new Set(ownerIds)]);
+
+  // Only for owners of reports still waiting. One RPC each, and a
+  // decided queue shouldn't pay for context nobody is going to act on.
+  const pendingOwners = [
+    ...new Set(
+      reports
+        .filter((r) => r.status === "pending")
+        .map((r) => resolved.get(key(r.target_type, r.target_id))?.ownerId)
+        .filter((id): id is string => Boolean(id))
+    ),
+  ];
+  const inFlightById = new Map(
+    await Promise.all(
+      pendingOwners.map(async (id) => {
+        const { data } = await supabase.rpc("in_flight_for", {
+          p_profile_id: id,
+        });
+        return [id, (data as InFlight | null) ?? null] as const;
+      })
+    )
   );
 
   // Tallies, counted over the reports we already have rather than with
@@ -264,9 +326,44 @@ export async function listReports(): Promise<ReportRow[]> {
       target_label: target?.label ?? null,
       owner_id: ownerId,
       owner_name: ownerId ? (nameById.get(ownerId) ?? null) : null,
+      owner_email: ownerId ? (emailById.get(ownerId) ?? null) : null,
+      owner_suspended_until: ownerId
+        ? ((profileById.get(ownerId)?.suspended_until as string | null) ?? null)
+        : null,
+      owner_terminated_at: ownerId
+        ? ((profileById.get(ownerId)?.terminated_at as string | null) ?? null)
+        : null,
+      owner_in_flight: ownerId ? (inFlightById.get(ownerId) ?? null) : null,
       owner_total: ownerId ? (byOwner.get(ownerId) ?? 0) : 0,
     };
   });
+}
+
+/**
+ * Emails for a handful of accounts.
+ *
+ * `auth.users` is not exposed through PostgREST, so this goes through
+ * the Admin API — one call per account rather than one query, which is
+ * why it is deliberately scoped to the owners on screen and not to
+ * every profile mentioned. A failure yields no email rather than
+ * throwing: an address is useful context, not a reason to take the
+ * whole queue down.
+ */
+async function emailsFor(
+  supabase: ReturnType<typeof createServerSupabaseClient>,
+  ids: string[]
+): Promise<Map<string, string | null>> {
+  const entries = await Promise.all(
+    ids.map(async (id) => {
+      try {
+        const { data } = await supabase.auth.admin.getUserById(id);
+        return [id, data?.user?.email ?? null] as const;
+      } catch {
+        return [id, null] as const;
+      }
+    })
+  );
+  return new Map(entries);
 }
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
