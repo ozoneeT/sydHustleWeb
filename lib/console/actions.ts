@@ -63,6 +63,63 @@ export async function updateEarningsSettings(
   return { error: null, saved: true };
 }
 
+const providersSchema = z.object({
+  funding_provider: z.enum(["paystack", "opay"]),
+  payout_provider: z.enum(["paystack", "opay"]),
+});
+
+export type ProvidersState = { error: string | null; saved: boolean };
+
+/**
+ * Moves a rail to a different payment provider.
+ *
+ * Takes effect on the NEXT deposit and the NEXT withdrawal, and on
+ * nothing that is already moving. Every payment intent and every
+ * withdrawal row carries the provider it was started with, and the
+ * functions that settle them dispatch on that stamp rather than on this
+ * setting - so flipping a rail mid-transfer cannot strand money at the
+ * old provider. Both providers' webhooks stay deployed for the same
+ * reason.
+ *
+ * Two things do change for users straight away, and both are deliberate:
+ *   - Add Cash draws the methods the new funding provider supports.
+ *   - Withdrawal banks saved against the old payout provider ask to be
+ *     confirmed again, because a bank code belongs to one provider's list
+ *     and Paystack additionally needs a recipient the other never minted.
+ *     Until a bank is confirmed it cannot be withdrawn to, and the
+ *     automatic sweep skips it with a notification rather than failing a
+ *     transfer.
+ *
+ * So this is not a setting to toggle idly on a live business. It is the
+ * one to change when a provider goes live, or has to be taken out of
+ * service.
+ */
+export async function updatePaymentProviders(
+  _prev: ProvidersState,
+  formData: FormData
+): Promise<ProvidersState> {
+  await requireConsole();
+
+  const parsed = providersSchema.safeParse({
+    funding_provider: formData.get("funding_provider"),
+    payout_provider: formData.get("payout_provider"),
+  });
+  if (!parsed.success) {
+    return { error: "Pick a provider for each rail.", saved: false };
+  }
+
+  const supabase = createServerSupabaseClient();
+  const { error } = await supabase
+    .from("platform_settings")
+    .update({ ...parsed.data, updated_at: new Date().toISOString() })
+    .eq("id", 1);
+  if (error) {
+    return { error: error.message, saved: false };
+  }
+  revalidatePath("/console/payments");
+  return { error: null, saved: true };
+}
+
 const costSchema = z
   .object({
     id: z.string().uuid().optional(),

@@ -1,5 +1,6 @@
 import "server-only";
 
+import type { PaymentProvider } from "@/lib/console/payments";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 
 /** All reads for the console. Service-role, server-only — panel routes are
@@ -45,6 +46,10 @@ export type PlatformSettings = {
   sms_monthly_price: number;
   /** Naira to open a slot to change the SMS alert number. */
   sms_number_change_fee: number;
+  /** Which provider takes money in, and which sends it out. Independent
+   * on purpose - see lib/console/payments.ts. */
+  funding_provider: PaymentProvider;
+  payout_provider: PaymentProvider;
   updated_at: string;
 };
 
@@ -53,7 +58,7 @@ export async function getPlatformSettings(): Promise<PlatformSettings> {
   const { data, error } = await supabase
     .from("platform_settings")
     .select(
-      "withdrawal_cut_percent, escrow_cut_percent, escrow_cut_applies_to, sms_daily_price, sms_weekly_price, sms_monthly_price, sms_number_change_fee, updated_at"
+      "withdrawal_cut_percent, escrow_cut_percent, escrow_cut_applies_to, sms_daily_price, sms_weekly_price, sms_monthly_price, sms_number_change_fee, funding_provider, payout_provider, updated_at"
     )
     .eq("id", 1)
     .single();

@@ -1,0 +1,86 @@
+import { PaymentProvidersForm } from "@/components/console/PaymentProvidersForm";
+import { Card } from "@/components/ui/card";
+import { getPlatformSettings } from "@/lib/console/data";
+import { getPaymentRails, PROVIDER_LABELS } from "@/lib/console/payments";
+
+export const metadata = { title: "Payments — sydHustle Console" };
+
+export default async function PaymentsPage() {
+  const [settings, rails] = await Promise.all([
+    getPlatformSettings(),
+    getPaymentRails(),
+  ]);
+
+  return (
+    <div className="space-y-8">
+      <div>
+        <h1 className="text-2xl font-bold tracking-tight">Payments</h1>
+        <p className="text-sm text-muted-foreground">
+          Which provider takes money in, and which sends it out. The two are
+          set separately, so one rail can go live while the other is still
+          being tested.
+        </p>
+      </div>
+
+      <div className="grid gap-4 sm:grid-cols-2">
+        <Card className="p-5">
+          <p className="text-xs uppercase tracking-wide text-muted-foreground">
+            Money in
+          </p>
+          <p className="mt-1 text-xl font-semibold">
+            {PROVIDER_LABELS[settings.funding_provider]}
+          </p>
+        </Card>
+        <Card className="p-5">
+          <p className="text-xs uppercase tracking-wide text-muted-foreground">
+            Money out
+          </p>
+          <p className="mt-1 text-xl font-semibold">
+            {PROVIDER_LABELS[settings.payout_provider]}
+          </p>
+        </Card>
+      </div>
+
+      {rails === null ? (
+        <Card className="border-amber-500/30 bg-amber-500/5 p-4 text-sm text-amber-200">
+          Could not reach the payment functions to check which credentials
+          are set, so the readiness labels below are blank. The switch still
+          works; you are just choosing without that confirmation.
+        </Card>
+      ) : null}
+
+      <Card className="p-5">
+        <PaymentProvidersForm
+          funding={settings.funding_provider}
+          payout={settings.payout_provider}
+          rails={rails}
+        />
+      </Card>
+
+      <Card className="space-y-2 p-5 text-sm text-muted-foreground">
+        <p className="font-medium text-foreground">
+          What a switch does, and what it deliberately does not
+        </p>
+        <p>
+          It decides where the NEXT deposit and the NEXT withdrawal go.
+          Every payment intent and every withdrawal row records the
+          provider it started with, and the functions that settle them read
+          that record rather than this setting, so money already moving
+          finishes at the provider holding it. Both providers&apos; webhooks
+          stay live at all times for the same reason.
+        </p>
+        <p>
+          Changing the payout provider asks users to confirm their saved
+          withdrawal banks once against the new one. That is not a formality:
+          bank codes come from each provider&apos;s own list, and paying a
+          code from the wrong list is how money reaches the wrong bank.
+        </p>
+        <p>
+          Credentials are not set here. They live in the Supabase function
+          secrets, and this page only reports whether they are present and
+          whether they look like live or test keys.
+        </p>
+      </Card>
+    </div>
+  );
+}

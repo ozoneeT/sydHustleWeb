@@ -64,8 +64,13 @@ export default async function EarningsPage({
       </div>
 
       <Card className="p-5 text-sm text-muted-foreground">
-        Withdrawal fees are gross — Paystack&apos;s own transfer charge comes
-        out of them, since we absorb it rather than bill users for it.
+        Withdrawal fees are gross: the payout provider&apos;s own transfer
+        charge comes out of them, since we absorb it rather than bill users
+        for it. Which provider that is, is set on{" "}
+        <a className="underline" href="/console/payments">
+          Payments
+        </a>
+        .
       </Card>
 
       <section className="space-y-3">
