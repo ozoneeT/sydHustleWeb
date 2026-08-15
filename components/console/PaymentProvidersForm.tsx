@@ -6,12 +6,14 @@ import {
   updatePaymentProviders,
   type ProvidersState,
 } from "@/lib/console/actions";
+// From `payment-providers`, not `payments`: the latter is server-only,
+// and this is a client component.
 import {
   PROVIDER_LABELS,
   type PaymentProvider,
   type PaymentRails,
   type RailReadiness,
-} from "@/lib/console/payments";
+} from "@/lib/console/payment-providers";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";

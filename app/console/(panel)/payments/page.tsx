@@ -1,9 +1,17 @@
 import { PaymentProvidersForm } from "@/components/console/PaymentProvidersForm";
 import { Card } from "@/components/ui/card";
 import { getPlatformSettings } from "@/lib/console/data";
-import { getPaymentRails, PROVIDER_LABELS } from "@/lib/console/payments";
+import { PROVIDER_LABELS } from "@/lib/console/payment-providers";
+import { getPaymentRails } from "@/lib/console/payments";
 
 export const metadata = { title: "Payments — sydHustle Console" };
+
+// Read fresh on every request. This page takes no search params, so Next
+// would otherwise prerender it at build time and serve a snapshot of
+// which provider was live when the console was last deployed - the exact
+// misreading the page exists to prevent. Credential readiness is live
+// state too: secrets set in Supabase minutes ago have to show up here.
+export const dynamic = "force-dynamic";
 
 export default async function PaymentsPage() {
   const [settings, rails] = await Promise.all([

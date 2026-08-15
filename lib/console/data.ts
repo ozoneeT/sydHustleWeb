@@ -1,6 +1,6 @@
 import "server-only";
 
-import type { PaymentProvider } from "@/lib/console/payments";
+import type { PaymentProvider } from "@/lib/console/payment-providers";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 
 /** All reads for the console. Service-role, server-only — panel routes are
