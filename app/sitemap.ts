@@ -47,5 +47,15 @@ export default function sitemap(): MetadataRoute.Sitemap {
       priority: 0.8,
       images: brandImages,
     },
+    {
+      // Listed because people will search for it rather than type the
+      // address off a receipt they were sent. The page itself is a shell:
+      // every verdict depends on a token that arrives in the URL fragment,
+      // which no crawler ever sees.
+      url: `${SITE_URL}/verify`,
+      lastModified: new Date(),
+      changeFrequency: "yearly",
+      priority: 0.4,
+    },
   ];
 }
