@@ -157,7 +157,14 @@ export async function checkReceiptStamp(
   if (error) {
     console.error("[console] verify_receipt_code failed", error);
     return {
-      error: "The check could not run. See the server logs.",
+      // Named, not hidden behind "see the logs". This is an operator tool:
+      // the person reading it can act on "the migration is not applied" and
+      // cannot act on a shrug. PGRST202 is PostgREST saying the function is
+      // not in its schema cache, which in practice means one of two things.
+      error:
+        error.code === "PGRST202"
+          ? "This database has no `verify_receipt_code` function. Apply supabase/migrations/20260815100000_receipt_stamp.sql, then reload the schema cache (Supabase does that on its own within a minute)."
+          : `The check could not run: ${error.message}`,
       result: null,
       reference: parsed.data.reference,
       code: parsed.data.code,
