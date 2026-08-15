@@ -37,7 +37,18 @@ export async function getPaymentRails(): Promise<PaymentRails | null> {
     rails?: PaymentRails;
   }>("payment-rails", { body: {} });
 
-  if (error || !data?.rails) return null;
+  // Logged, not swallowed. The page renders a calm "couldn't check"
+  // banner either way, and without this line the operator (and whoever
+  // they ask) has no way at all to tell a missing deployment from a
+  // rejected call from a network blip.
+  if (error || !data?.rails) {
+    console.error(
+      "[console] payment-rails unreachable:",
+      error?.message ?? "no rails in response",
+      error && "status" in error ? `status=${String(error.status)}` : ""
+    );
+    return null;
+  }
 
   return {
     funding: {
