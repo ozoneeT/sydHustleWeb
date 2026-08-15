@@ -18,6 +18,7 @@ import {
   Menu,
   MessageSquareWarning,
   Receipt,
+  ReceiptText,
   ShieldAlert,
   Sparkles,
   Users,
@@ -63,6 +64,7 @@ const GROUPS: NavGroup[] = [
       { href: "/console/costs", label: "Costs", icon: Receipt },
       { href: "/console/transactions", label: "Transactions", icon: Banknote },
       { href: "/console/withdrawals", label: "Withdrawals", icon: Wallet },
+      { href: "/console/receipts", label: "Receipt check", icon: ReceiptText },
     ],
   },
   {
