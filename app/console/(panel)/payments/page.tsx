@@ -1,4 +1,5 @@
 import { PaymentProvidersForm } from "@/components/console/PaymentProvidersForm";
+import { ProviderFees } from "@/components/console/ProviderFees";
 import { Card } from "@/components/ui/card";
 import { getPlatformSettings } from "@/lib/console/data";
 import { PROVIDER_LABELS } from "@/lib/console/payment-providers";
@@ -64,6 +65,12 @@ export default async function PaymentsPage() {
           rails={rails}
         />
       </Card>
+
+      <ProviderFees
+        cutPercent={settings.withdrawal_cut_percent}
+        fundingProvider={settings.funding_provider}
+        payoutProvider={settings.payout_provider}
+      />
 
       <Card className="space-y-2 p-5 text-sm text-muted-foreground">
         <p className="font-medium text-foreground">
