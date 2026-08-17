@@ -46,7 +46,6 @@ export type TransactionReport = {
   id: string;
   reporterId: string;
   reporterName: string;
-  reporterEmail: string | null;
   reference: string;
   reason: TransactionReportReason;
   detail: string | null;

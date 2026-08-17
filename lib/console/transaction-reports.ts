@@ -41,7 +41,7 @@ type ReportRow = {
   resolution: string | null;
   created_at: string;
   resolved_at: string | null;
-  profiles: { display_name: string | null; full_name: string | null; email: string | null } | null;
+  profiles: { display_name: string | null; full_name: string | null } | null;
 };
 
 /**
@@ -58,7 +58,7 @@ export async function listTransactionReports(
   let query = supabase
     .from("transaction_reports")
     .select(
-      "id, reporter_id, transaction_reference, reason, detail, receipt_snapshot, status, resolution, created_at, resolved_at, profiles!transaction_reports_reporter_id_fkey(display_name, full_name, email)"
+      "id, reporter_id, transaction_reference, reason, detail, receipt_snapshot, status, resolution, created_at, resolved_at, profiles!transaction_reports_reporter_id_fkey(display_name, full_name)"
     )
     .order("created_at", { ascending: false })
     .limit(200);
@@ -97,7 +97,6 @@ export async function listTransactionReports(
     reporterId: row.reporter_id,
     reporterName:
       row.profiles?.display_name ?? row.profiles?.full_name ?? "Someone",
-    reporterEmail: row.profiles?.email ?? null,
     reference: row.transaction_reference,
     reason: row.reason,
     detail: row.detail,
