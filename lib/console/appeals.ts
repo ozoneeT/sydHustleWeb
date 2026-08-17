@@ -79,17 +79,44 @@ async function loadNames(
 export async function listAppeals(): Promise<AppealSummary[]> {
   const supabase = createServerSupabaseClient();
 
-  const [applications, bookings, resolutions, holds] = await Promise.all([
+  /**
+   * Resolutions FIRST, because they decide what to fetch.
+   *
+   * Deciding an appeal moves the row off 'appealed' - awarding the worker
+   * releases the payment, awarding the payer refunds it - so a query that
+   * only asks for 'appealed' loses the case the moment it is judged. The
+   * list emptied itself, and the detail page 404'd on the very appeal the
+   * reviewer had just decided, with no confirmation that anything had
+   * happened.
+   *
+   * The rest of this function always expected otherwise: it carries
+   * `resolvedAt` and `awardedTo`, and sorts resolved cases last. Only the
+   * source queries disagreed.
+   */
+  const [resolutions, holds] = await Promise.all([
+    supabase.from("appeal_resolutions").select("kind, source_id, awarded_to, resolved_at"),
+    supabase.from("escrow_holds").select("kind, source_id").eq("status", "held"),
+  ]);
+
+  /** Still open, OR judged at some point - whatever the row says now. */
+  const openOrJudged = (kind: AppealKind) => {
+    const ids = (resolutions.data ?? [])
+      .filter((r) => r.kind === kind)
+      .map((r) => r.source_id as string);
+    return ids.length > 0
+      ? `status.eq.appealed,id.in.(${ids.join(",")})`
+      : "status.eq.appealed";
+  };
+
+  const [applications, bookings] = await Promise.all([
     supabase
       .from("hustle_applications")
       .select("id, hustler_id, agreed_amount, updated_at, hustle:hustles(title, provider_id)")
-      .eq("status", "appealed"),
+      .or(openOrJudged("hustle")),
     supabase
       .from("skill_bookings")
       .select("id, client_id, provider_id, agreed_amount, updated_at, skill:hustler_skills(skill_name)")
-      .eq("status", "appealed"),
-    supabase.from("appeal_resolutions").select("kind, source_id, awarded_to, resolved_at"),
-    supabase.from("escrow_holds").select("kind, source_id").eq("status", "held"),
+      .or(openOrJudged("booking")),
   ]);
 
   const resolvedBy = new Map(
