@@ -35,7 +35,6 @@ export const PROMO_ICONS = [
   { value: "chatbubble-ellipses", label: "Message", lucide: "MessageCircle" },
   { value: "rocket", label: "Rocket", lucide: "Rocket" },
   { value: "shield-checkmark", label: "Shield", lucide: "ShieldCheck" },
-  { value: "sparkles", label: "Sparkles", lucide: "Sparkles" },
   { value: "trending-up", label: "Growth", lucide: "TrendingUp" },
   { value: "wallet", label: "Wallet", lucide: "Wallet" },
   { value: "flash", label: "Fast", lucide: "Zap" },

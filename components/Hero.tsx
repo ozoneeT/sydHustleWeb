@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { motion } from "framer-motion";
-import { ArrowRight, HandHelping, Sparkles, Wallet } from "lucide-react";
+import { ArrowRight, HandHelping, Wallet, Wrench } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 const container = {
@@ -52,7 +52,7 @@ export function Hero() {
             <span className="animate-pulse-ring absolute inline-flex h-2 w-2 rounded-full bg-accent" />
             <span className="relative inline-flex h-2 w-2 rounded-full bg-accent" />
           </span>
-          <Sparkles className="h-4 w-4 text-accent" />
+          <Wrench className="h-4 w-4 text-accent" />
           Development in progress
         </motion.div>
 

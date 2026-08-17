@@ -20,8 +20,9 @@ import {
   MessageSquareWarning,
   Receipt,
   ReceiptText,
+  ShieldCheck,
   ShieldAlert,
-  Sparkles,
+  Star,
   Users,
   Wallet,
   X,
@@ -67,6 +68,11 @@ const GROUPS: NavGroup[] = [
       { href: "/console/withdrawals", label: "Withdrawals", icon: Wallet },
       { href: "/console/payments", label: "Payments", icon: CreditCard },
       { href: "/console/receipts", label: "Receipt check", icon: ReceiptText },
+      {
+        href: "/console/transaction-reports",
+        label: "Payment reports",
+        icon: ReceiptText,
+      },
     ],
   },
   {
@@ -75,6 +81,11 @@ const GROUPS: NavGroup[] = [
       { href: "/console/users", label: "Users", icon: Users },
       { href: "/console/subscribers", label: "Subscribers", icon: Mail },
       { href: "/console/identity", label: "Identity", icon: Fingerprint },
+      {
+        href: "/console/certifications",
+        label: "Certifications",
+        icon: ShieldCheck,
+      },
     ],
   },
   {
@@ -94,7 +105,7 @@ const GROUPS: NavGroup[] = [
   {
     label: "Ops",
     links: [
-      { href: "/console/featured", label: "Subscriptions", icon: Sparkles },
+      { href: "/console/featured", label: "Subscriptions", icon: Star },
       { href: "/console/promos", label: "Promotions", icon: BadgePercent },
       { href: "/console/broadcast", label: "Broadcast", icon: Megaphone },
     ],
