@@ -1,9 +1,9 @@
 import { TransactionReportQueue } from "@/components/console/TransactionReportQueue";
 import { requireConsole } from "@/lib/console/dal";
+import type { TransactionReportStatus } from "@/lib/console/transaction-report-types";
 import {
   listTransactionReports,
   transactionReportCounts,
-  type TransactionReportStatus,
 } from "@/lib/console/transaction-reports";
 
 export const metadata = { title: "Payment reports — sydHustle Console" };

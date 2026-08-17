@@ -11,7 +11,7 @@ import {
   REASON_LABELS,
   type TransactionReport,
   type TransactionReportStatus,
-} from "@/lib/console/transaction-reports";
+} from "@/lib/console/transaction-report-types";
 
 const STATUS_TABS: { id: TransactionReportStatus | "all"; label: string }[] = [
   { id: "open", label: "Open" },
