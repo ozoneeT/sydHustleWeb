@@ -105,18 +105,37 @@ export async function POST(request: Request) {
     region: "auto",
   });
 
+  // Content-Length is set by hand. R2 rejects a PUT without one with a
+  // bare 411, and depending on the runtime a body that reaches fetch as a
+  // stream rather than a byte sequence goes out chunked, with no length.
+  // Setting it is free of side effects: aws4fetch lists content-length as
+  // unsignable, so it never enters the signature.
+  const bytes = new Uint8Array(await file.arrayBuffer());
+
   const response = await client.fetch(
     `https://${accountId}.r2.cloudflarestorage.com/${bucket}/${key}`,
     {
       method: "PUT",
-      body: await file.arrayBuffer(),
-      headers: { "Content-Type": file.type },
+      body: bytes,
+      headers: {
+        "Content-Type": file.type,
+        "Content-Length": String(bytes.byteLength),
+      },
     },
   );
 
   if (!response.ok) {
+    // R2 answers with an XML body naming the actual fault (SignatureDoesNot
+    // Match, MissingContentLength, AccessDenied, NoSuchBucket). Throwing that
+    // away and reporting only the status is what turned a five-second fix
+    // into guesswork the first time this failed. Operator-only route, so the
+    // detail is safe to surface.
+    const detail = await response.text().catch(() => "");
+    console.error("promo-art R2 upload failed", response.status, detail);
     return NextResponse.json(
-      { error: `Upload failed (${response.status}).` },
+      {
+        error: `Upload failed (${response.status}). ${extractS3Code(detail) ?? ""}`.trim(),
+      },
       { status: 500 },
     );
   }
@@ -124,6 +143,12 @@ export async function POST(request: Request) {
   return NextResponse.json({
     url: `${publicBase.replace(/\/$/, "")}/${key}`,
   });
+}
+
+/** Pulls `<Code>…</Code>` out of an S3/R2 XML error so the operator sees
+ * "AccessDenied" rather than a wall of markup. */
+function extractS3Code(xml: string): string | null {
+  return xml.match(/<Code>([^<]+)<\/Code>/)?.[1] ?? null;
 }
 
 /** Derived from the validated MIME type rather than the uploaded
