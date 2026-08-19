@@ -9,6 +9,8 @@ import { Card } from "@/components/ui/card";
 import {
   getFinalPositions,
   getLiveSession,
+  getLocationTrail,
+  getPanicAlerts,
 } from "@/lib/console/live-locations";
 
 export const metadata = { title: "Live channel — sydHustle Console" };
@@ -28,9 +30,11 @@ export default async function LiveChannelPage({
   const { conversationId } = await params;
   if (!/^[0-9a-fA-F-]{36}$/.test(conversationId)) notFound();
 
-  const [session, finals] = await Promise.all([
+  const [session, finals, trail, alerts] = await Promise.all([
     getLiveSession(conversationId),
     getFinalPositions(conversationId),
+    getLocationTrail(conversationId),
+    getPanicAlerts(conversationId),
   ]);
   if (!session && finals.length === 0) notFound();
 
@@ -85,11 +89,47 @@ export default async function LiveChannelPage({
         </p>
       </div>
 
+      {alerts.filter((alert) => alert.cleared_at === null).map((alert) => (
+        <Card
+          className="border-red-500/40 bg-red-500/10 p-4 text-sm"
+          key={alert.id}
+        >
+          <p className="text-base font-semibold text-red-300">
+            Panic Mode active &mdash; {alert.full_name ?? "a participant"}
+          </p>
+          <dl className="mt-3 grid gap-x-6 gap-y-1 sm:grid-cols-2">
+            <Detail label="Activated">
+              {new Date(alert.activated_at).toLocaleString()}
+            </Detail>
+            <Detail label="Support notified">
+              {alert.notified_at
+                ? new Date(alert.notified_at).toLocaleString()
+                : "NOT SENT \u2014 no email went out"}
+            </Detail>
+            <Detail label="Emergency contact">
+              {alert.emergency_contact_name
+                ? `${alert.emergency_contact_name}${
+                    alert.emergency_contact_relationship
+                      ? ` (${alert.emergency_contact_relationship})`
+                      : ""
+                  } \u2014 ${alert.emergency_contact_phone ?? ""}`
+                : "none on file"}
+            </Detail>
+            <Detail label="Payment">frozen while this is open</Detail>
+          </dl>
+          <p className="mt-3 text-xs text-white/50">
+            Do not contact the other party until the desk has decided to.
+            They may be the reason for this alert.
+          </p>
+        </Card>
+      ))}
+
       <LiveLocationMap
         conversationId={conversationId}
         finals={finalPins}
         live={live}
         payerName={payerName}
+        trail={trail}
         venue={venue}
         workerName={workerName}
       />
@@ -117,6 +157,21 @@ export default async function LiveChannelPage({
           ))}
         </Card>
       ) : null}
+    </div>
+  );
+}
+
+function Detail({
+  children,
+  label,
+}: {
+  children: React.ReactNode;
+  label: string;
+}) {
+  return (
+    <div className="flex gap-2">
+      <dt className="shrink-0 text-white/50">{label}</dt>
+      <dd className="font-medium text-white/90">{children}</dd>
     </div>
   );
 }

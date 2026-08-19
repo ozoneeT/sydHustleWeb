@@ -57,6 +57,14 @@ export type FinalPin = {
   lng: number;
 };
 
+/** A recorded step, oldest first. See `getLocationTrail`. */
+export type TrailStep = {
+  party: "worker" | "payer";
+  lat: number;
+  lng: number;
+  recorded_at: string;
+};
+
 const COLORS = {
   worker: "#14B8A6",
   payer: "#6366F1",
@@ -162,6 +170,7 @@ export function LiveLocationMap({
   live,
   venue: initialVenue,
   finals,
+  trail,
   workerName,
   payerName,
 }: {
@@ -172,6 +181,14 @@ export function LiveLocationMap({
    * broadcast, which is how a mid-session move shows up here. */
   venue: Point | null;
   finals: FinalPin[];
+  /**
+   * Everywhere each party has already been, recorded server-side.
+   *
+   * Seeds the two paths so a session opened mid-journey shows the route
+   * walked so far rather than starting from wherever the operator happened
+   * to tune in. Live broadcasts extend it from there.
+   */
+  trail: TrailStep[];
   workerName: string;
   payerName: string;
 }) {
@@ -179,6 +196,10 @@ export function LiveLocationMap({
   const mapRef = useRef<google.maps.Map | null>(null);
   const markersRef = useRef(new Map<string, google.maps.Marker>());
   const fittedRef = useRef(false);
+  /** One polyline per party, mutated in place. Rebuilding them on every
+   * broadcast would re-upload the whole path to the map several times a
+   * minute for the sake of one new vertex at the end. */
+  const pathsRef = useRef(new Map<"worker" | "payer", google.maps.Polyline>());
 
   const [mapReady, setMapReady] = useState(false);
   const [mapError, setMapError] = useState<string | null>(null);
@@ -322,6 +343,82 @@ export function LiveLocationMap({
     };
   }, [live, conversationId]);
 
+  // ── Paths, seeded from the trail and extended live ────────────────
+  //
+  // The polylines are created once and then only ever appended to. Two
+  // sources feed them and they must not fight: the server trail is
+  // everything up to the moment the page loaded, and the broadcasts are
+  // everything since. Seeding runs once (guarded on the polyline not
+  // existing yet); after that only the live effect below adds vertices.
+  useEffect(() => {
+    const g = window.google;
+    const map = mapRef.current;
+    if (!mapReady || !g?.maps || !map) return;
+
+    const paths = pathsRef.current;
+
+    for (const party of ["worker", "payer"] as const) {
+      if (paths.has(party)) continue;
+
+      const seed = trail
+        .filter((step) => step.party === party)
+        .map((step) => ({ lat: step.lat, lng: step.lng }));
+
+      paths.set(
+        party,
+        new g.maps.Polyline({
+          map,
+          path: seed,
+          strokeColor: COLORS[party],
+          strokeOpacity: 0.85,
+          strokeWeight: 3,
+          // Arrows rather than a plain line: on a route that doubles back
+          // over itself, which is most of them, the direction of travel is
+          // the whole question and a bare line cannot answer it.
+          icons: [
+            {
+              icon: {
+                path: g.maps.SymbolPath.FORWARD_CLOSED_ARROW,
+                scale: 2.2,
+                strokeColor: COLORS[party],
+                fillColor: COLORS[party],
+                fillOpacity: 1,
+              },
+              offset: "0",
+              repeat: "90px",
+            },
+          ],
+          zIndex: 2,
+        }),
+      );
+    }
+  }, [mapReady, trail]);
+
+  // Every position that arrives extends the line under the marker.
+  useEffect(() => {
+    const path = pathsRef.current.get("worker");
+    if (path && worker) {
+      path.getPath().push(new google.maps.LatLng(worker.lat, worker.lng));
+    }
+  }, [worker]);
+
+  useEffect(() => {
+    const path = pathsRef.current.get("payer");
+    if (path && payer) {
+      path.getPath().push(new google.maps.LatLng(payer.lat, payer.lng));
+    }
+  }, [payer]);
+
+  // The polylines outlive their effect: they are attached to the map, not
+  // to React, so nothing else takes them off it on unmount.
+  useEffect(() => {
+    const paths = pathsRef.current;
+    return () => {
+      paths.forEach((path) => path.setMap(null));
+      paths.clear();
+    };
+  }, []);
+
   // ── Markers, synced from state ────────────────────────────────────
   useEffect(() => {
     const g = window.google;
@@ -371,6 +468,11 @@ export function LiveLocationMap({
       markers.forEach((marker) => {
         const at = marker.getPosition();
         if (at) bounds.extend(at);
+      });
+      // ...and the ground already covered, or a session opened after a long
+      // walk frames the two current dots and leaves the route off-screen.
+      pathsRef.current.forEach((path) => {
+        path.getPath().forEach((at) => bounds.extend(at));
       });
       map.fitBounds(bounds, 90);
       fittedRef.current = true;
