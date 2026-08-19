@@ -64,8 +64,8 @@ export async function updateEarningsSettings(
 }
 
 const providersSchema = z.object({
-  funding_provider: z.enum(["paystack", "opay"]),
-  payout_provider: z.enum(["paystack", "opay"]),
+  funding_provider: z.enum(["paystack", "payvessel"]),
+  payout_provider: z.enum(["paystack", "payvessel"]),
 });
 
 export type ProvidersState = { error: string | null; saved: boolean };
@@ -85,7 +85,7 @@ export type ProvidersState = { error: string | null; saved: boolean };
  *   - Add Cash draws the methods the new funding provider supports.
  *   - Withdrawal banks saved against the old payout provider ask to be
  *     confirmed again, because a bank code belongs to one provider's list
- *     and Paystack additionally needs a recipient the other never minted.
+ *     and Paystack additionally needs a recipient Payvessel never mints.
  *     Until a bank is confirmed it cannot be withdrawn to, and the
  *     automatic sweep skips it with a notification rather than failing a
  *     transfer.

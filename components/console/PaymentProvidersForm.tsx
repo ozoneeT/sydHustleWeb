@@ -20,14 +20,14 @@ import { Label } from "@/components/ui/label";
 
 const initialState: ProvidersState = { error: null, saved: false };
 
-const PROVIDERS: PaymentProvider[] = ["paystack", "opay"];
+const PROVIDERS: PaymentProvider[] = ["paystack", "payvessel"];
 
 const RAILS = {
   funding: {
     field: "funding_provider",
     title: "Add money",
     blurb:
-      "Handles every way a wallet is topped up: card, bank transfer, USSD, and the OPay app hand-off where OPay is the one taking it.",
+      "Handles every way a wallet is topped up. Which methods the app can draw in-app rather than in a browser depends on the provider.",
   },
   payout: {
     field: "payout_provider",
@@ -193,7 +193,7 @@ export function PaymentProvidersForm({
           <p className="font-medium">Saved withdrawal banks will need confirming</p>
           <p className="mt-1 text-amber-200/80">
             A bank code belongs to one provider&apos;s list, and Paystack
-            needs a transfer recipient that OPay never mints. So every bank
+            needs a transfer recipient that Payvessel never mints. So every bank
             saved against {PROVIDER_LABELS[payout]} asks its owner to
             confirm it once against {PROVIDER_LABELS[payoutChoice]} before
             it can be paid, and automatic withdrawals to it are skipped

@@ -53,11 +53,11 @@ export async function getPaymentRails(): Promise<PaymentRails | null> {
   return {
     funding: {
       paystack: data.rails.funding?.paystack ?? UNKNOWN,
-      opay: data.rails.funding?.opay ?? UNKNOWN,
+      payvessel: data.rails.funding?.payvessel ?? UNKNOWN,
     },
     payout: {
       paystack: data.rails.payout?.paystack ?? UNKNOWN,
-      opay: data.rails.payout?.opay ?? UNKNOWN,
+      payvessel: data.rails.payout?.payvessel ?? UNKNOWN,
     },
   };
 }

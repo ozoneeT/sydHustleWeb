@@ -3,10 +3,11 @@
  * server and the browser.
  *
  * sydHustle integrates two providers in full, not one and a half:
- * Paystack and OPay each handle money in and money out on their own. A
- * business does not go live on both at the same moment - one can be live
- * while the other is still in test - so which one is real right now
- * belongs to whoever runs the business, in this console.
+ * Paystack and Payvessel each handle money in and money out on their own.
+ * A business does not go live on both at the same moment - one can be
+ * live while the other is still in test, or under review - so which one
+ * is real right now belongs to whoever runs the business, in this
+ * console. (OPay held this slot until it declined the merchant account.)
  *
  * Two settings rather than one, because the two directions are genuinely
  * independent: whoever takes deposits owns every funding method, and
@@ -19,11 +20,11 @@
  * where the guard belongs.
  */
 
-export type PaymentProvider = "paystack" | "opay";
+export type PaymentProvider = "paystack" | "payvessel";
 
 export const PROVIDER_LABELS: Record<PaymentProvider, string> = {
   paystack: "Paystack",
-  opay: "OPay",
+  payvessel: "Payvessel",
 };
 
 export type RailReadiness = {

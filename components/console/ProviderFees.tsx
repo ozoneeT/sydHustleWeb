@@ -104,7 +104,7 @@ export function ProviderFees({
 }) {
   const margins = MARGIN_SAMPLES.map((amount) => ({
     amount,
-    ...withdrawalMargin(amount, cutPercent),
+    ...withdrawalMargin(amount, cutPercent, payoutProvider),
   }));
   const firstLoss = margins.find((row) => row.net < 0);
 
@@ -115,10 +115,9 @@ export function ProviderFees({
           What the providers charge
         </h2>
         <p className="text-sm text-muted-foreground">
-          Published rates, not live data. Neither provider prices deposit
-          channels differently, so there is no cheaper method to steer people
-          towards — the choice that costs money is which provider takes
-          deposits at all.
+          Published rates, not live data. Paystack prices every local
+          deposit channel the same; Payvessel does not, so on that rail the
+          method a user picks changes what it costs you.
         </p>
       </div>
 
@@ -128,8 +127,10 @@ export function ProviderFees({
           fees={PROVIDER_FEES.paystack}
         />
         <ProviderCard
-          active={fundingProvider === "opay" || payoutProvider === "opay"}
-          fees={PROVIDER_FEES.opay}
+          active={
+            fundingProvider === "payvessel" || payoutProvider === "payvessel"
+          }
+          fees={PROVIDER_FEES.payvessel}
         />
       </div>
 
@@ -139,8 +140,8 @@ export function ProviderFees({
         </p>
         <p className="mt-1 text-sm text-muted-foreground">
           The user is credited the full amount either way, so this comes out
-          of sydHustle. Below ₦2,500 the two are identical; above it,
-          Paystack&apos;s flat ₦100 is the entire difference.
+          of sydHustle. Quoted for a bank transfer, the default method in the
+          app.
         </p>
 
         <div className="mt-4 overflow-x-auto">
@@ -149,21 +150,21 @@ export function ProviderFees({
               <tr className="border-b border-white/10">
                 <th className="py-2 text-left font-medium">Top-up</th>
                 <th className="py-2 text-right font-medium">Paystack</th>
-                <th className="py-2 text-right font-medium">OPay</th>
+                <th className="py-2 text-right font-medium">Payvessel</th>
                 <th className="py-2 text-right font-medium">Difference</th>
               </tr>
             </thead>
             <tbody>
               {DEPOSIT_SAMPLES.map((amount) => {
                 const ps = depositCost(amount, "paystack");
-                const op = depositCost(amount, "opay");
+                const pv = depositCost(amount, "payvessel");
                 return (
                   <tr className="border-b border-white/5" key={amount}>
                     <td className="py-2">{naira(amount)}</td>
                     <td className="py-2 text-right font-mono">{naira(ps)}</td>
-                    <td className="py-2 text-right font-mono">{naira(op)}</td>
+                    <td className="py-2 text-right font-mono">{naira(pv)}</td>
                     <td className="py-2 text-right font-mono text-muted-foreground">
-                      {ps === op ? "same" : `+${naira(ps - op)}`}
+                      {ps === pv ? "same" : `+${naira(ps - pv)}`}
                     </td>
                   </tr>
                 );
@@ -173,9 +174,10 @@ export function ProviderFees({
         </div>
 
         <p className="mt-3 text-sm text-muted-foreground">
-          At any top-up of ₦2,500 or more, OPay costs ₦100 less per deposit.
-          Whether that matters is a volume question: at a thousand deposits a
-          month it is {naira(100000)} a year.
+          Payvessel is cheaper at every size, and the gap widens with the
+          amount: its 1% caps at {naira(500)} where Paystack&apos;s 1.5% plus{" "}
+          {naira(100)} caps at {naira(2000)}. Remember Payvessel quotes VAT
+          exclusive, so add 7.5% before treating the difference as final.
         </p>
       </Card>
 
@@ -184,10 +186,11 @@ export function ProviderFees({
           What a withdrawal leaves you, at your current {cutPercent}% cut
         </p>
         <p className="mt-1 text-sm text-muted-foreground">
-          Both providers charge the same three tiers, so this does not change
-          with the switch. Your cut is a percentage and their charge is flat,
-          so the two cross over somewhere — below that point a withdrawal
-          costs more to send than it earns.
+          Calculated for {PROVIDER_LABELS[payoutProvider]}, the provider
+          currently sending the money — the tiers differ above ₦5,000. Your
+          cut is a percentage and their charge is flat, so the two cross
+          over somewhere; below that point a withdrawal costs more to send
+          than it earns.
         </p>
 
         <div className="mt-4 overflow-x-auto">
@@ -243,8 +246,8 @@ export function ProviderFees({
         <p className="mt-3 text-xs text-muted-foreground">
           Note the jump between {naira(9999)} and {naira(10000)} — the ₦50
           stamp duty starts there, so a single naira costs you fifty. Neither
-          provider absorbs it; {PROVIDER_LABELS.opay} does not mention it on
-          their pricing page at all, and it is included above on the
+          provider absorbs it; {PROVIDER_LABELS.payvessel} does not mention
+          it on their pricing page at all, and it is included above on the
           assumption that a statutory levy applies whoever moves the money.
         </p>
       </Card>
