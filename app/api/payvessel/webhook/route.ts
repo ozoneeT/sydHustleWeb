@@ -17,18 +17,22 @@ import { NextResponse } from "next/server";
  * `request.json()` here would break every signature.
  *
  * The security split, which is worth stating because it is not obvious:
- *  - The IP allowlist is enforced HERE, because this is the only place
- *    the real source address is visible. Once the request is forwarded,
- *    the edge function sees Vercel, not Payvessel.
  *  - The SIGNATURE is enforced in the edge function, because that is
  *    where the API secret lives and it must not be copied into a second
- *    environment to check it twice.
- *
- * The signature is the real control: it is cryptographic, and the secret
- * never leaves Supabase. The IP check is defence in depth on top.
+ *    environment to check it twice. It is the real control: cryptographic,
+ *    and the secret never leaves Supabase.
+ *  - The source IP is RECORDED here, because this is the only place the
+ *    real address is visible - once forwarded, the edge function sees
+ *    Vercel. It is deliberately not enforced. Payvessel publishes two
+ *    addresses, but a delivery from any other one would be dropped here
+ *    and logged to Vercel, which is indistinguishable from Payvessel
+ *    never having called at all - and that is precisely the failure that
+ *    cost a real deposit. Logging it means an unexpected address is
+ *    visible; rejecting on it means silence.
  */
 
-/** Published by Payvessel in their webhook documentation. */
+/** Published by Payvessel in their webhook documentation. Used to notice
+ * an unexpected source, not to refuse one - see the note above. */
 const PAYVESSEL_IPS = new Set(["3.255.23.38", "162.246.254.36"]);
 
 export async function POST(request: Request) {
@@ -45,8 +49,9 @@ export async function POST(request: Request) {
     "";
 
   if (source && !PAYVESSEL_IPS.has(source)) {
-    console.error(`[payvessel-proxy] rejected delivery from ${source}`);
-    return NextResponse.json({ error: "Unrecognised source." }, { status: 403 });
+    // Recorded, not rejected. If this appears in the logs alongside a
+    // valid signature, add the address to the list above.
+    console.warn(`[payvessel-proxy] delivery from unlisted address ${source}`);
   }
 
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
