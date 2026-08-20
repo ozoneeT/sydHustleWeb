@@ -24,10 +24,25 @@ export type ProfitAndLoss = {
   /** Quick ranges, computed against today's calendar. */
   presets: PnlPreset[];
   revenue: {
-    withdrawalFees: number;
+    /** The main stream: sydHustle's cut of every released Hustle. */
+    releaseFees: number;
+    /** Charged when a hold is refunded out of a failed transaction. */
     escrowFees: number;
     smsFees: number;
+    /** Paid placements on the Skills surface. */
+    featureFees: number;
+    /** Zero going forward - withdrawals are free - and non-zero for any
+     * period before the cut moved to releases. */
+    withdrawalFees: number;
     total: number;
+  };
+  /**
+   * Stamp duty collected from users and paid to government. Deliberately
+   * outside `revenue` and outside `costs`: it passes straight through, and
+   * putting it in either would misstate the business by the whole amount.
+   */
+  passThrough: {
+    stampDuty: number;
   };
   costs: {
     recurringAccrued: number;
@@ -93,20 +108,42 @@ export async function getProfitAndLoss(
       new Date(toEndMs).toISOString()
     );
   }
-  const [{ data: revenueRows, error }, costRows] = await Promise.all([
-    revenueQuery,
-    listCosts(),
-  ]);
+  // Stamp duty over the same window. Only paid withdrawals: an unpaid one
+  // has not been charged the duty either.
+  let dutyQuery = supabase
+    .from("withdrawals")
+    .select("levy")
+    .eq("status", "paid");
+  if (from) dutyQuery = dutyQuery.gte("created_at", from);
+  if (toEndMs !== null) {
+    dutyQuery = dutyQuery.lt("created_at", new Date(toEndMs).toISOString());
+  }
+
+  const [{ data: revenueRows, error }, { data: dutyRows }, costRows] =
+    await Promise.all([revenueQuery, dutyQuery, listCosts()]);
   if (error) throw new Error(error.message);
 
+  const stampDuty = (dutyRows ?? []).reduce(
+    (sum, row) => sum + Number(row.levy ?? 0),
+    0,
+  );
+
   let withdrawalFees = 0;
+  let releaseFees = 0;
   let escrowFees = 0;
   let smsFees = 0;
+  let featureFees = 0;
+  // Every kind is counted, and anything unrecognised still reaches the
+  // total below. The old version summed three of five: release fees - the
+  // main stream - and featured placements were both earned, recorded, and
+  // then left out of the statement.
   for (const row of revenueRows ?? []) {
     const amount = Number(row.amount);
     if (row.kind === "withdrawal_fee") withdrawalFees += amount;
+    else if (row.kind === "escrow_release_fee") releaseFees += amount;
     else if (row.kind === "escrow_refund_fee") escrowFees += amount;
     else if (row.kind === "sms_subscription") smsFees += amount;
+    else if (row.kind === "skill_feature") featureFees += amount;
   }
 
   let oneOffs = 0;
@@ -139,7 +176,8 @@ export async function getProfitAndLoss(
     recurringAccrued += dailyRate * days;
   }
 
-  const revenueTotal = withdrawalFees + escrowFees + smsFees;
+  const revenueTotal =
+    withdrawalFees + releaseFees + escrowFees + smsFees + featureFees;
   const costsTotal = oneOffs + recurringAccrued;
 
   return {
@@ -147,10 +185,15 @@ export async function getProfitAndLoss(
     to,
     presets: buildPresets(nowMs),
     revenue: {
-      withdrawalFees: round(withdrawalFees),
+      releaseFees: round(releaseFees),
       escrowFees: round(escrowFees),
       smsFees: round(smsFees),
+      featureFees: round(featureFees),
+      withdrawalFees: round(withdrawalFees),
       total: round(revenueTotal),
+    },
+    passThrough: {
+      stampDuty: round(stampDuty),
     },
     costs: {
       recurringAccrued: round(recurringAccrued),

@@ -45,7 +45,7 @@ export default async function OverviewPage() {
           <StatCard
             label="Earned"
             value={naira(stats.revenue.total)}
-            hint="withdrawal + escrow fees — see Earnings"
+            hint="mostly release fees — see Earnings"
           />
           <StatCard
             label="Money in (30d)"
@@ -68,9 +68,21 @@ export default async function OverviewPage() {
             >
               {naira(Math.abs(netFlow30d))} {netFlow30d >= 0 ? "in" : "out"}
             </span>
-            . True profit is fees earned minus provider charges (Paystack /
-            OPay fees aren&apos;t recorded per-transaction yet — read them off
-            the provider dashboards until they are).
+            . Wallet flow is not revenue: a deposit is someone else&apos;s
+            money arriving, and it leaves again on withdrawal. What
+            sydHustle keeps is on{" "}
+            <a className="underline" href="/console/earnings">
+              Earnings
+            </a>
+            .
+          </p>
+          <p className="mt-2">
+            True profit is fees earned minus provider charges, and those are
+            still not recorded per transaction — Paystack takes 1% capped at
+            ₦300 on transfers into virtual accounts, and ₦10/₦25/₦50 per
+            payout by band. Read them off the provider dashboard until they
+            are recorded here. Card checkout costs nothing: the payer bears
+            that fee.
           </p>
         </Card>
       </section>

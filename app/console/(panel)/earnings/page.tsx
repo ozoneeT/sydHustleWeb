@@ -52,9 +52,9 @@ export default async function EarningsPage({
           value={naira(stats.revenue.total_30d)}
         />
         <StatCard
-          label="Withdrawal fees"
-          value={naira(stats.revenue.withdrawal_fees)}
-          hint="collected when transfers settle"
+          label="Release fees"
+          value={naira(stats.revenue.release_fees)}
+          hint="4-10% of every released Hustle"
         />
         <StatCard
           label="Escrow service fees"
@@ -63,14 +63,25 @@ export default async function EarningsPage({
         />
       </div>
 
-      <Card className="p-5 text-sm text-muted-foreground">
-        Withdrawal fees are gross: the payout provider&apos;s own transfer
-        charge comes out of them, since we absorb it rather than bill users
-        for it. Which provider that is, is set on{" "}
-        <a className="underline" href="/console/payments">
-          Payments
-        </a>
-        .
+      <Card className="space-y-2 p-5 text-sm text-muted-foreground">
+        <p>
+          sydHustle earns when work is released, on a sliding rate by Hustle
+          value. Withdrawals are free and the payout provider&apos;s transfer
+          charge comes out of these fees, since we absorb it rather than bill
+          users for it. Which provider that is, is set on{" "}
+          <a className="underline" href="/console/payments">
+            Payments
+          </a>
+          .
+        </p>
+        <p>
+          <strong className="text-white">
+            {naira(stats.levies.stamp_duty_collected)}
+          </strong>{" "}
+          of stamp duty has been collected from users and paid to government.
+          It is not counted anywhere above: it passes straight through, so
+          treating it as income would flatter the books by the whole amount.
+        </p>
       </Card>
 
       <section className="space-y-3">
@@ -136,9 +147,14 @@ export default async function EarningsPage({
                 </td>
               </tr>
               <tr className="border-b border-white/5">
-                <td className="px-4 py-3">Withdrawal fees</td>
+                <td className="px-4 py-3">
+                  Release fees
+                  <span className="block text-xs text-muted-foreground">
+                    sydHustle&apos;s cut of every released Hustle
+                  </span>
+                </td>
                 <td className="px-4 py-3 text-right font-mono">
-                  {naira(pnl.revenue.withdrawalFees)}
+                  {naira(pnl.revenue.releaseFees)}
                 </td>
               </tr>
               <tr className="border-b border-white/5">
@@ -153,6 +169,28 @@ export default async function EarningsPage({
                   {naira(pnl.revenue.smsFees)}
                 </td>
               </tr>
+              <tr className="border-b border-white/5">
+                <td className="px-4 py-3">Featured placements</td>
+                <td className="px-4 py-3 text-right font-mono">
+                  {naira(pnl.revenue.featureFees)}
+                </td>
+              </tr>
+              {/* Only worth a row where it is not zero: withdrawals have
+                  been free since the cut moved to releases, and a
+                  permanent ₦0 line is noise on every statement after. */}
+              {pnl.revenue.withdrawalFees > 0 ? (
+                <tr className="border-b border-white/5">
+                  <td className="px-4 py-3">
+                    Withdrawal fees
+                    <span className="block text-xs text-muted-foreground">
+                      charged before withdrawals became free
+                    </span>
+                  </td>
+                  <td className="px-4 py-3 text-right font-mono">
+                    {naira(pnl.revenue.withdrawalFees)}
+                  </td>
+                </tr>
+              ) : null}
               <tr className="border-b border-white/10">
                 <td className="px-4 py-3 font-semibold">Total revenue</td>
                 <td className="px-4 py-3 text-right font-mono font-semibold">
@@ -188,6 +226,20 @@ export default async function EarningsPage({
                   {naira(pnl.costs.total)}
                 </td>
               </tr>
+
+              {pnl.passThrough.stampDuty > 0 ? (
+                <tr className="border-b border-white/10">
+                  <td className="px-4 py-3 text-muted-foreground">
+                    Stamp duty collected and remitted
+                    <span className="block text-xs text-muted-foreground">
+                      passes through - in neither revenue nor costs
+                    </span>
+                  </td>
+                  <td className="px-4 py-3 text-right font-mono text-muted-foreground">
+                    {naira(pnl.passThrough.stampDuty)}
+                  </td>
+                </tr>
+              ) : null}
 
               <tr className="bg-white/5">
                 <td className="px-4 py-3 text-base font-bold">

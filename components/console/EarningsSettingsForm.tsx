@@ -20,6 +20,17 @@ const APPLIES_OPTIONS = [
   { value: "none", label: "No one — escrow cut off" },
 ];
 
+/** Mirrors the seed in 20260820180000_tiered_release_fee.sql. Displayed
+ * only - the database is the authority, and this is here so the page can
+ * state the rates without a round trip. */
+const RELEASE_TIERS = [
+  { band: "Up to ₦5,000", rate: "10%" },
+  { band: "₦5,001 – ₦20,000", rate: "8%" },
+  { band: "₦20,001 – ₦50,000", rate: "6%" },
+  { band: "₦50,001 – ₦100,000", rate: "5%" },
+  { band: "Above ₦100,000", rate: "4%" },
+];
+
 export function EarningsSettingsForm({
   settings,
 }: {
@@ -44,10 +55,38 @@ export function EarningsSettingsForm({
           type="number"
         />
         <p className="text-xs text-muted-foreground">
-          Taken from every withdrawal; the transfer goes out net of this.
-          Users see the exact net amount before they confirm. Applies to new
-          withdrawals only — in-flight ones keep the rate they were created
-          with.
+          <strong className="text-amber-300">
+            Zero, and meant to stay zero.
+          </strong>{" "}
+          sydHustle earns on released work now, and free withdrawals are
+          advertised to users in the app — putting a rate back here charges
+          people for something they were told was free. The mechanism is kept
+          for the day that changes. Applies to new withdrawals only; in-flight
+          ones keep the rate they were created with, and stamp duty is
+          separate and always passed through.
+        </p>
+      </div>
+
+      <div className="space-y-2">
+        <Label>Release fee tiers</Label>
+        <div className="rounded-lg border border-white/10 text-xs">
+          {RELEASE_TIERS.map((tier) => (
+            <div
+              className="flex justify-between border-b border-white/5 px-3 py-2 last:border-0"
+              key={tier.band}
+            >
+              <span className="text-muted-foreground">{tier.band}</span>
+              <span className="font-mono">{tier.rate}</span>
+            </div>
+          ))}
+        </div>
+        <p className="text-xs text-muted-foreground">
+          What sydHustle takes when a Hustle is released — the main revenue
+          stream. Shown here rather than edited: the rates live in
+          <code className="mx-1">platform_fee_tiers</code>, the app quotes
+          them to Hustlers before they accept a price, and changing one is a
+          pricing decision worth making deliberately in SQL until this form
+          grows an editor for it.
         </p>
       </div>
 

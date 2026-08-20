@@ -29,10 +29,22 @@ export type ConsoleStats = {
   };
   revenue: {
     total: number;
-    withdrawal_fees: number;
+    /** The main stream: sydHustle's cut of every released Hustle. */
+    release_fees: number;
+    release_fees_30d: number;
     escrow_fees: number;
     sms_fees?: number;
+    feature_fees?: number;
+    /** Zero going forward - withdrawals are free - and non-zero for the
+     * period before the cut moved to releases. */
+    withdrawal_fees: number;
     total_30d: number;
+  };
+  /** Collected from users and remitted to government. Neither revenue nor
+   * cost: it passes straight through. */
+  levies: {
+    stamp_duty_collected: number;
+    stamp_duty_30d: number;
   };
   generated_at: string;
 };
@@ -78,7 +90,33 @@ export async function getConsoleStats(): Promise<ConsoleStats> {
   const supabase = createServerSupabaseClient();
   const { data, error } = await supabase.rpc("console_stats");
   if (error) throw new Error(error.message);
-  return data as ConsoleStats;
+  // Read loosely, returned strictly. The console deploys separately from
+  // the schema, so a database still on the previous `console_stats` is a
+  // normal state for a few minutes - and a missing key should render as
+  // zero rather than crash the page it appears on.
+  const stats = data as Partial<ConsoleStats> & {
+    revenue?: Partial<ConsoleStats["revenue"]>;
+    levies?: Partial<ConsoleStats["levies"]>;
+  };
+  const revenue: Partial<ConsoleStats["revenue"]> = stats.revenue ?? {};
+  const levies: Partial<ConsoleStats["levies"]> = stats.levies ?? {};
+  return {
+    ...(stats as ConsoleStats),
+    revenue: {
+      total: revenue.total ?? 0,
+      release_fees: revenue.release_fees ?? 0,
+      release_fees_30d: revenue.release_fees_30d ?? 0,
+      escrow_fees: revenue.escrow_fees ?? 0,
+      sms_fees: revenue.sms_fees ?? 0,
+      feature_fees: revenue.feature_fees ?? 0,
+      withdrawal_fees: revenue.withdrawal_fees ?? 0,
+      total_30d: revenue.total_30d ?? 0,
+    },
+    levies: {
+      stamp_duty_collected: levies.stamp_duty_collected ?? 0,
+      stamp_duty_30d: levies.stamp_duty_30d ?? 0,
+    },
+  };
 }
 
 export type ConsoleUser = {
@@ -193,7 +231,13 @@ export async function listRecentLedger(): Promise<LedgerRow[]> {
 export type WithdrawalRow = {
   id: string;
   created_at: string;
+  /** What left the wallet. */
   amount: number;
+  /** Stamp duty taken off it, and what the bank was actually sent. The
+   * pair exists so support can answer "why is my transfer ₦50 short"
+   * without opening a SQL client. */
+  levy: number;
+  net: number;
   status: string;
   bank_name: string | null;
   account_number: string | null;
@@ -212,7 +256,7 @@ export async function listWithdrawals(): Promise<WithdrawalRow[]> {
   const { data, error } = await supabase
     .from("withdrawals")
     .select(
-      "id, created_at, amount, status, bank_code, account_number, account_name, failure_reason, profiles(full_name), withdrawal_accounts(bank_name)"
+      "id, created_at, amount, fee, levy, status, bank_code, account_number, account_name, failure_reason, profiles(full_name), withdrawal_accounts(bank_name)"
     )
     .order("created_at", { ascending: false })
     .limit(100);
@@ -222,6 +266,8 @@ export async function listWithdrawals(): Promise<WithdrawalRow[]> {
     id: string;
     created_at: string;
     amount: number | string;
+    fee: number | string | null;
+    levy: number | string | null;
     status: string;
     bank_code: string | null;
     account_number: string | null;
@@ -244,6 +290,8 @@ export async function listWithdrawals(): Promise<WithdrawalRow[]> {
       id: row.id,
       created_at: row.created_at,
       amount: Number(row.amount),
+      levy: Number(row.levy ?? 0),
+      net: Number(row.amount) - Number(row.fee ?? 0) - Number(row.levy ?? 0),
       status: row.status,
       bank_name: account?.bank_name ?? row.bank_code,
       account_number: row.account_number,

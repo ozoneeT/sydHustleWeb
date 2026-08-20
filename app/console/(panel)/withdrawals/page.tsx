@@ -62,6 +62,16 @@ export default async function WithdrawalsPage() {
                 </td>
                 <td className="px-4 py-3 text-right font-mono">
                   {naira(row.amount)}
+                  {/* What the bank was actually sent, whenever it differs.
+                      The gap is stamp duty on transfers of ₦10,000 or
+                      more, and "why is my transfer ₦50 short" is the
+                      support question this column exists to answer. */}
+                  {row.net !== row.amount ? (
+                    <span className="block text-xs font-sans text-muted-foreground">
+                      {naira(row.net)} sent
+                      {row.levy > 0 ? ` · ${naira(row.levy)} duty` : ""}
+                    </span>
+                  ) : null}
                 </td>
                 <td className="px-4 py-3 text-muted-foreground">
                   {row.bank_name ?? "—"} ···
