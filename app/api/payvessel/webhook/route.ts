@@ -35,9 +35,48 @@ import { NextResponse } from "next/server";
  * an unexpected source, not to refuse one - see the note above. */
 const PAYVESSEL_IPS = new Set(["3.255.23.38", "162.246.254.36"]);
 
+/**
+ * The signature header, under whatever name it arrives.
+ *
+ * Payvessel's own Node example reads `HTTP_PAYVESSEL_HTTP_SIGNATURE` -
+ * the PHP `$_SERVER` spelling pasted into JavaScript - so their docs do
+ * not settle what actually goes on the wire. This matters more here than
+ * upstream: a name this route does not recognise is a delivery dropped
+ * before Supabase ever sees it, which looks from there like Payvessel
+ * never called. Every plausible spelling is accepted, plus any header
+ * naming both the provider and a signature.
+ */
+function signatureOf(headers: Headers): { name: string; value: string } | null {
+  const named = [
+    "payvessel-http-signature",
+    "http_payvessel_http_signature",
+    "payvessel-signature",
+    "x-payvessel-signature",
+  ];
+  for (const name of named) {
+    const value = headers.get(name)?.trim();
+    if (value) return { name, value };
+  }
+  for (const [name, value] of headers) {
+    const lower = name.toLowerCase();
+    if (lower.includes("payvessel") && lower.includes("signature")) {
+      const trimmed = value.trim();
+      if (trimmed) return { name: lower, value: trimmed };
+    }
+  }
+  return null;
+}
+
 export async function POST(request: Request) {
-  const signature = request.headers.get("payvessel-http-signature");
+  const signature = signatureOf(request.headers);
   if (!signature) {
+    // Logged with the header names, because "which header did they
+    // actually send" is the only question this failure raises and there
+    // is no second chance to ask it - Payvessel does not replay on
+    // demand.
+    console.error(
+      `[payvessel-proxy] no signature header. headers=${[...request.headers.keys()].join(",")}`,
+    );
     return NextResponse.json({ error: "Missing signature." }, { status: 401 });
   }
 
@@ -69,7 +108,9 @@ export async function POST(request: Request) {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "payvessel-http-signature": signature,
+        // Forwarded under the canonical name whatever it arrived as, so
+        // the edge function has one thing to look for.
+        "payvessel-http-signature": signature.value,
       },
       body: rawBody,
     });
