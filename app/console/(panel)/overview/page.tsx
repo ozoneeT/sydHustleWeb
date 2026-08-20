@@ -77,12 +77,14 @@ export default async function OverviewPage() {
             .
           </p>
           <p className="mt-2">
-            True profit is fees earned minus provider charges, and those are
-            still not recorded per transaction — Paystack takes 1% capped at
-            ₦300 on transfers into virtual accounts, and ₦10/₦25/₦50 per
-            payout by band. Read them off the provider dashboard until they
-            are recorded here. Card checkout costs nothing: the payer bears
-            that fee.
+            Provider charges are recorded per transaction and subtracted on{" "}
+            <a className="underline" href="/console/earnings">
+              Earnings
+            </a>
+            , so the net there is a real one. Deposit fees come from the
+            providers&apos; own webhooks; payout fees are computed from their
+            published bands. Card checkout costs nothing while the payer
+            bears the fee.
           </p>
         </Card>
       </section>

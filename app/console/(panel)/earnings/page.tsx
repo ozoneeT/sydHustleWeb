@@ -215,6 +215,29 @@ export default async function EarningsPage({
                 </td>
               </tr>
               <tr className="border-b border-white/5">
+                <td className="px-4 py-3">
+                  Provider charges on deposits
+                  <span className="block text-xs text-muted-foreground">
+                    as Paystack and Payvessel reported them
+                  </span>
+                </td>
+                <td className="px-4 py-3 text-right font-mono">
+                  {naira(pnl.costs.providerDeposits)}
+                </td>
+              </tr>
+              <tr className="border-b border-white/5">
+                <td className="px-4 py-3">
+                  Provider charges on payouts
+                  <span className="block text-xs text-muted-foreground">
+                    computed from published transfer bands
+                    {pnl.costs.providerEstimated ? " — estimated" : ""}
+                  </span>
+                </td>
+                <td className="px-4 py-3 text-right font-mono">
+                  {naira(pnl.costs.providerPayouts)}
+                </td>
+              </tr>
+              <tr className="border-b border-white/5">
                 <td className="px-4 py-3">One-off spends</td>
                 <td className="px-4 py-3 text-right font-mono">
                   {naira(pnl.costs.oneOffs)}

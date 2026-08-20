@@ -47,6 +47,14 @@ export type ProfitAndLoss = {
   costs: {
     recurringAccrued: number;
     oneOffs: number;
+    /** What Paystack and Payvessel took, per transaction. Deposits are
+     * measured from their own webhooks; payouts are computed from the
+     * published transfer bands. */
+    providerDeposits: number;
+    providerPayouts: number;
+    /** True while any provider charge in the period is a computed
+     * estimate rather than a reported figure - which payouts always are. */
+    providerEstimated: boolean;
     total: number;
   };
   net: number;
@@ -119,14 +127,36 @@ export async function getProfitAndLoss(
     dutyQuery = dutyQuery.lt("created_at", new Date(toEndMs).toISOString());
   }
 
-  const [{ data: revenueRows, error }, { data: dutyRows }, costRows] =
-    await Promise.all([revenueQuery, dutyQuery, listCosts()]);
+  let chargeQuery = supabase
+    .from("provider_charges")
+    .select("kind, amount, estimated");
+  if (from) chargeQuery = chargeQuery.gte("created_at", from);
+  if (toEndMs !== null) {
+    chargeQuery = chargeQuery.lt("created_at", new Date(toEndMs).toISOString());
+  }
+
+  const [
+    { data: revenueRows, error },
+    { data: dutyRows },
+    { data: chargeRows },
+    costRows,
+  ] = await Promise.all([revenueQuery, dutyQuery, chargeQuery, listCosts()]);
   if (error) throw new Error(error.message);
 
   const stampDuty = (dutyRows ?? []).reduce(
     (sum, row) => sum + Number(row.levy ?? 0),
     0,
   );
+
+  let providerDeposits = 0;
+  let providerPayouts = 0;
+  let providerEstimated = false;
+  for (const row of chargeRows ?? []) {
+    const amount = Number(row.amount);
+    if (row.kind === "deposit") providerDeposits += amount;
+    else if (row.kind === "payout") providerPayouts += amount;
+    if (row.estimated) providerEstimated = true;
+  }
 
   let withdrawalFees = 0;
   let releaseFees = 0;
@@ -178,7 +208,8 @@ export async function getProfitAndLoss(
 
   const revenueTotal =
     withdrawalFees + releaseFees + escrowFees + smsFees + featureFees;
-  const costsTotal = oneOffs + recurringAccrued;
+  const costsTotal =
+    oneOffs + recurringAccrued + providerDeposits + providerPayouts;
 
   return {
     from,
@@ -198,6 +229,9 @@ export async function getProfitAndLoss(
     costs: {
       recurringAccrued: round(recurringAccrued),
       oneOffs: round(oneOffs),
+      providerDeposits: round(providerDeposits),
+      providerPayouts: round(providerPayouts),
+      providerEstimated,
       total: round(costsTotal),
     },
     net: round(revenueTotal - costsTotal),
