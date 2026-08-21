@@ -381,3 +381,38 @@ export async function listModerationQueue(): Promise<ModerationRow[]> {
   if (error) throw new Error(error.message);
   return (data ?? []) as ModerationRow[];
 }
+
+export type BroadcastRow = {
+  id: string;
+  title: string;
+  body: string;
+  url: string;
+  filters: Record<string, unknown>;
+  note: string | null;
+  recipients: number;
+  delivered: number;
+  opened: number;
+  created_at: string;
+};
+
+/**
+ * What has been sent, and how it landed.
+ *
+ * Delivery and open counts come off the receipts the app already writes
+ * (`notifications.delivered_at` from the device ack, `read_at` from the
+ * notification centre), so they cost nothing to collect. Read them as
+ * "at least this many": a user who deletes a notification deletes the
+ * row the receipt lived on.
+ */
+export async function listBroadcasts(): Promise<BroadcastRow[]> {
+  const supabase = createServerSupabaseClient();
+  const { data, error } = await supabase
+    .from("console_broadcast_results")
+    .select(
+      "id, title, body, url, filters, note, recipients, delivered, opened, created_at"
+    )
+    .order("created_at", { ascending: false })
+    .limit(25);
+  if (error) throw new Error(error.message);
+  return (data ?? []) as BroadcastRow[];
+}

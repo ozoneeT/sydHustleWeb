@@ -4,6 +4,11 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 
+import { APP_ROUTE_PATHS } from "@/lib/console/app-routes";
+import {
+  audienceSchema,
+  type AudienceFilters,
+} from "@/lib/console/audience";
 import { requireConsole } from "@/lib/console/dal";
 import { deleteConsoleSession } from "@/lib/console/session";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
@@ -255,6 +260,7 @@ export async function deleteCost(formData: FormData) {
 const broadcastSchema = z.object({
   title: z.string().trim().min(3, "Title is too short").max(80),
   body: z.string().trim().min(10, "Message is too short").max(500),
+  note: z.string().trim().max(200).optional(),
 });
 
 export type BroadcastState = {
@@ -263,11 +269,110 @@ export type BroadcastState = {
 };
 
 /**
- * Sends an announcement to every user: one `notifications` row per
- * profile, which the existing per-row trigger fans out to push tokens.
- * Type `system` — it is not one of the per-type mutable preferences,
- * because a service announcement is not a marketing category. Use
- * sparingly: the app promises users it never sends promotional pushes.
+ * Read the audience out of the form.
+ *
+ * The filters travel as one JSON field rather than as fifteen form
+ * inputs: the shape is nested (a list of ids, optional day counts) and
+ * flattening it into form keys would mean encoding and decoding it in
+ * two places that could disagree. Anything malformed is rejected rather
+ * than coerced, because the failure mode of a silently-dropped filter
+ * is sending to more people than the operator chose.
+ */
+function parseFilters(raw: FormDataEntryValue | null): AudienceFilters | null {
+  if (typeof raw !== "string" || raw.trim() === "") return {};
+  try {
+    const parsed = audienceSchema.safeParse(JSON.parse(raw));
+    return parsed.success ? parsed.data : null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * How many people a filter set currently selects, plus a few names to
+ * check it against.
+ *
+ * The form calls this as the operator changes the filters, so the count
+ * on screen is always the count the send would produce. It is a fresh
+ * query every time rather than a cached one for the same reason.
+ */
+export async function previewBroadcastAudience(
+  filters: AudienceFilters
+): Promise<{ count: number; reachable: number; sample: { id: string; name: string }[] }> {
+  await requireConsole();
+
+  const parsed = audienceSchema.safeParse(filters);
+  if (!parsed.success) return { count: 0, reachable: 0, sample: [] };
+
+  const supabase = createServerSupabaseClient();
+  const { data, error } = await supabase.rpc("console_broadcast_preview", {
+    p_filters: parsed.data,
+  });
+  if (error) throw new Error(error.message);
+
+  const result = (data ?? {}) as {
+    count?: number;
+    reachable?: number;
+    sample?: { id: string; name: string }[];
+  };
+  return {
+    count: result.count ?? 0,
+    reachable: result.reachable ?? 0,
+    sample: result.sample ?? [],
+  };
+}
+
+/**
+ * Name search for the "specific people" field.
+ *
+ * Names only, and only the ones already visible on the console's users
+ * page. Emails are deliberately not returned: picking a recipient does
+ * not need one, and a search box that hands them out is a search box
+ * that leaks them into a browser tab.
+ */
+export async function searchBroadcastRecipients(
+  query: string
+): Promise<{ id: string; name: string; school: string | null }[]> {
+  await requireConsole();
+
+  const term = query.trim();
+  if (term.length < 2) return [];
+
+  const supabase = createServerSupabaseClient();
+  const { data, error } = await supabase
+    .from("profiles")
+    .select("id, full_name, display_name, school")
+    .or(`full_name.ilike.%${term}%,display_name.ilike.%${term}%`)
+    .limit(10);
+  if (error) throw new Error(error.message);
+
+  return (
+    (data ?? []) as {
+      id: string;
+      full_name: string | null;
+      display_name: string | null;
+      school: string | null;
+    }[]
+  ).map((row) => ({
+    id: row.id,
+    name: row.display_name?.trim() || row.full_name?.trim() || "Unnamed",
+    school: row.school,
+  }));
+}
+
+/**
+ * Send an announcement to a targeted audience.
+ *
+ * The audience is resolved inside the database function, in the same
+ * statement that writes the notifications, so nobody can join or leave
+ * the segment between the preview the operator confirmed and the rows
+ * that actually go out.
+ *
+ * Type `system`, as before: these sit outside the per-type preferences
+ * in the app's Settings because a service announcement is not a
+ * category anybody opted into. Targeting one narrowly does not change
+ * what may be said in it. Promotional push still needs an explicit
+ * opt-in that the app does not yet collect.
  */
 export async function sendBroadcast(
   _prev: BroadcastState,
@@ -278,6 +383,7 @@ export async function sendBroadcast(
   const parsed = broadcastSchema.safeParse({
     title: formData.get("title"),
     body: formData.get("body"),
+    note: formData.get("note") || undefined,
   });
   if (!parsed.success) {
     return {
@@ -289,35 +395,32 @@ export async function sendBroadcast(
     return { error: "Tick the confirmation box first.", sent: null };
   }
 
+  const filters = parseFilters(formData.get("filters"));
+  if (!filters) {
+    return { error: "That audience isn't valid. Reset it and try again.", sent: null };
+  }
+
+  // The app's router ignores a path it does not recognise, so an
+  // unlisted one produces a notification that opens nothing at all.
+  const url = String(formData.get("url") ?? "").trim() || "/notifications";
+  if (!APP_ROUTE_PATHS.includes(url)) {
+    return { error: "That screen isn't one the app can open.", sent: null };
+  }
+
   const supabase = createServerSupabaseClient();
-  const { data: profiles, error: profilesError } = await supabase
-    .from("profiles")
-    .select("id");
-  if (profilesError) {
-    return { error: "Couldn't load the recipient list.", sent: null };
+  const { data, error } = await supabase.rpc("console_send_broadcast", {
+    p_title: parsed.data.title,
+    p_body: parsed.data.body,
+    p_url: url,
+    p_filters: filters,
+    p_note: parsed.data.note ?? null,
+  });
+  if (error) {
+    return { error: `Nothing was sent: ${error.message}`, sent: null };
   }
 
-  const rows = (profiles ?? []).map((profile) => ({
-    profile_id: profile.id,
-    type: "system",
-    title: parsed.data.title,
-    body: parsed.data.body,
-    data: { url: "/notifications" },
-  }));
+  const sent = ((data ?? {}) as { recipients?: number }).recipients ?? 0;
 
-  let sent = 0;
-  const CHUNK = 500;
-  for (let i = 0; i < rows.length; i += CHUNK) {
-    const chunk = rows.slice(i, i + CHUNK);
-    const { error } = await supabase.from("notifications").insert(chunk);
-    if (error) {
-      return {
-        error: `Stopped after ${sent} of ${rows.length} — ${error.message}`,
-        sent,
-      };
-    }
-    sent += chunk.length;
-  }
-
+  revalidatePath("/console/broadcast");
   return { error: null, sent };
 }
