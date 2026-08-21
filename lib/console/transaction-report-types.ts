@@ -73,5 +73,16 @@ export type TransactionReport = {
     reason: string;
     createdAt: string;
     balanceAfter: number | null;
+    /**
+     * The NIP session ID for this entry, read from the ledger NOW.
+     *
+     * The reporter's snapshot carries one too, for reports filed after
+     * settlement ids existed. This is here for the two cases the snapshot
+     * cannot cover: reports filed before they did, and a payout that was
+     * still in flight when the user gave up on it and filed — the rail
+     * stamps the session id on arrival, so the number that answers the
+     * case often lands after the complaint about it.
+     */
+    settlementId: string | null;
   } | null;
 };

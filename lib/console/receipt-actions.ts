@@ -74,6 +74,10 @@ export type ReceiptCheck = {
     createdAt: string;
     sourceType: string | null;
     profileId: string;
+    /** The NIP session ID, folded in by `withSettlementId` rather than
+     * returned by the RPC. The one identifier on this whole result that
+     * a bank or a provider's support desk can act on. */
+    settlementId?: string | null;
   };
   entries?: LinkedEntry[];
   parties?: {
@@ -112,6 +116,10 @@ export type ReceiptCheck = {
     accountNumber: string | null;
     provider: string | null;
     providerReference: string | null;
+    /** What the BANK can trace, as opposed to `providerReference`, which
+     * only Paystack or Payvessel can resolve. Folded in alongside the
+     * entry's own copy so the withdrawal block reads on its own. */
+    sessionId?: string | null;
     failureReason: string | null;
     requestedAt: string;
     statusChangedAt: string;
@@ -173,8 +181,76 @@ export async function checkReceiptStamp(
 
   return {
     error: null,
-    result: data as ReceiptCheck,
+    result: await withSettlementId(supabase, data as ReceiptCheck),
     reference: parsed.data.reference,
     code: parsed.data.code,
   };
+}
+
+/**
+ * Folds the NIP settlement ID into a check result.
+ *
+ * Done HERE rather than inside `verify_receipt_code` on purpose. That
+ * function is a 300-line security-definer audit routine that also writes
+ * the check to `private.stamp_checks`; replacing its whole body to append
+ * two fields would put the tamper-evidence trail at risk for a display
+ * detail. This reads the same rows it would have, with the same service
+ * key, and cannot affect the verdict - the signature check has already
+ * happened and nothing below can change it.
+ *
+ * A failed lookup degrades to no settlement id rather than to no result.
+ * An operator who can see the verdict and the parties but not the tracing
+ * number is far better off than one staring at an error.
+ */
+async function withSettlementId(
+  supabase: ReturnType<typeof createServerSupabaseClient>,
+  result: ReceiptCheck
+): Promise<ReceiptCheck> {
+  if (result.verdict !== "valid" || !result.entry) return result;
+
+  try {
+    // A withdrawal keeps it on its own row, because it arrives after the
+    // append-only ledger entry was written. A checkout deposit keeps it
+    // on the intent, for the same reason. Only a virtual-account credit
+    // carries it on the entry itself, having had nowhere else to put it.
+    const { data: ledger } = await supabase
+      .from("wallet_ledger")
+      .select("source_type, source_id, settlement_id")
+      .eq("reference", result.entry.reference)
+      .maybeSingle();
+
+    if (!ledger) return result;
+
+    let settlementId: string | null = ledger.settlement_id ?? null;
+
+    if (!settlementId && ledger.source_id) {
+      const table =
+        ledger.source_type === "withdrawal"
+          ? "withdrawals"
+          : ledger.source_type === "payment_intent"
+            ? "payment_intents"
+            : null;
+      if (table) {
+        const { data: source } = await supabase
+          .from(table)
+          .select("session_id")
+          .eq("id", ledger.source_id)
+          .maybeSingle();
+        settlementId = source?.session_id ?? null;
+      }
+    }
+
+    if (!settlementId) return result;
+
+    return {
+      ...result,
+      entry: { ...result.entry, settlementId },
+      ...(result.withdrawal
+        ? { withdrawal: { ...result.withdrawal, sessionId: settlementId } }
+        : {}),
+    };
+  } catch (cause) {
+    console.error("[console] settlement id lookup failed", cause);
+    return result;
+  }
 }

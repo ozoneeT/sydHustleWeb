@@ -160,6 +160,15 @@ function ReportCard({ report }: { report: TransactionReport }) {
                       ledger.balanceAfter !== null
                         ? `Balance after: ${naira(ledger.balanceAfter)}`
                         : null,
+                      // The line that closes most of these cases. "Money
+                      // never arrived" is unanswerable from our own
+                      // records alone; with the session id the bank can
+                      // be asked directly. Absent on internal escrow
+                      // moves, where no bank rail was involved and the
+                      // question is a different one entirely.
+                      ledger.settlementId
+                        ? `Settlement ID: ${ledger.settlementId}`
+                        : null,
                     ]
                       .filter(Boolean)
                       .join("\n")

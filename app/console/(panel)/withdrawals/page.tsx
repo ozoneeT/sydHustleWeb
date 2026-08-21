@@ -1,5 +1,5 @@
 import { listWithdrawals } from "@/lib/console/data";
-import { naira, shortDate } from "@/lib/console/format";
+import { naira, settlementId, shortDate } from "@/lib/console/format";
 import { Card } from "@/components/ui/card";
 
 export const metadata = { title: "Withdrawals — sydHustle Console" };
@@ -48,6 +48,7 @@ export default async function WithdrawalsPage() {
               <th className="px-4 py-3">User</th>
               <th className="px-4 py-3 text-right">Amount</th>
               <th className="px-4 py-3">Destination</th>
+              <th className="px-4 py-3">Settlement ID</th>
               <th className="px-4 py-3">Status</th>
             </tr>
           </thead>
@@ -78,6 +79,34 @@ export default async function WithdrawalsPage() {
                   {row.account_number?.slice(-4) ?? "????"}
                   <span className="block text-xs">{row.account_name}</span>
                 </td>
+                {/* The number the caller is holding. When someone rings
+                    saying a payout never landed, this is what their bank
+                    will search on — every other identifier on this page is
+                    ours and traces nothing outside sydHustle. Selectable
+                    and unspaced underneath, because it gets pasted into a
+                    provider's support form. */}
+                <td className="px-4 py-3 font-mono text-xs">
+                  {row.session_id ? (
+                    <span
+                      className="select-all text-foreground"
+                      title={row.session_id}
+                    >
+                      {settlementId(row.session_id)}
+                    </span>
+                  ) : (
+                    <span className="text-muted-foreground">
+                      {row.status === "pending" || row.status === "processing"
+                        ? "awaiting rail"
+                        : "—"}
+                    </span>
+                  )}
+                  {row.provider_reference ? (
+                    <span className="mt-1 block text-[11px] text-muted-foreground">
+                      {row.provider_reference}
+                      {row.provider ? ` · ${row.provider}` : ""}
+                    </span>
+                  ) : null}
+                </td>
                 <td className="px-4 py-3">
                   <span
                     className={`rounded-full px-2 py-0.5 text-xs font-semibold ${
@@ -96,7 +125,7 @@ export default async function WithdrawalsPage() {
             ))}
             {rows.length === 0 ? (
               <tr>
-                <td className="px-4 py-8 text-center text-muted-foreground" colSpan={5}>
+                <td className="px-4 py-8 text-center text-muted-foreground" colSpan={6}>
                   No withdrawals yet.
                 </td>
               </tr>

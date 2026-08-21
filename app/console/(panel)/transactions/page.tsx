@@ -1,5 +1,5 @@
 import { listRecentLedger } from "@/lib/console/data";
-import { naira, shortDate } from "@/lib/console/format";
+import { naira, settlementId, shortDate } from "@/lib/console/format";
 
 export const metadata = { title: "Transactions — sydHustle Console" };
 
@@ -35,6 +35,7 @@ export default async function TransactionsPage() {
               <th className="px-4 py-3">Type</th>
               <th className="px-4 py-3 text-right">Amount</th>
               <th className="px-4 py-3">Reference</th>
+              <th className="px-4 py-3">Settlement ID</th>
             </tr>
           </thead>
           <tbody>
@@ -62,11 +63,29 @@ export default async function TransactionsPage() {
                 <td className="px-4 py-3 font-mono text-xs text-muted-foreground">
                   {row.reference ?? "—"}
                 </td>
+                {/* Beside the SYD reference, never instead of it. The two
+                    answer different questions: the reference finds the
+                    entry in here, the settlement ID finds the transfer out
+                    there. Most rows show a dash and that is correct — an
+                    escrow lock or release moved money between two
+                    sydHustle wallets and no bank rail ever saw it. */}
+                <td className="px-4 py-3 font-mono text-xs">
+                  {row.settlement_id ? (
+                    <span
+                      className="select-all text-foreground"
+                      title={row.settlement_id}
+                    >
+                      {settlementId(row.settlement_id)}
+                    </span>
+                  ) : (
+                    <span className="text-muted-foreground">—</span>
+                  )}
+                </td>
               </tr>
             ))}
             {rows.length === 0 ? (
               <tr>
-                <td className="px-4 py-8 text-center text-muted-foreground" colSpan={5}>
+                <td className="px-4 py-8 text-center text-muted-foreground" colSpan={6}>
                   No transactions yet.
                 </td>
               </tr>

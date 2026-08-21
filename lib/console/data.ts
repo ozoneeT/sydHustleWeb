@@ -181,6 +181,17 @@ export type LedgerRow = {
   reason: string;
   reference: string | null;
   profile_name: string | null;
+  /**
+   * The NIP session ID — what a bank, NIBSS, or a provider's support desk
+   * can actually trace, as opposed to `reference`, which means nothing
+   * outside sydHustle.
+   *
+   * Null on every entry that never touched a bank rail (escrow holds,
+   * releases, refunds, fees all moved between two sydHustle wallets), and
+   * null on a payout still in flight, because the rail stamps it on
+   * arrival.
+   */
+  settlement_id: string | null;
 };
 
 export async function listRecentLedger(): Promise<LedgerRow[]> {
@@ -189,7 +200,9 @@ export async function listRecentLedger(): Promise<LedgerRow[]> {
   // so names are fetched separately and joined here.
   const { data, error } = await supabase
     .from("wallet_ledger")
-    .select("id, created_at, direction, amount, reason, reference, profile_id")
+    .select(
+      "id, created_at, direction, amount, reason, reference, profile_id, source_type, source_id, settlement_id"
+    )
     .order("created_at", { ascending: false })
     .limit(100);
   if (error) throw new Error(error.message);
@@ -202,6 +215,9 @@ export async function listRecentLedger(): Promise<LedgerRow[]> {
     reason: string;
     reference: string | null;
     profile_id: string;
+    source_type: string | null;
+    source_id: string | null;
+    settlement_id: string | null;
   };
 
   const rows = (data ?? []) as Row[];
@@ -217,6 +233,44 @@ export async function listRecentLedger(): Promise<LedgerRow[]> {
     }
   }
 
+  // Only ONE kind of entry carries its settlement id on the ledger row:
+  // a credit into a permanent virtual account, which has no other row
+  // describing it anywhere. Withdrawals and checkout deposits keep theirs
+  // on the withdrawal or the intent, because those arrive after the
+  // ledger entry was written and the ledger is append-only. So the two
+  // are fetched and folded in here, batched by source type rather than
+  // one query per row.
+  const sessionBySource = new Map<string, string | null>();
+  const sourceIds = (type: string) => [
+    ...new Set(
+      rows
+        .filter((row) => row.source_type === type && row.source_id)
+        .map((row) => row.source_id as string)
+    ),
+  ];
+
+  const withdrawalIds = sourceIds("withdrawal");
+  if (withdrawalIds.length > 0) {
+    const { data: withdrawals } = await supabase
+      .from("withdrawals")
+      .select("id, session_id")
+      .in("id", withdrawalIds);
+    for (const row of withdrawals ?? []) {
+      sessionBySource.set(`withdrawal:${row.id}`, row.session_id);
+    }
+  }
+
+  const intentIds = sourceIds("payment_intent");
+  if (intentIds.length > 0) {
+    const { data: intents } = await supabase
+      .from("payment_intents")
+      .select("id, session_id")
+      .in("id", intentIds);
+    for (const row of intents ?? []) {
+      sessionBySource.set(`payment_intent:${row.id}`, row.session_id);
+    }
+  }
+
   return rows.map((row) => ({
     id: row.id,
     created_at: row.created_at,
@@ -225,6 +279,11 @@ export async function listRecentLedger(): Promise<LedgerRow[]> {
     reason: row.reason,
     reference: row.reference,
     profile_name: nameById.get(row.profile_id) ?? null,
+    settlement_id:
+      row.settlement_id ??
+      (row.source_type && row.source_id
+        ? sessionBySource.get(`${row.source_type}:${row.source_id}`) ?? null
+        : null),
   }));
 }
 
@@ -247,6 +306,21 @@ export type WithdrawalRow = {
   /** Still pending well past the normal few seconds — usually means the
    * Paystack balance couldn't cover it and the retry loop is waiting. */
   queued_long: boolean;
+  /**
+   * The NIP session ID, once the rail has stamped one.
+   *
+   * This is the number the user's bank asks for, so it is also the number
+   * support has to be able to read off the console the moment someone
+   * calls saying a payout never landed. Null while a transfer is still in
+   * flight and null throughout a provider test mode.
+   */
+  session_id: string | null;
+  /** The provider's own handle for the transfer, and whose desk it
+   * belongs to. Kept apart from the session id because a bank cannot
+   * trace a `TRF_` code and a provider cannot be handed a session id
+   * without also being told the transfer was theirs. */
+  provider_reference: string | null;
+  provider: string | null;
 };
 
 export async function listWithdrawals(): Promise<WithdrawalRow[]> {
@@ -256,7 +330,7 @@ export async function listWithdrawals(): Promise<WithdrawalRow[]> {
   const { data, error } = await supabase
     .from("withdrawals")
     .select(
-      "id, created_at, amount, fee, levy, status, bank_code, account_number, account_name, failure_reason, profiles(full_name), withdrawal_accounts(bank_name)"
+      "id, created_at, amount, fee, levy, status, bank_code, account_number, account_name, failure_reason, session_id, provider_reference, provider, profiles(full_name), withdrawal_accounts(bank_name)"
     )
     .order("created_at", { ascending: false })
     .limit(100);
@@ -273,6 +347,9 @@ export async function listWithdrawals(): Promise<WithdrawalRow[]> {
     account_number: string | null;
     account_name: string | null;
     failure_reason: string | null;
+    session_id: string | null;
+    provider_reference: string | null;
+    provider: string | null;
     profiles: { full_name: string | null } | { full_name: string | null }[] | null;
     withdrawal_accounts:
       | { bank_name: string | null }
@@ -297,6 +374,9 @@ export async function listWithdrawals(): Promise<WithdrawalRow[]> {
       account_number: row.account_number,
       account_name: row.account_name,
       failure_reason: row.failure_reason,
+      session_id: row.session_id,
+      provider_reference: row.provider_reference,
+      provider: row.provider,
       profile_name: profile?.full_name ?? null,
       queued_long:
         row.status === "pending" &&

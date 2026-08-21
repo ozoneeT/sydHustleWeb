@@ -76,18 +76,73 @@ export async function listTransactionReports(
   // One round trip for every referenced entry rather than one per row.
   const { data: ledgerRows } = await supabase
     .from("wallet_ledger")
-    .select("reference, amount, direction, reason, created_at, balance_after")
+    .select(
+      "reference, amount, direction, reason, created_at, balance_after, source_type, source_id, settlement_id"
+    )
     .in("reference", [...new Set(rows.map((r) => r.transaction_reference))]);
 
+  const entries = (ledgerRows ?? []) as {
+    reference: string;
+    amount: number | string;
+    direction: string;
+    reason: string;
+    created_at: string;
+    balance_after: number | string | null;
+    source_type: string | null;
+    source_id: string | null;
+    settlement_id: string | null;
+  }[];
+
+  // The settlement id lives on the ledger row only for a virtual-account
+  // credit; a withdrawal or a checkout deposit keeps it on the row the
+  // entry points at, because it arrives after the append-only entry was
+  // written. Both are folded in here so the reviewer sees one field and
+  // never has to know which kind of entry produced it.
+  const sessionBySource = new Map<string, string | null>();
+  const idsOf = (type: string) => [
+    ...new Set(
+      entries
+        .filter((entry) => entry.source_type === type && entry.source_id)
+        .map((entry) => entry.source_id as string)
+    ),
+  ];
+
+  const withdrawalIds = idsOf("withdrawal");
+  if (withdrawalIds.length > 0) {
+    const { data: withdrawals } = await supabase
+      .from("withdrawals")
+      .select("id, session_id")
+      .in("id", withdrawalIds);
+    for (const w of withdrawals ?? []) {
+      sessionBySource.set(`withdrawal:${w.id}`, w.session_id);
+    }
+  }
+
+  const intentIds = idsOf("payment_intent");
+  if (intentIds.length > 0) {
+    const { data: intents } = await supabase
+      .from("payment_intents")
+      .select("id, session_id")
+      .in("id", intentIds);
+    for (const intent of intents ?? []) {
+      sessionBySource.set(`payment_intent:${intent.id}`, intent.session_id);
+    }
+  }
+
   const ledgerByRef = new Map(
-    (ledgerRows ?? []).map((l) => [
-      l.reference as string,
+    entries.map((l) => [
+      l.reference,
       {
         amount: Number(l.amount),
         direction: String(l.direction),
         reason: String(l.reason),
         createdAt: String(l.created_at),
         balanceAfter: l.balance_after === null ? null : Number(l.balance_after),
+        settlementId:
+          l.settlement_id ??
+          (l.source_type && l.source_id
+            ? sessionBySource.get(`${l.source_type}:${l.source_id}`) ?? null
+            : null),
       },
     ])
   );

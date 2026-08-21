@@ -12,7 +12,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { naira, shortDate } from "@/lib/console/format";
+import { naira, settlementId, shortDate } from "@/lib/console/format";
 import {
   checkReceiptStamp,
   type CheckState,
@@ -203,6 +203,25 @@ export function ReceiptCheckOutcome({ result }: { result: ReceiptCheck }) {
         </div>
       ) : null}
 
+      {/* Deposits get their settlement ID here; payouts get theirs inside
+          the Withdrawal section, which reads better beside the bank
+          details it belongs to. Rendered high on the page either way,
+          because on a "money never arrived" call it is the first thing
+          the operator needs to read out and the last thing that should
+          be buried under four sections of escrow history. */}
+      {entry?.settlementId && !withdrawal ? (
+        <Section title="Settlement ID">
+          <p className="select-all font-mono text-lg tracking-wide">
+            {settlementId(entry.settlementId)}
+          </p>
+          <p className="mt-2 text-sm text-muted-foreground">
+            The NIP session ID for this transfer. This is the number the
+            user&apos;s bank can trace — the SYD reference above means
+            nothing to them.
+          </p>
+        </Section>
+      ) : null}
+
       {parties && parties.length > 0 ? (
         <Section title="Parties">
           <div className="grid gap-3 sm:grid-cols-2">
@@ -291,6 +310,23 @@ export function ReceiptCheckOutcome({ result }: { result: ReceiptCheck }) {
                   ? ` · ${withdrawal.providerReference}`
                   : ""
               }`}
+            />
+            {/* Directly under the provider handle, because the pair is
+                the whole point: the line above is what Paystack or
+                Payvessel can look up, this one is what the user's own
+                bank can. An operator chasing a payout needs to know which
+                is which before they pick up the phone. */}
+            <Row
+              label="Settlement ID"
+              value={
+                withdrawal.sessionId
+                  ? settlementId(withdrawal.sessionId)
+                  : withdrawal.status === "pending" ||
+                      withdrawal.status === "processing"
+                    ? "awaiting the rail"
+                    : "—"
+              }
+              strong={Boolean(withdrawal.sessionId)}
             />
             <Row
               label="Triggered by"
