@@ -48,6 +48,24 @@ export type CertificationActionState = {
   done: string | null;
 };
 
+/**
+ * What the reviewer is told.
+ *
+ * `sendEmail` reports a failure by returning rather than throwing, and
+ * this file used to drop that on the floor: a missing RESEND_API_KEY on
+ * the deploy meant every certification email vanished in silence while
+ * the console said "Certified." and the queue emptied. The decision has
+ * still been made and the row is still written - the push and the
+ * in-app banner do not depend on Resend - so this is a warning on the
+ * end of a success, not an error.
+ */
+function outcome(done: string, mailed: boolean): CertificationActionState {
+  return {
+    error: null,
+    done: mailed ? done : `${done} The email could not be sent.`,
+  };
+}
+
 async function operator(): Promise<string> {
   return process.env.CONSOLE_EMAIL ?? "console";
 }
@@ -88,6 +106,22 @@ function shell(heading: string, body: string, footer?: string): string {
     footer ??
     "Open the sydHustle app to continue. You will see this on your home screen too."
   }</p>
+</div>`;
+}
+
+/**
+ * The certified mark, drawn in the email rather than described.
+ *
+ * The one message in this file that is good news, and a wall of
+ * paragraphs is how good news gets skimmed past. An image would be
+ * better still, but a remote image in an email is blocked by default in
+ * most clients, so this is built from characters and a border - nothing
+ * to load, nothing to allow, identical in every reader.
+ */
+function mark(): string {
+  return `<div style="margin:0 0 16px;padding:16px;border:1px solid #0F9D8F;border-radius:12px;background:#F6FBFA;text-align:center">
+  <div style="font-size:26px;line-height:1">\u2713</div>
+  <div style="font-size:13px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#0F9D8F;margin-top:6px">Certified by sydHustle</div>
 </div>`;
 }
 
@@ -138,8 +172,9 @@ export async function requestCertificationInfo(
   }
 
   const to = await recipient(skillId);
+  let mailed = true;
   if (to?.email) {
-    await sendEmail({
+    mailed = (await sendEmail({
       to: to.email,
       subject: `Your Skill needs one more thing - ${to.displayName}`,
       html: shell(
@@ -148,11 +183,11 @@ export async function requestCertificationInfo(
          ${quote(body)}
          <p style="font-size:15px;line-height:23px;margin:0">Open the app and you will find it under <strong>Your attention is needed</strong> on the home screen.</p>`,
       ),
-    });
+    })).success;
   }
 
   revalidatePath("/console/certifications");
-  return { error: null, done: "Request sent." };
+  return outcome("Request sent.", mailed);
 }
 
 export async function certifySkill(
@@ -187,21 +222,24 @@ export async function certifySkill(
   }
 
   const to = await recipient(parsed.data.skillId);
+  let mailed = true;
   if (to?.email) {
-    await sendEmail({
+    mailed = (await sendEmail({
       to: to.email,
-      subject: `${to.displayName} is now certified`,
+      subject: `Congratulations! ${to.displayName} is certified`,
       html: shell(
-        "Your Skill is certified",
-        `<p style="font-size:15px;line-height:23px;margin:0 0 14px"><strong>${to.displayName}</strong> (${to.skillName}) now carries the sydHustle certified mark. Clients browsing ${to.skillName}s will see it on your card.</p>
-         <p style="font-size:15px;line-height:23px;margin:0">Nothing else to do. Thank you for sending your documents.</p>`,
+        "Congratulations, your Skill is certified",
+        `<p style="font-size:15px;line-height:23px;margin:0 0 14px">We have looked at everything you sent for <strong>${to.displayName}</strong> (${to.skillName}), and it checks out. Your Skill now carries the sydHustle certified mark.</p>
+         ${mark()}
+         <p style="font-size:15px;line-height:23px;margin:0 0 14px">Clients browsing ${to.skillName}s will see it on your card. It is the clearest signal on this platform that somebody has proved they can do the work, and only a small number of Skills carry it.</p>
+         <p style="font-size:15px;line-height:23px;margin:0">Nothing else to do. Thank you for taking the trouble to send your documents.</p>`,
         "Keep your certificate current - we may ask again when it is due to expire.",
       ),
-    });
+    })).success;
   }
 
   revalidatePath("/console/certifications");
-  return { error: null, done: "Certified." };
+  return outcome("Certified.", mailed);
 }
 
 export async function rejectCertification(
@@ -253,8 +291,9 @@ export async function rejectCertification(
   }
 
   const to = await recipient(skillId);
+  let mailed = true;
   if (to?.email) {
-    await sendEmail({
+    mailed = (await sendEmail({
       to: to.email,
       subject: `We could not certify ${to.displayName}`,
       html: shell(
@@ -263,9 +302,9 @@ export async function rejectCertification(
          ${quote(body)}
          <p style="font-size:15px;line-height:23px;margin:0">Your Skill is still listed and you can still be booked. If you can put this right, send the documents again from the app and we will look again.</p>`,
       ),
-    });
+    })).success;
   }
 
   revalidatePath("/console/certifications");
-  return { error: null, done: "Rejected." };
+  return outcome("Rejected.", mailed);
 }

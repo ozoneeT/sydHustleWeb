@@ -1,6 +1,7 @@
 import "server-only";
 
 import { createServerSupabaseClient } from "@/lib/supabase/server";
+import { brandStorageUrl } from "@/lib/storage-url";
 
 /**
  * The certification review queue.
@@ -108,7 +109,10 @@ export async function listCertificationReviews(): Promise<
       .from(BUCKET)
       .createSignedUrls(paths, SIGNED_URL_TTL_SECONDS);
     for (const entry of urls ?? []) {
-      if (entry.path && entry.signedUrl) signed.set(entry.path, entry.signedUrl);
+      // Rewritten to our own host here rather than at the point of
+      // display, so nothing downstream can accidentally show the raw one.
+      const branded = brandStorageUrl(entry.signedUrl ?? null);
+      if (entry.path && branded) signed.set(entry.path, branded);
     }
   }
 

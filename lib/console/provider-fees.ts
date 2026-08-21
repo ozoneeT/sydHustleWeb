@@ -175,9 +175,22 @@ export function withdrawalMargin(
         : amount <= 50000
           ? 25
           : 50;
+  // Charged on transfers of ₦10,000 and above - and NOT a cost to
+  // sydHustle. Since January 2026 the sender carries it, and the app
+  // passes it to the person withdrawing: ₦50 comes off their payout and
+  // the same ₦50 is remitted. It nets to nothing here, so counting it
+  // against the margin would show a loss on money that never left our
+  // pocket. Returned all the same, because the table has to say why the
+  // user receives less.
   const stampDuty = amount >= 10000 ? 50 : 0;
-  const providerCost = transferFee + stampDuty;
-  return { cut, transferFee, stampDuty, providerCost, net: cut - providerCost };
+  return {
+    cut,
+    transferFee,
+    stampDuty,
+    /** What sydHustle actually pays to move this money. */
+    providerCost: transferFee,
+    net: cut - transferFee,
+  };
 }
 
 /** The withdrawal floor, the stamp-duty threshold either side, and a few

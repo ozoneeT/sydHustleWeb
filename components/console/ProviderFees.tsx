@@ -190,7 +190,8 @@ export function ProviderFees({
           currently sending the money — the tiers differ above ₦5,000. Your
           cut is a percentage and their charge is flat, so the two cross
           over somewhere; below that point a withdrawal costs more to send
-          than it earns.
+          than it earns. Stamp duty is excluded: the user pays it, so it is
+          neither a cost nor income here.
         </p>
 
         <div className="mt-4 overflow-x-auto">
@@ -213,7 +214,9 @@ export function ProviderFees({
                   <td className="py-2 text-right font-mono text-muted-foreground">
                     {naira(row.providerCost)}
                     {row.stampDuty > 0 ? (
-                      <span className="ml-1 text-xs">(incl. duty)</span>
+                      <span className="ml-1 text-xs">
+                        + {naira(row.stampDuty)} duty, paid by the user
+                      </span>
                     ) : null}
                   </td>
                   <td
@@ -244,11 +247,13 @@ export function ProviderFees({
         )}
 
         <p className="mt-3 text-xs text-muted-foreground">
-          Note the jump between {naira(9999)} and {naira(10000)} — the ₦50
-          stamp duty starts there, so a single naira costs you fifty. Neither
-          provider absorbs it; {PROVIDER_LABELS.payvessel} does not mention
-          it on their pricing page at all, and it is included above on the
-          assumption that a statutory levy applies whoever moves the money.
+          Stamp duty is not in these figures and does not touch your margin.
+          From {naira(10000)} up, ₦50 comes off the user&apos;s payout and the
+          same ₦50 is remitted — the app names it as a government levy rather
+          than a sydHustle fee, and the withdrawal stays free. Neither
+          provider absorbs it; {PROVIDER_LABELS.payvessel} does not mention it
+          on their pricing page at all, and it is assumed to apply whoever
+          moves the money.
         </p>
       </Card>
     </div>
