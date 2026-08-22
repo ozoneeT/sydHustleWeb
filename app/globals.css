@@ -88,3 +88,80 @@ html {
     animation: none;
   }
 }
+
+/* ------------------------------------------------------------------ */
+/* Printing a transaction record                                       */
+/* ------------------------------------------------------------------ */
+/*
+ * The console is a dark theme, and a dark theme printed is pale grey on
+ * white — legible on screen, unreadable on paper, and the one page here
+ * that gets printed is the one that has to stand up in a bank or police
+ * enquiry.
+ *
+ * So print gets its own palette rather than the screen's: black on
+ * white, real borders instead of translucent ones, and no navigation.
+ * Scoped to @media print, so nothing here can affect the console.
+ */
+@media print {
+  :root {
+    --background: #ffffff;
+    --foreground: #000000;
+    --muted-foreground: #333333;
+  }
+
+  html,
+  body {
+    background: #ffffff !important;
+    color: #000000 !important;
+  }
+
+  /* The sidebar, the mobile header, and anything a page has marked as
+     chrome. A printed record should be the record and nothing else. */
+  aside,
+  header,
+  nav,
+  .print\:hidden {
+    display: none !important;
+  }
+
+  /* Translucent white borders vanish on paper. */
+  [class*="border-white"] {
+    border-color: #cccccc !important;
+  }
+
+  /* Cards are surfaces on screen and boxes on paper. */
+  [class*="bg-white"],
+  [class*="bg-black"],
+  [class*="bg-muted"] {
+    background: transparent !important;
+  }
+
+  /* Colour carries meaning here — money in versus money out — so it is
+     kept, but darkened to survive greyscale printing. */
+  .text-emerald-400 {
+    color: #046c4e !important;
+  }
+  .text-red-400 {
+    color: #9b1c1c !important;
+  }
+  .text-amber-400 {
+    color: #8a5300 !important;
+  }
+  .text-muted-foreground {
+    color: #333333 !important;
+  }
+
+  /* Nothing should break across a page mid-fact. */
+  section,
+  details,
+  pre {
+    break-inside: avoid;
+  }
+
+  /* The main column carries page padding of its own on screen. */
+  main {
+    padding: 0 !important;
+    margin: 0 !important;
+    max-width: none !important;
+  }
+}
