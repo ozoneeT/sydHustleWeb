@@ -203,21 +203,29 @@ export function ReceiptCheckOutcome({ result }: { result: ReceiptCheck }) {
         </div>
       ) : null}
 
-      {/* Deposits get their settlement ID here; payouts get theirs inside
-          the Withdrawal section, which reads better beside the bank
-          details it belongs to. Rendered high on the page either way,
-          because on a "money never arrived" call it is the first thing
-          the operator needs to read out and the last thing that should
-          be buried under four sections of escrow history. */}
-      {entry?.settlementId && !withdrawal ? (
-        <Section title="Settlement ID">
+      {/* Deposits get their tracing identifier here; payouts get theirs
+          inside the Withdrawal section, which reads better beside the
+          bank details it belongs to. Rendered high on the page either
+          way, because on a "money never arrived" call it is the first
+          thing the operator needs to read out and the last thing that
+          should be buried under four sections of escrow history.
+
+          A deposit's identifier is the PROVIDER REFERENCE, not a
+          settlement id. Nothing settled under our instruction - the
+          provider collected a charge - so the conversation this opens is
+          with Paystack or Payvessel, which is why the provider is named
+          right underneath it. */}
+      {entry?.providerReference && !withdrawal ? (
+        <Section title="Provider reference">
           <p className="select-all font-mono text-lg tracking-wide">
-            {settlementId(entry.settlementId)}
+            {entry.providerReference}
           </p>
           <p className="mt-2 text-sm text-muted-foreground">
-            The NIP session ID for this transfer. This is the number the
-            user&apos;s bank can trace — the SYD reference above means
-            nothing to them.
+            {entry.provider
+              ? `Quote this to ${entry.provider}. `
+              : "Quote this to the payment provider. "}
+            A top-up has no settlement ID — the provider collected the
+            charge, so there is no interbank transfer of ours to trace.
           </p>
         </Section>
       ) : null}

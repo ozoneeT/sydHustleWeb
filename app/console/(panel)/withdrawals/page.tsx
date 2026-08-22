@@ -82,9 +82,14 @@ export default async function WithdrawalsPage() {
                 {/* The number the caller is holding. When someone rings
                     saying a payout never landed, this is what their bank
                     will search on — every other identifier on this page is
-                    ours and traces nothing outside sydHustle. Selectable
-                    and unspaced underneath, because it gets pasted into a
-                    provider's support form. */}
+                    ours and traces nothing outside sydHustle.
+
+                    The provider's own reference sits under it, named, so
+                    an operator who needs the OTHER conversation — the one
+                    with Paystack or Payvessel rather than with the bank —
+                    can see at a glance which desk to open. `title` carries
+                    the unspaced value for copying into their support
+                    form; the grouped one is for reading aloud. */}
                 <td className="px-4 py-3 font-mono text-xs">
                   {row.session_id ? (
                     <span
@@ -100,10 +105,27 @@ export default async function WithdrawalsPage() {
                         : "—"}
                     </span>
                   )}
-                  {row.provider_reference ? (
+                  {/* The provider's reference is dropped when it IS the
+                      session id, which on Payvessel it always is: their
+                      transfer API returns no handle of its own, so both
+                      columns hold the same string and printing it twice
+                      shows one number as if it were two. The provider
+                      name still shows, because that is the part an
+                      operator actually needs from this line. */}
+                  {row.provider ||
+                  (row.provider_reference &&
+                    row.provider_reference !== row.session_id) ? (
                     <span className="mt-1 block text-[11px] text-muted-foreground">
-                      {row.provider_reference}
-                      {row.provider ? ` · ${row.provider}` : ""}
+                      {row.provider_reference &&
+                      row.provider_reference !== row.session_id ? (
+                        <span className="select-all">
+                          {row.provider_reference}
+                          {row.provider ? " · " : ""}
+                        </span>
+                      ) : null}
+                      {row.provider ? (
+                        <span className="font-sans">{row.provider}</span>
+                      ) : null}
                     </span>
                   ) : null}
                 </td>

@@ -182,16 +182,28 @@ export type LedgerRow = {
   reference: string | null;
   profile_name: string | null;
   /**
-   * The NIP session ID — what a bank, NIBSS, or a provider's support desk
-   * can actually trace, as opposed to `reference`, which means nothing
-   * outside sydHustle.
+   * The NIP session ID — what the user's own bank can trace, as opposed
+   * to `reference`, which means nothing outside sydHustle.
    *
-   * Null on every entry that never touched a bank rail (escrow holds,
-   * releases, refunds, fees all moved between two sydHustle wallets), and
-   * null on a payout still in flight, because the rail stamps it on
-   * arrival.
+   * WITHDRAWALS ONLY. A payout is a transfer we put on the interbank
+   * rail, so NIBSS stamps it; a deposit is a charge the provider
+   * collected, which never settles under our instruction and has no
+   * session id to give. Deposits carry `provider_reference` instead, and
+   * that is not a lesser version of this — it is the correct identifier
+   * for what happened. Also null on a payout still in flight, because the
+   * rail stamps it on arrival.
    */
   settlement_id: string | null;
+  /**
+   * The provider's own handle, and whose desk resolves it.
+   *
+   * The console names the provider where the app deliberately does not:
+   * an operator with a reference in front of them still has to decide
+   * whether to open Paystack or Payvessel, and one row carrying both
+   * answers is the difference between a phone call and a hunt.
+   */
+  provider_reference: string | null;
+  provider: string | null;
 };
 
 export async function listRecentLedger(): Promise<LedgerRow[]> {
@@ -201,7 +213,7 @@ export async function listRecentLedger(): Promise<LedgerRow[]> {
   const { data, error } = await supabase
     .from("wallet_ledger")
     .select(
-      "id, created_at, direction, amount, reason, reference, profile_id, source_type, source_id, settlement_id"
+      "id, created_at, direction, amount, reason, reference, profile_id, source_type, source_id, settlement_id, provider_reference"
     )
     .order("created_at", { ascending: false })
     .limit(100);
@@ -218,6 +230,7 @@ export async function listRecentLedger(): Promise<LedgerRow[]> {
     source_type: string | null;
     source_id: string | null;
     settlement_id: string | null;
+    provider_reference: string | null;
   };
 
   const rows = (data ?? []) as Row[];
@@ -233,14 +246,19 @@ export async function listRecentLedger(): Promise<LedgerRow[]> {
     }
   }
 
-  // Only ONE kind of entry carries its settlement id on the ledger row:
-  // a credit into a permanent virtual account, which has no other row
-  // describing it anywhere. Withdrawals and checkout deposits keep theirs
-  // on the withdrawal or the intent, because those arrive after the
-  // ledger entry was written and the ledger is append-only. So the two
+  // Only ONE kind of entry carries its provider identifiers on the ledger
+  // row: a credit into a permanent virtual account, which has no other
+  // row describing it anywhere. Withdrawals and checkout deposits keep
+  // theirs on the withdrawal or the intent, because those arrive after
+  // the ledger entry was written and the ledger is append-only. So both
   // are fetched and folded in here, batched by source type rather than
   // one query per row.
-  const sessionBySource = new Map<string, string | null>();
+  type Trace = {
+    settlementId: string | null;
+    providerReference: string | null;
+    provider: string | null;
+  };
+  const traceBySource = new Map<string, Trace>();
   const sourceIds = (type: string) => [
     ...new Set(
       rows
@@ -253,10 +271,14 @@ export async function listRecentLedger(): Promise<LedgerRow[]> {
   if (withdrawalIds.length > 0) {
     const { data: withdrawals } = await supabase
       .from("withdrawals")
-      .select("id, session_id")
+      .select("id, session_id, provider_reference, provider")
       .in("id", withdrawalIds);
     for (const row of withdrawals ?? []) {
-      sessionBySource.set(`withdrawal:${row.id}`, row.session_id);
+      traceBySource.set(`withdrawal:${row.id}`, {
+        settlementId: row.session_id,
+        providerReference: row.provider_reference,
+        provider: row.provider,
+      });
     }
   }
 
@@ -264,27 +286,58 @@ export async function listRecentLedger(): Promise<LedgerRow[]> {
   if (intentIds.length > 0) {
     const { data: intents } = await supabase
       .from("payment_intents")
-      .select("id, session_id")
+      .select("id, session_id, provider_reference, provider")
       .in("id", intentIds);
     for (const row of intents ?? []) {
-      sessionBySource.set(`payment_intent:${row.id}`, row.session_id);
+      traceBySource.set(`payment_intent:${row.id}`, {
+        // Deposits do not get one. The column exists and is read here so
+        // that a provider who starts sending one is captured without a
+        // schema change, but nothing displays it as a deposit's identity.
+        settlementId: row.session_id,
+        providerReference: row.provider_reference,
+        provider: row.provider,
+      });
     }
   }
 
-  return rows.map((row) => ({
-    id: row.id,
-    created_at: row.created_at,
-    direction: row.direction,
-    amount: Number(row.amount),
-    reason: row.reason,
-    reference: row.reference,
-    profile_name: nameById.get(row.profile_id) ?? null,
-    settlement_id:
-      row.settlement_id ??
-      (row.source_type && row.source_id
-        ? sessionBySource.get(`${row.source_type}:${row.source_id}`) ?? null
-        : null),
-  }));
+  // A virtual-account credit points at the ACCOUNT, so the provider comes
+  // off that row rather than off anything transaction-shaped.
+  const accountIds = sourceIds("virtual_account");
+  if (accountIds.length > 0) {
+    const { data: accounts } = await supabase
+      .from("virtual_accounts")
+      .select("id, provider")
+      .in("id", accountIds);
+    for (const row of accounts ?? []) {
+      traceBySource.set(`virtual_account:${row.id}`, {
+        settlementId: null,
+        providerReference: null,
+        provider: row.provider,
+      });
+    }
+  }
+
+  return rows.map((row) => {
+    const trace =
+      row.source_type && row.source_id
+        ? traceBySource.get(`${row.source_type}:${row.source_id}`)
+        : undefined;
+    return {
+      id: row.id,
+      created_at: row.created_at,
+      direction: row.direction,
+      amount: Number(row.amount),
+      reason: row.reason,
+      reference: row.reference,
+      profile_name: nameById.get(row.profile_id) ?? null,
+      // The ledger row wins where it has a value: that is the
+      // virtual-account case, which has no source row to read from.
+      settlement_id: row.settlement_id ?? trace?.settlementId ?? null,
+      provider_reference:
+        row.provider_reference ?? trace?.providerReference ?? null,
+      provider: trace?.provider ?? null,
+    };
+  });
 }
 
 export type WithdrawalRow = {

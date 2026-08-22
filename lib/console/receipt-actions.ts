@@ -74,10 +74,15 @@ export type ReceiptCheck = {
     createdAt: string;
     sourceType: string | null;
     profileId: string;
-    /** The NIP session ID, folded in by `withSettlementId` rather than
-     * returned by the RPC. The one identifier on this whole result that
-     * a bank or a provider's support desk can act on. */
+    /** Folded in by `withTracingIds` rather than returned by the RPC.
+     * `settlementId` is NIBSS's and exists only on a withdrawal; a
+     * deposit carries `providerReference` instead, which is the correct
+     * identifier for a charge rather than a lesser one. `provider` names
+     * whose desk resolves the reference - the console says it, the app
+     * deliberately does not. */
     settlementId?: string | null;
+    providerReference?: string | null;
+    provider?: string | null;
   };
   entries?: LinkedEntry[];
   parties?: {
@@ -181,49 +186,59 @@ export async function checkReceiptStamp(
 
   return {
     error: null,
-    result: await withSettlementId(supabase, data as ReceiptCheck),
+    result: await withTracingIds(supabase, data as ReceiptCheck),
     reference: parsed.data.reference,
     code: parsed.data.code,
   };
 }
 
 /**
- * Folds the NIP settlement ID into a check result.
+ * Folds the external tracing identifiers into a check result.
+ *
+ * Two of them, because a payment has two different outside worlds. The
+ * settlement id is NIBSS's and belongs to a WITHDRAWAL - a transfer we
+ * put on the interbank rail, which is the only thing that settles under
+ * our instruction. The provider reference is Paystack's or Payvessel's,
+ * and is what a DEPOSIT has instead: a top-up is a charge they collected,
+ * so there is no settlement and no session id, and their reference is the
+ * correct identifier rather than a consolation prize.
  *
  * Done HERE rather than inside `verify_receipt_code` on purpose. That
  * function is a 300-line security-definer audit routine that also writes
  * the check to `private.stamp_checks`; replacing its whole body to append
- * two fields would put the tamper-evidence trail at risk for a display
- * detail. This reads the same rows it would have, with the same service
- * key, and cannot affect the verdict - the signature check has already
- * happened and nothing below can change it.
+ * display fields would put the tamper-evidence trail at risk for a
+ * cosmetic gain. This reads the same rows it would have, with the same
+ * service key, and cannot affect the verdict - the signature check has
+ * already happened and nothing below can change it.
  *
- * A failed lookup degrades to no settlement id rather than to no result.
- * An operator who can see the verdict and the parties but not the tracing
+ * A failed lookup degrades to no identifiers rather than to no result. An
+ * operator who can see the verdict and the parties but not the tracing
  * number is far better off than one staring at an error.
  */
-async function withSettlementId(
+async function withTracingIds(
   supabase: ReturnType<typeof createServerSupabaseClient>,
   result: ReceiptCheck
 ): Promise<ReceiptCheck> {
   if (result.verdict !== "valid" || !result.entry) return result;
 
   try {
-    // A withdrawal keeps it on its own row, because it arrives after the
-    // append-only ledger entry was written. A checkout deposit keeps it
-    // on the intent, for the same reason. Only a virtual-account credit
-    // carries it on the entry itself, having had nowhere else to put it.
+    // A withdrawal keeps these on its own row, because they arrive after
+    // the append-only ledger entry was written. A checkout deposit keeps
+    // them on the intent, for the same reason. Only a virtual-account
+    // credit carries them on the entry itself, having had nowhere else.
     const { data: ledger } = await supabase
       .from("wallet_ledger")
-      .select("source_type, source_id, settlement_id")
+      .select("source_type, source_id, settlement_id, provider_reference")
       .eq("reference", result.entry.reference)
       .maybeSingle();
 
     if (!ledger) return result;
 
     let settlementId: string | null = ledger.settlement_id ?? null;
+    let providerReference: string | null = ledger.provider_reference ?? null;
+    let provider: string | null = null;
 
-    if (!settlementId && ledger.source_id) {
+    if (ledger.source_id) {
       const table =
         ledger.source_type === "withdrawal"
           ? "withdrawals"
@@ -233,24 +248,35 @@ async function withSettlementId(
       if (table) {
         const { data: source } = await supabase
           .from(table)
-          .select("session_id")
+          .select("session_id, provider_reference, provider")
           .eq("id", ledger.source_id)
           .maybeSingle();
-        settlementId = source?.session_id ?? null;
+        settlementId ??= source?.session_id ?? null;
+        providerReference ??= source?.provider_reference ?? null;
+        provider = source?.provider ?? null;
+      } else if (ledger.source_type === "virtual_account") {
+        // The entry points at the ACCOUNT, so the provider comes off that
+        // row - there is nothing transaction-shaped to read it from.
+        const { data: account } = await supabase
+          .from("virtual_accounts")
+          .select("provider")
+          .eq("id", ledger.source_id)
+          .maybeSingle();
+        provider = account?.provider ?? null;
       }
     }
 
-    if (!settlementId) return result;
+    if (!settlementId && !providerReference) return result;
 
     return {
       ...result,
-      entry: { ...result.entry, settlementId },
+      entry: { ...result.entry, settlementId, providerReference, provider },
       ...(result.withdrawal
         ? { withdrawal: { ...result.withdrawal, sessionId: settlementId } }
         : {}),
     };
   } catch (cause) {
-    console.error("[console] settlement id lookup failed", cause);
+    console.error("[console] tracing id lookup failed", cause);
     return result;
   }
 }
