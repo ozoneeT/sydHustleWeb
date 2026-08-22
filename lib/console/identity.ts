@@ -23,6 +23,12 @@ export type RetainedIdentityRow = {
   purge_after: string | null;
   /** Null once the account is gone — the record outlives the profile. */
   display_name: string | null;
+  /** The second document, and whether we are currently asking for it.
+   * Both live here rather than on their own page because the question
+   * "do we trust this identity" is one question, and answering it from
+   * two screens is how one of them gets forgotten. */
+  bvn_verified: boolean;
+  bvn_requested: boolean;
 };
 
 export async function listRetainedIdentityRecords(
@@ -39,7 +45,10 @@ export async function listRetainedIdentityRecords(
     .limit(200);
   if (error) throw new Error(error.message);
 
-  const rows = (data ?? []) as Omit<RetainedIdentityRow, "display_name">[];
+  const rows = (data ?? []) as Omit<
+    RetainedIdentityRow,
+    "display_name" | "bvn_verified" | "bvn_requested"
+  >[];
   if (rows.length === 0) return [];
 
   // Names come from the live profile when there still is one. A separate
@@ -59,9 +68,29 @@ export async function listRetainedIdentityRecords(
     )
   );
 
+  const ids = rows.map((row) => row.profile_id);
+  const [bvns, requests] = await Promise.all([
+    supabase.from("verified_bvns").select("profile_id").in("profile_id", ids),
+    supabase
+      .from("bvn_requests")
+      .select("profile_id")
+      .eq("status", "open")
+      .in("profile_id", ids),
+  ]);
+  const verified = new Set(
+    ((bvns.data ?? []) as { profile_id: string }[]).map((row) => row.profile_id)
+  );
+  const asked = new Set(
+    ((requests.data ?? []) as { profile_id: string }[]).map(
+      (row) => row.profile_id
+    )
+  );
+
   const withNames = rows.map((row) => ({
     ...row,
     display_name: names.get(row.profile_id) ?? null,
+    bvn_verified: verified.has(row.profile_id),
+    bvn_requested: asked.has(row.profile_id),
   }));
 
   const needle = query?.trim().toLowerCase();

@@ -1,4 +1,5 @@
 import { Button } from "@/components/ui/button";
+import { BvnRequest } from "@/components/console/BvnRequest";
 import { IdentityReveal } from "@/components/console/IdentityReveal";
 import { Input } from "@/components/ui/input";
 import { shortDate } from "@/lib/console/format";
@@ -81,10 +82,17 @@ export default async function IdentityPage({
                     purge after {record.purge_after ?? "—"}
                   </p>
                 </div>
-                <IdentityReveal
-                  label={record.display_name ?? record.profile_id}
-                  profileId={record.profile_id}
-                />
+                <div className="flex flex-wrap items-center justify-end gap-3">
+                  <BvnRequest
+                    profileId={record.profile_id}
+                    requested={record.bvn_requested}
+                    verified={record.bvn_verified}
+                  />
+                  <IdentityReveal
+                    label={record.display_name ?? record.profile_id}
+                    profileId={record.profile_id}
+                  />
+                </div>
               </div>
             </div>
           ))
