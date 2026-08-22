@@ -125,6 +125,50 @@ export async function updatePaymentProviders(
   return { error: null, saved: true };
 }
 
+const kycSchema = z.object({
+  nin_provider: z.enum(["interswitch", "payvessel"]),
+  bvn_provider: z.enum(["interswitch", "payvessel"]),
+});
+
+export type KycState = { error: string | null; saved: boolean };
+
+/**
+ * Points the identity checks at a provider.
+ *
+ * Takes effect on the NEXT lookup and changes nothing already verified.
+ * The cached encrypted records survive it too: a record is a record,
+ * whoever found it, so a retry after a switch is still free.
+ *
+ * The NIN rail is not a free choice. A provider whose record carries no
+ * state of origin cannot prove the fourth factor of the knowledge
+ * check - see NIN_CHECKS_STATE and the warning the form shows.
+ */
+export async function updateKycProviders(
+  _prev: KycState,
+  formData: FormData
+): Promise<KycState> {
+  await requireConsole();
+
+  const parsed = kycSchema.safeParse({
+    nin_provider: formData.get("nin_provider"),
+    bvn_provider: formData.get("bvn_provider"),
+  });
+  if (!parsed.success) {
+    return { error: "Pick a provider for each check.", saved: false };
+  }
+
+  const supabase = createServerSupabaseClient();
+  const { error } = await supabase
+    .from("platform_settings")
+    .update({ ...parsed.data, updated_at: new Date().toISOString() })
+    .eq("id", 1);
+  if (error) {
+    return { error: error.message, saved: false };
+  }
+  revalidatePath("/console/payments");
+  return { error: null, saved: true };
+}
+
 const costSchema = z
   .object({
     id: z.string().uuid().optional(),

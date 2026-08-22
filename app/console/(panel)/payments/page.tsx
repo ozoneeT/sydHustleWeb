@@ -1,3 +1,4 @@
+import { KycProvidersForm } from "@/components/console/KycProvidersForm";
 import { PaymentProvidersForm } from "@/components/console/PaymentProvidersForm";
 import { ProviderFees } from "@/components/console/ProviderFees";
 import { Card } from "@/components/ui/card";
@@ -65,6 +66,19 @@ export default async function PaymentsPage() {
           rails={rails}
         />
       </Card>
+
+      <div>
+        <h2 className="text-lg font-semibold">Identity checks</h2>
+        <p className="max-w-3xl text-sm text-muted-foreground">
+          Who answers the NIN and BVN lookups. Separate from the money
+          rails and from each other: separate products, separate outages,
+          separate prices. The match always runs on our side, so a switch
+          moves cost and availability rather than the standard — with one
+          exception, called out below where it applies.
+        </p>
+      </div>
+
+      <KycProvidersForm bvn={settings.bvn_provider} nin={settings.nin_provider} />
 
       <ProviderFees
         cutPercent={settings.withdrawal_cut_percent}

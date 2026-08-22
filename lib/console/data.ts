@@ -1,5 +1,6 @@
 import "server-only";
 
+import type { KycProvider } from "@/lib/console/kyc-providers";
 import type { PaymentProvider } from "@/lib/console/payment-providers";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 
@@ -62,6 +63,11 @@ export type PlatformSettings = {
    * on purpose - see lib/console/payments.ts. */
   funding_provider: PaymentProvider;
   payout_provider: PaymentProvider;
+  /** Who runs the NIN and BVN lookups. Independent of each other and of
+   * the money rails - separate products, separate outages, separate
+   * prices. See lib/console/kyc-providers.ts. */
+  nin_provider: KycProvider;
+  bvn_provider: KycProvider;
   updated_at: string;
 };
 
@@ -70,7 +76,7 @@ export async function getPlatformSettings(): Promise<PlatformSettings> {
   const { data, error } = await supabase
     .from("platform_settings")
     .select(
-      "withdrawal_cut_percent, escrow_cut_percent, escrow_cut_applies_to, sms_daily_price, sms_weekly_price, sms_monthly_price, sms_number_change_fee, funding_provider, payout_provider, updated_at"
+      "withdrawal_cut_percent, escrow_cut_percent, escrow_cut_applies_to, sms_daily_price, sms_weekly_price, sms_monthly_price, sms_number_change_fee, funding_provider, payout_provider, nin_provider, bvn_provider, updated_at"
     )
     .eq("id", 1)
     .single();
