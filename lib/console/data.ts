@@ -52,6 +52,15 @@ export type ConsoleStats = {
 
 export type PlatformSettings = {
   withdrawal_cut_percent: number;
+  /** Flat naira on top of the percentage, and the ceiling on the two
+   * together. Null cap means uncapped. Zero everywhere means free. */
+  withdrawal_fee_flat: number;
+  withdrawal_fee_cap: number | null;
+  /** sydHustle's cut of money added, charged ON TOP of the payment
+   * provider's own. Zero means the payer bears only the provider's. */
+  deposit_fee_percent: number;
+  deposit_fee_flat: number;
+  deposit_fee_cap: number | null;
   escrow_cut_percent: number;
   escrow_cut_applies_to: "none" | "provider" | "hustler" | "both";
   sms_daily_price: number;
@@ -59,6 +68,10 @@ export type PlatformSettings = {
   sms_monthly_price: number;
   /** Naira to open a slot to change the SMS alert number. */
   sms_number_change_fee: number;
+  /** A government levy on payouts at or above the threshold, passed
+   * through at cost. Never sydHustle revenue. */
+  stamp_duty_amount: number;
+  stamp_duty_threshold: number;
   /** Which provider takes money in, and which sends it out. Independent
    * on purpose - see lib/console/payments.ts. */
   funding_provider: PaymentProvider;
@@ -76,7 +89,7 @@ export async function getPlatformSettings(): Promise<PlatformSettings> {
   const { data, error } = await supabase
     .from("platform_settings")
     .select(
-      "withdrawal_cut_percent, escrow_cut_percent, escrow_cut_applies_to, sms_daily_price, sms_weekly_price, sms_monthly_price, sms_number_change_fee, funding_provider, payout_provider, nin_provider, bvn_provider, updated_at"
+      "withdrawal_cut_percent, withdrawal_fee_flat, withdrawal_fee_cap, deposit_fee_percent, deposit_fee_flat, deposit_fee_cap, escrow_cut_percent, escrow_cut_applies_to, sms_daily_price, sms_weekly_price, sms_monthly_price, sms_number_change_fee, stamp_duty_amount, stamp_duty_threshold, funding_provider, payout_provider, nin_provider, bvn_provider, updated_at"
     )
     .eq("id", 1)
     .single();
@@ -84,6 +97,15 @@ export async function getPlatformSettings(): Promise<PlatformSettings> {
   return {
     ...data,
     withdrawal_cut_percent: Number(data.withdrawal_cut_percent),
+    withdrawal_fee_flat: Number(data.withdrawal_fee_flat ?? 0),
+    withdrawal_fee_cap:
+      data.withdrawal_fee_cap === null ? null : Number(data.withdrawal_fee_cap),
+    deposit_fee_percent: Number(data.deposit_fee_percent ?? 0),
+    deposit_fee_flat: Number(data.deposit_fee_flat ?? 0),
+    deposit_fee_cap:
+      data.deposit_fee_cap === null ? null : Number(data.deposit_fee_cap),
+    stamp_duty_amount: Number(data.stamp_duty_amount ?? 0),
+    stamp_duty_threshold: Number(data.stamp_duty_threshold ?? 0),
     escrow_cut_percent: Number(data.escrow_cut_percent),
     sms_daily_price: Number(data.sms_daily_price),
     sms_weekly_price: Number(data.sms_weekly_price),

@@ -43,27 +43,127 @@ export function EarningsSettingsForm({
 
   return (
     <form action={formAction} className="space-y-6">
-      <div className="space-y-2">
-        <Label htmlFor="withdrawal_cut_percent">Withdrawal cut (%)</Label>
-        <Input
-          defaultValue={settings.withdrawal_cut_percent}
-          id="withdrawal_cut_percent"
-          max={30}
-          min={0}
-          name="withdrawal_cut_percent"
-          step="0.5"
-          type="number"
-        />
+      <div className="space-y-4 rounded-xl border border-white/10 p-4">
+        <div>
+          <h3 className="font-medium">Withdrawal fee</h3>
+          <p className="text-xs text-muted-foreground">
+            What a Hustler pays to take their own money out. Percentage and
+            flat are ADDED together, then capped. Leave all three at zero
+            for free withdrawals — free is a setting here, not a special
+            case in the code, and the app says &ldquo;Free to your saved
+            bank&rdquo; only while it is true.
+          </p>
+        </div>
+
+        <div className="grid gap-4 sm:grid-cols-3">
+          <div className="space-y-2">
+            <Label htmlFor="withdrawal_cut_percent">Percent (%)</Label>
+            <Input
+              defaultValue={settings.withdrawal_cut_percent}
+              id="withdrawal_cut_percent"
+              max={30}
+              min={0}
+              name="withdrawal_cut_percent"
+              step="0.5"
+              type="number"
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="withdrawal_fee_flat">Flat (₦)</Label>
+            <Input
+              defaultValue={settings.withdrawal_fee_flat}
+              id="withdrawal_fee_flat"
+              min={0}
+              name="withdrawal_fee_flat"
+              step="10"
+              type="number"
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="withdrawal_fee_cap">Cap (₦)</Label>
+            <Input
+              defaultValue={settings.withdrawal_fee_cap ?? ""}
+              id="withdrawal_fee_cap"
+              min={0}
+              name="withdrawal_fee_cap"
+              placeholder="no cap"
+              step="10"
+              type="number"
+            />
+          </div>
+        </div>
+
         <p className="text-xs text-muted-foreground">
           <strong className="text-amber-300">
-            Zero, and meant to stay zero.
+            Currently advertised as free.
           </strong>{" "}
-          sydHustle earns on released work now, and free withdrawals are
-          advertised to users in the app — putting a rate back here charges
-          people for something they were told was free. The mechanism is kept
-          for the day that changes. Applies to new withdrawals only; in-flight
-          ones keep the rate they were created with, and stamp duty is
-          separate and always passed through.
+          sydHustle earns on released work, and free withdrawals are stated
+          to users in the app — putting a rate back here charges people for
+          something they were told was free, so it is worth telling them
+          first. A flat fee is the honest shape if you do: a payout costs us
+          per transfer, not per naira. Applies to new withdrawals only;
+          in-flight ones keep the fee snapshotted on their own row, and
+          stamp duty is separate and always passed through at cost.
+        </p>
+      </div>
+
+      <div className="space-y-4 rounded-xl border border-white/10 p-4">
+        <div>
+          <h3 className="font-medium">Add-money fee</h3>
+          <p className="text-xs text-muted-foreground">
+            sydHustle&apos;s cut of a deposit, charged{" "}
+            <strong className="text-foreground">on top</strong> of whatever
+            Paystack or Payvessel already takes from the payer. At zero the
+            payer bears only the provider&apos;s cut, which never reaches
+            our account and is not ours to book. Above zero they bear that
+            plus this, and this is booked as revenue.
+          </p>
+        </div>
+
+        <div className="grid gap-4 sm:grid-cols-3">
+          <div className="space-y-2">
+            <Label htmlFor="deposit_fee_percent">Percent (%)</Label>
+            <Input
+              defaultValue={settings.deposit_fee_percent}
+              id="deposit_fee_percent"
+              max={30}
+              min={0}
+              name="deposit_fee_percent"
+              step="0.5"
+              type="number"
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="deposit_fee_flat">Flat (₦)</Label>
+            <Input
+              defaultValue={settings.deposit_fee_flat}
+              id="deposit_fee_flat"
+              min={0}
+              name="deposit_fee_flat"
+              step="10"
+              type="number"
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="deposit_fee_cap">Cap (₦)</Label>
+            <Input
+              defaultValue={settings.deposit_fee_cap ?? ""}
+              id="deposit_fee_cap"
+              min={0}
+              name="deposit_fee_cap"
+              placeholder="no cap"
+              step="10"
+              type="number"
+            />
+          </div>
+        </div>
+
+        <p className="text-xs text-muted-foreground">
+          The deposit lands and the fee comes off it, so the ledger records
+          all three figures — what arrived, what we took, what was credited.
+          The AML review threshold is measured against{" "}
+          <strong className="text-foreground">what arrived</strong>, so a
+          fee cannot quietly move it.
         </p>
       </div>
 

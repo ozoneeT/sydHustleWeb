@@ -175,15 +175,28 @@ export default async function EarningsPage({
                   {naira(pnl.revenue.featureFees)}
                 </td>
               </tr>
-              {/* Only worth a row where it is not zero: withdrawals have
-                  been free since the cut moved to releases, and a
-                  permanent ₦0 line is noise on every statement after. */}
+              {/* Both of these are zero unless the console has set a
+                  rate, so they appear only when they carry a figure. A
+                  permanent ₦0 line is noise on every statement. */}
+              {pnl.revenue.depositFees > 0 ? (
+                <tr className="border-b border-white/5">
+                  <td className="px-4 py-3">
+                    Add-money fees
+                    <span className="block text-xs text-muted-foreground">
+                      our cut of deposits, on top of the provider&apos;s
+                    </span>
+                  </td>
+                  <td className="px-4 py-3 text-right font-mono">
+                    {naira(pnl.revenue.depositFees)}
+                  </td>
+                </tr>
+              ) : null}
               {pnl.revenue.withdrawalFees > 0 ? (
                 <tr className="border-b border-white/5">
                   <td className="px-4 py-3">
                     Withdrawal fees
                     <span className="block text-xs text-muted-foreground">
-                      charged before withdrawals became free
+                      what Hustlers paid to take money out
                     </span>
                   </td>
                   <td className="px-4 py-3 text-right font-mono">

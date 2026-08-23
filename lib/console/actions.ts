@@ -18,8 +18,20 @@ export async function consoleLogout() {
   redirect("/console");
 }
 
+/** Empty means "no cap", which is a different answer from zero — zero
+ * would cap every fee at nothing. */
+const OPTIONAL_CAP = z.preprocess(
+  (value) => (value === "" || value === null ? null : value),
+  z.coerce.number().min(0).max(1_000_000).nullable()
+);
+
 const earningsSchema = z.object({
   withdrawal_cut_percent: z.coerce.number().min(0).max(30),
+  withdrawal_fee_flat: z.coerce.number().min(0).max(100000),
+  withdrawal_fee_cap: OPTIONAL_CAP,
+  deposit_fee_percent: z.coerce.number().min(0).max(30),
+  deposit_fee_flat: z.coerce.number().min(0).max(100000),
+  deposit_fee_cap: OPTIONAL_CAP,
   escrow_cut_percent: z.coerce.number().min(0).max(30),
   escrow_cut_applies_to: z.enum(["none", "provider", "hustler", "both"]),
   sms_daily_price: z.coerce.number().min(0).max(10000),
@@ -43,6 +55,11 @@ export async function updateEarningsSettings(
 
   const parsed = earningsSchema.safeParse({
     withdrawal_cut_percent: formData.get("withdrawal_cut_percent"),
+    withdrawal_fee_flat: formData.get("withdrawal_fee_flat"),
+    withdrawal_fee_cap: formData.get("withdrawal_fee_cap"),
+    deposit_fee_percent: formData.get("deposit_fee_percent"),
+    deposit_fee_flat: formData.get("deposit_fee_flat"),
+    deposit_fee_cap: formData.get("deposit_fee_cap"),
     escrow_cut_percent: formData.get("escrow_cut_percent"),
     escrow_cut_applies_to: formData.get("escrow_cut_applies_to"),
     sms_daily_price: formData.get("sms_daily_price"),
@@ -52,7 +69,8 @@ export async function updateEarningsSettings(
   });
   if (!parsed.success) {
     return {
-      error: "Percentages must be 0–30 and SMS prices 0–10,000.",
+      error:
+        "Percentages must be 0–30, flat fees 0–100,000, and SMS prices 0–10,000. Leave a cap blank for no cap.",
       saved: false,
     };
   }
@@ -65,6 +83,10 @@ export async function updateEarningsSettings(
   if (error) {
     return { error: error.message, saved: false };
   }
+  // Every surface that prices money reads these: the app's withdraw and
+  // Add Cash screens, the payments page's rate card, and the P&L.
+  revalidatePath("/console/earnings");
+  revalidatePath("/console/payments");
   return { error: null, saved: true };
 }
 

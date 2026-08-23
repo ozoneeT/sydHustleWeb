@@ -164,7 +164,16 @@ export default async function TransactionDetailPage({
         title="The movement"
       >
         <Fact label="Direction" value={credit ? "Money in" : "Money out"} />
-        <Fact label="Amount" value={money(entry.amount)} />
+        {entry.gross_amount ? (
+          <>
+            <Fact label="Amount that arrived" value={money(entry.gross_amount)} />
+            <Fact label="sydHustle fee" value={money(entry.fee_amount)} />
+          </>
+        ) : null}
+        <Fact
+          label={entry.gross_amount ? "Credited to the wallet" : "Amount"}
+          value={money(entry.amount)}
+        />
         <Fact label="Balance before" value={money(entry.balance_before)} />
         <Fact label="Balance after" value={money(entry.balance_after)} />
         <Fact label="Recorded at" value={when(entry.created_at)} />

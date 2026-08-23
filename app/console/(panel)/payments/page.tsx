@@ -1,9 +1,12 @@
+import Link from "next/link";
+
 import { KycProvidersForm } from "@/components/console/KycProvidersForm";
 import { PaymentProvidersForm } from "@/components/console/PaymentProvidersForm";
 import { ProviderFees } from "@/components/console/ProviderFees";
 import { Card } from "@/components/ui/card";
 import { getPlatformSettings } from "@/lib/console/data";
 import { PROVIDER_LABELS } from "@/lib/console/payment-providers";
+import { naira } from "@/lib/console/format";
 import { getPaymentRails } from "@/lib/console/payments";
 
 export const metadata = { title: "Payments — sydHustle Console" };
@@ -79,6 +82,119 @@ export default async function PaymentsPage() {
       </div>
 
       <KycProvidersForm bvn={settings.bvn_provider} nin={settings.nin_provider} />
+
+      {/* What WE charge, next to what the providers charge us. The two
+          are read together constantly - a rate is set by looking at the
+          cost it has to cover - and having them on separate pages is how
+          a fee gets set against a stale idea of the cost. */}
+      <Card className="space-y-4 p-5">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <h2 className="text-lg font-semibold">What sydHustle charges</h2>
+            <p className="text-sm text-muted-foreground">
+              Live values. Every one is read by the app when it draws a
+              price, by the wallet functions when they move money, and by
+              the P&amp;L when it counts what was earned.
+            </p>
+          </div>
+          <Link
+            className="text-sm underline underline-offset-4"
+            href="/console/earnings"
+          >
+            Change these →
+          </Link>
+        </div>
+
+        <div className="grid gap-3 sm:grid-cols-2">
+          <div className="rounded-lg border border-white/10 p-4">
+            <p className="text-xs uppercase tracking-wide text-muted-foreground">
+              Withdrawal fee
+            </p>
+            <p className="mt-1 text-lg font-semibold">
+              {settings.withdrawal_cut_percent === 0 &&
+              settings.withdrawal_fee_flat === 0
+                ? "Free"
+                : [
+                    settings.withdrawal_cut_percent > 0
+                      ? `${settings.withdrawal_cut_percent}%`
+                      : null,
+                    settings.withdrawal_fee_flat > 0
+                      ? naira(settings.withdrawal_fee_flat)
+                      : null,
+                  ]
+                    .filter(Boolean)
+                    .join(" + ")}
+              {settings.withdrawal_fee_cap !== null ? (
+                <span className="text-sm font-normal text-muted-foreground">
+                  {" "}
+                  capped at {naira(settings.withdrawal_fee_cap)}
+                </span>
+              ) : null}
+            </p>
+            <p className="mt-1 text-xs text-muted-foreground">
+              The app says &ldquo;Free to your saved bank&rdquo; only while
+              this is zero.
+            </p>
+          </div>
+
+          <div className="rounded-lg border border-white/10 p-4">
+            <p className="text-xs uppercase tracking-wide text-muted-foreground">
+              Add-money fee
+            </p>
+            <p className="mt-1 text-lg font-semibold">
+              {settings.deposit_fee_percent === 0 &&
+              settings.deposit_fee_flat === 0
+                ? "Provider's cut only"
+                : [
+                    settings.deposit_fee_percent > 0
+                      ? `${settings.deposit_fee_percent}%`
+                      : null,
+                    settings.deposit_fee_flat > 0
+                      ? naira(settings.deposit_fee_flat)
+                      : null,
+                  ]
+                    .filter(Boolean)
+                    .join(" + ")}
+              {settings.deposit_fee_cap !== null ? (
+                <span className="text-sm font-normal text-muted-foreground">
+                  {" "}
+                  capped at {naira(settings.deposit_fee_cap)}
+                </span>
+              ) : null}
+            </p>
+            <p className="mt-1 text-xs text-muted-foreground">
+              On top of what {PROVIDER_LABELS[settings.funding_provider]} takes
+              from the payer. Theirs never reaches our account; ours is booked
+              as revenue.
+            </p>
+          </div>
+
+          <div className="rounded-lg border border-white/10 p-4">
+            <p className="text-xs uppercase tracking-wide text-muted-foreground">
+              Release fee
+            </p>
+            <p className="mt-1 text-lg font-semibold">10% → 4%, by size</p>
+            <p className="mt-1 text-xs text-muted-foreground">
+              The main stream. Tiered in `platform_fee_tiers`; the whole
+              Hustle is charged at the rate its size falls into.
+            </p>
+          </div>
+
+          <div className="rounded-lg border border-white/10 p-4">
+            <p className="text-xs uppercase tracking-wide text-muted-foreground">
+              Stamp duty
+            </p>
+            <p className="mt-1 text-lg font-semibold">
+              {naira(settings.stamp_duty_amount)}
+            </p>
+            <p className="mt-1 text-xs text-muted-foreground">
+              Government levy on payouts of{" "}
+              {naira(settings.stamp_duty_threshold)} and above, passed through
+              at cost. Never counted as revenue.
+            </p>
+          </div>
+        </div>
+      </Card>
 
       <ProviderFees
         cutPercent={settings.withdrawal_cut_percent}

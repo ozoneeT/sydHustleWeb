@@ -34,6 +34,10 @@ export type ProfitAndLoss = {
     /** Zero going forward - withdrawals are free - and non-zero for any
      * period before the cut moved to releases. */
     withdrawalFees: number;
+    /** sydHustle's cut of money added, when the console has one set.
+     * Distinct from what the payment provider charges the payer, which
+     * never reaches our account and is a cost line, not a revenue one. */
+    depositFees: number;
     total: number;
   };
   /**
@@ -163,6 +167,7 @@ export async function getProfitAndLoss(
   let escrowFees = 0;
   let smsFees = 0;
   let featureFees = 0;
+  let depositFees = 0;
   // Every kind is counted, and anything unrecognised still reaches the
   // total below. The old version summed three of five: release fees - the
   // main stream - and featured placements were both earned, recorded, and
@@ -174,6 +179,7 @@ export async function getProfitAndLoss(
     else if (row.kind === "escrow_refund_fee") escrowFees += amount;
     else if (row.kind === "sms_subscription") smsFees += amount;
     else if (row.kind === "skill_feature") featureFees += amount;
+    else if (row.kind === "deposit_fee") depositFees += amount;
   }
 
   let oneOffs = 0;
@@ -207,7 +213,12 @@ export async function getProfitAndLoss(
   }
 
   const revenueTotal =
-    withdrawalFees + releaseFees + escrowFees + smsFees + featureFees;
+    withdrawalFees +
+    releaseFees +
+    escrowFees +
+    smsFees +
+    featureFees +
+    depositFees;
   const costsTotal =
     oneOffs + recurringAccrued + providerDeposits + providerPayouts;
 
@@ -221,6 +232,7 @@ export async function getProfitAndLoss(
       smsFees: round(smsFees),
       featureFees: round(featureFees),
       withdrawalFees: round(withdrawalFees),
+      depositFees: round(depositFees),
       total: round(revenueTotal),
     },
     passThrough: {
