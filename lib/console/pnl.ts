@@ -56,6 +56,17 @@ export type ProfitAndLoss = {
      * published transfer bands. */
     providerDeposits: number;
     providerPayouts: number;
+    /**
+     * What Apple and Google keep of an in-app purchase.
+     *
+     * Always an estimate, and never quietly promoted to exact: the
+     * store charges the user in their own currency at their own price
+     * point and remits after their own FX, so the true figure exists
+     * only on a settlement report. An estimate here is the difference
+     * between a cost line that is roughly right and one that is
+     * confidently zero.
+     */
+    storeCommission: number;
     /** True while any provider charge in the period is a computed
      * estimate rather than a reported figure - which payouts always are. */
     providerEstimated: boolean;
@@ -154,11 +165,13 @@ export async function getProfitAndLoss(
 
   let providerDeposits = 0;
   let providerPayouts = 0;
+  let storeCommission = 0;
   let providerEstimated = false;
   for (const row of chargeRows ?? []) {
     const amount = Number(row.amount);
     if (row.kind === "deposit") providerDeposits += amount;
     else if (row.kind === "payout") providerPayouts += amount;
+    else if (row.kind === "store_commission") storeCommission += amount;
     if (row.estimated) providerEstimated = true;
   }
 
@@ -220,7 +233,11 @@ export async function getProfitAndLoss(
     featureFees +
     depositFees;
   const costsTotal =
-    oneOffs + recurringAccrued + providerDeposits + providerPayouts;
+    oneOffs +
+    recurringAccrued +
+    providerDeposits +
+    providerPayouts +
+    storeCommission;
 
   return {
     from,
@@ -243,6 +260,7 @@ export async function getProfitAndLoss(
       oneOffs: round(oneOffs),
       providerDeposits: round(providerDeposits),
       providerPayouts: round(providerPayouts),
+      storeCommission: round(storeCommission),
       providerEstimated,
       total: round(costsTotal),
     },

@@ -250,6 +250,23 @@ export default async function EarningsPage({
                   {naira(pnl.costs.providerPayouts)}
                 </td>
               </tr>
+              {/* Only where it carries a figure. Store billing is new
+                  and most periods have none. */}
+              {pnl.costs.storeCommission > 0 ? (
+                <tr className="border-b border-white/5">
+                  <td className="px-4 py-3">
+                    Apple &amp; Google commission
+                    <span className="block text-xs text-muted-foreground">
+                      their cut of hustleBoost and SMS subscriptions —
+                      estimated at the console&apos;s rate, since the true
+                      figure is on their settlement report
+                    </span>
+                  </td>
+                  <td className="px-4 py-3 text-right font-mono">
+                    {naira(pnl.costs.storeCommission)}
+                  </td>
+                </tr>
+              ) : null}
               <tr className="border-b border-white/5">
                 <td className="px-4 py-3">One-off spends</td>
                 <td className="px-4 py-3 text-right font-mono">

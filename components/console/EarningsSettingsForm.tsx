@@ -167,6 +167,54 @@ export function EarningsSettingsForm({
         </p>
       </div>
 
+      <div className="space-y-4 rounded-xl border border-white/10 p-4">
+        <div>
+          <h3 className="font-medium">Store commission</h3>
+          <p className="text-xs text-muted-foreground">
+            What Apple and Google keep of an in-app purchase — hustleBoost
+            and SMS alerts, which bill through the stores and never through
+            the wallet. Used to estimate a cost line against that revenue,
+            which is otherwise booked gross and reads as more than it is.
+            30% is standard; 15% applies under the Small Business Program
+            and to subscriptions after their first year.
+          </p>
+        </div>
+
+        <div className="grid gap-4 sm:grid-cols-2">
+          <div className="space-y-2">
+            <Label htmlFor="apple_commission_percent">Apple (%)</Label>
+            <Input
+              defaultValue={settings.apple_commission_percent}
+              id="apple_commission_percent"
+              max={50}
+              min={0}
+              name="apple_commission_percent"
+              step="1"
+              type="number"
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="google_commission_percent">Google (%)</Label>
+            <Input
+              defaultValue={settings.google_commission_percent}
+              id="google_commission_percent"
+              max={50}
+              min={0}
+              name="google_commission_percent"
+              step="1"
+              type="number"
+            />
+          </div>
+        </div>
+
+        <p className="text-xs text-muted-foreground">
+          Always shown as an estimate and never promoted to exact: the
+          store charges in the user&apos;s currency at their own price
+          point and remits after their own FX. Changing a rate here affects
+          purchases recorded from now on, not ones already booked.
+        </p>
+      </div>
+
       <div className="space-y-2">
         <Label>Release fee tiers</Label>
         <div className="rounded-lg border border-white/10 text-xs">

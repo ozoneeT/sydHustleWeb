@@ -370,12 +370,27 @@ export default async function TransactionDetailPage({
         >
           <Fact label="Title" value={hustle.title} />
           <Fact label="Description" value={hustle.description} />
-          <Fact label="Category" value={hustle.category} />
           <Fact label="Agreed price" value={money(hustle.price)} />
           <Fact label="Status" value={hustle.status} />
-          <Fact label="Scheduled for" value={when(hustle.scheduled_for)} />
+          <Fact
+            label="When"
+            value={
+              hustle.is_asap
+                ? "Right now (ASAP)"
+                : when(hustle.scheduled_for)
+            }
+          />
+          {/* A remote Hustle has no place to have been, which is the
+              explanation for an absent location trail further down —
+              without saying so, the gap reads as missing evidence. */}
+          <Fact
+            label="Worked"
+            value={hustle.is_remote ? "Remotely" : "In person"}
+          />
+          <Fact label="Delivery email" value={hustle.delivery_email} />
           <Fact label="Stated location" value={hustle.location_text} />
           <Fact label="Location detail" value={hustle.location_detail} />
+          <Fact label="Area" value={hustle.area_label} />
           <Fact label="Stated coordinates" mono value={coords(hustle)} />
           <Fact label="Posted at" value={when(hustle.posted_at)} />
           <Fact label="Hustle ID" mono value={hustle.hustle_id} />
@@ -396,13 +411,52 @@ export default async function TransactionDetailPage({
         >
           <Fact label="Skill" value={booking.skill_name} />
           <Fact label="Listed as" value={booking.display_name} />
-          <Fact label="Category" value={booking.category_id} />
+          <Fact label="Category" value={booking.rail_id} />
           <Fact label="Status" value={booking.status} />
+          {/* What the two of them actually agreed, which can differ from
+              the listing price and is what the escrow was for. */}
+          <Fact label="Agreed amount" value={money(booking.agreed_amount)} />
+          <Fact label="Venue" value={booking.venue} />
+          <Fact label="Venue label" value={booking.venue_label} />
+          <Fact
+            label="Venue coordinates"
+            mono
+            value={
+              booking.venue_lat === null || booking.venue_lat === undefined
+                ? null
+                : `${booking.venue_lat}, ${booking.venue_lng}`
+            }
+          />
+          <Fact
+            label="Venue sharing consented at"
+            value={when(booking.venue_consent_at)}
+          />
           <Fact label="Booked at" value={when(booking.booked_at)} />
+          {/* How the job ended: who said it was done, the authentication
+              rung behind that claim, and whether the money released on
+              its own after the deadline rather than being signed off. */}
+          <Fact label="Marked done at" value={when(booking.worker_done_at)} />
+          <Fact label="Marked done by" value={booking.worker_done_proof} />
+          <Fact
+            label="Auto-released at"
+            value={when(booking.auto_released_at)}
+          />
+          <Fact label="Closed at" value={when(booking.closed_at)} />
+          <Fact label="Appealed at" value={when(booking.appealed_at)} />
+          <Fact label="Appeal reason" value={booking.appeal_reason} />
           <Fact label="Booking ID" mono value={booking.booking_id} />
           <Fact label="Skill ID" mono value={booking.skill_id} />
           <Fact label="Client profile ID" mono value={booking.client_id} />
           <Fact label="Hustler profile ID" mono value={booking.provider_id} />
+        </Section>
+      ) : null}
+
+      {!location && hustle?.is_remote ? (
+        <Section
+          blurb="Nothing was captured, and nothing should have been: this Hustle was done remotely, so there was no place for either phone to be. An absent trail here is the nature of the work, not a gap in the record."
+          title="Where it happened"
+        >
+          <Fact label="Location trail" value="Remote work — none captured" />
         </Section>
       ) : null}
 

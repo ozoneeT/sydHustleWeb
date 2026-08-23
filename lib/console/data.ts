@@ -72,6 +72,10 @@ export type PlatformSettings = {
    * through at cost. Never sydHustle revenue. */
   stamp_duty_amount: number;
   stamp_duty_threshold: number;
+  /** What each store keeps of an in-app purchase. Used to estimate the
+   * cost line against store revenue, which is booked gross. */
+  apple_commission_percent: number;
+  google_commission_percent: number;
   /** Which provider takes money in, and which sends it out. Independent
    * on purpose - see lib/console/payments.ts. */
   funding_provider: PaymentProvider;
@@ -89,7 +93,7 @@ export async function getPlatformSettings(): Promise<PlatformSettings> {
   const { data, error } = await supabase
     .from("platform_settings")
     .select(
-      "withdrawal_cut_percent, withdrawal_fee_flat, withdrawal_fee_cap, deposit_fee_percent, deposit_fee_flat, deposit_fee_cap, escrow_cut_percent, escrow_cut_applies_to, sms_daily_price, sms_weekly_price, sms_monthly_price, sms_number_change_fee, stamp_duty_amount, stamp_duty_threshold, funding_provider, payout_provider, nin_provider, bvn_provider, updated_at"
+      "withdrawal_cut_percent, withdrawal_fee_flat, withdrawal_fee_cap, deposit_fee_percent, deposit_fee_flat, deposit_fee_cap, escrow_cut_percent, escrow_cut_applies_to, sms_daily_price, sms_weekly_price, sms_monthly_price, sms_number_change_fee, stamp_duty_amount, stamp_duty_threshold, apple_commission_percent, google_commission_percent, funding_provider, payout_provider, nin_provider, bvn_provider, updated_at"
     )
     .eq("id", 1)
     .single();
@@ -106,6 +110,8 @@ export async function getPlatformSettings(): Promise<PlatformSettings> {
       data.deposit_fee_cap === null ? null : Number(data.deposit_fee_cap),
     stamp_duty_amount: Number(data.stamp_duty_amount ?? 0),
     stamp_duty_threshold: Number(data.stamp_duty_threshold ?? 0),
+    apple_commission_percent: Number(data.apple_commission_percent ?? 0),
+    google_commission_percent: Number(data.google_commission_percent ?? 0),
     escrow_cut_percent: Number(data.escrow_cut_percent),
     sms_daily_price: Number(data.sms_daily_price),
     sms_weekly_price: Number(data.sms_weekly_price),
