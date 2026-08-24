@@ -14,8 +14,8 @@ export const metadata: Metadata = {
 /**
  * The Terms & Conditions, as a numbered legal instrument.
  *
- * Drafted against Nigerian law — CAMA 2020, the FCCPA 2018, the NDPA
- * 2023 — with jurisdiction in the High Court of Oyo State sitting in
+ * Drafted against Nigerian law, CAMA 2020, the FCCPA 2018, the NDPA
+ * 2023, with jurisdiction in the High Court of Oyo State sitting in
  * Ibadan. The content lives in this file as JSX rather than markdown so
  * clause numbering, defined terms and cross-references render exactly
  * as written, which matters in a document where "Clause 14.3" has to
@@ -134,7 +134,7 @@ export default function TermsPage() {
             </Sub>
           </Clause>
 
-          <Clause number="2" title="What SydHustle Is — and What It Is Not">
+          <Clause number="2" title="What SydHustle Is, and What It Is Not">
             <Sub n="2.1">
               The Platform is an online marketplace that connects Clients who
               require services with Hustlers who offer them. Clients may post
@@ -187,8 +187,8 @@ export default function TermsPage() {
 
           <Clause number="4" title="Identity Verification">
             <Sub n="4.1">
-              To protect Users, certain actions on the Platform — including
-              offering a Skill, applying to a Hustle and booking a Hustler —
+              To protect Users, certain actions on the Platform, including
+              offering a Skill, applying to a Hustle and booking a Hustler,
               require completion of identity verification. You consent to the
               Company verifying, through duly licensed verification providers,
               government-issued identification and such other information as
@@ -312,8 +312,8 @@ export default function TermsPage() {
               only to transactions entered into after the notice.
             </Sub>
             <Sub n="8.4">
-              Optional paid features — including promotional placement
-              (&ldquo;boosts&rdquo;) and SMS notification subscriptions — are
+              Optional paid features, including promotional placement
+              (&ldquo;boosts&rdquo;) and SMS notification subscriptions, are
               charged at the prices displayed at the point of purchase.
               Purchases made through the Apple App Store or Google Play are
               additionally subject to the refund policies of those stores.
@@ -364,8 +364,8 @@ export default function TermsPage() {
             </Sub>
             <Sub n="10.2">
               The Company will review the dispute on the materials available to
-              it — including the in-app conversation, the terms recorded on
-              the Platform and any evidence the parties submit — and will
+              it, including the in-app conversation, the terms recorded on
+              the Platform and any evidence the parties submit, and will
               determine, acting reasonably and in good faith, whether the funds
               in Escrow should be released to the Hustler, refunded to the
               Client, or apportioned. Each party will be given the opportunity
@@ -511,8 +511,8 @@ export default function TermsPage() {
               chargeback, will be remitted to your verified bank account.
             </Sub>
             <Sub n="14.4">
-              Clauses which by their nature should survive termination —
-              including Clauses 8, 10, 15, 16 and 18 — survive it.
+              Clauses which by their nature should survive termination,
+              including Clauses 8, 10, 15, 16 and 18, survive it.
             </Sub>
           </Clause>
 

@@ -12,7 +12,7 @@ export const metadata: Metadata = {
 };
 
 /**
- * The Community Standards — the user-facing statement of the rules the
+ * The Community Standards, the user-facing statement of the rules the
  * moderation pipeline actually enforces.
  *
  * Written from the enforcement machinery that exists (pre-publish
@@ -52,7 +52,7 @@ export default function CommunityStandardsPage() {
             >
               Terms &amp; Conditions
             </a>{" "}
-            and apply to everything you post, list, message or review —
+            and apply to everything you post, list, message or review,
             including private one-to-one chats.
           </LegalCard>
 
@@ -63,14 +63,14 @@ export default function CommunityStandardsPage() {
               documents that are not your own, misrepresent your skills,
               experience or credentials, or operate more than one account. A
               verification badge means a government-issued ID was checked
-              against the name on the account — claiming qualifications you
+              against the name on the account, claiming qualifications you
               do not hold is a violation even on a verified account.
             </p>
           </Clause>
 
           <Clause number="2" title="Keep It Lawful">
             <p>
-              You must not post, request, offer or perform anything illegal —
+              You must not post, request, offer or perform anything illegal,
               including fraudulent schemes, scams, stolen goods, prohibited
               substances, or services that require a licence you do not hold.
               Using the platform to launder money or to defraud anyone will
@@ -82,7 +82,7 @@ export default function CommunityStandardsPage() {
           <Clause number="3" title="Respect Other People">
             <p>
               No harassment, bullying, threats, hate speech or discrimination
-              — in Hustle posts, listings, reviews or messages. Disagreements
+              in Hustle posts, listings, reviews or messages. Disagreements
               about work happen; abuse is never the way through them. Content
               that sexualises, exploits or endangers anyone is removed and
               the account actioned. Explicit sexual content and solicitation
@@ -93,8 +93,8 @@ export default function CommunityStandardsPage() {
           <Clause number="4" title="Keep Money on the Platform">
             <Sub n="4.1">
               Payment for work arranged through sydHustle must go through
-              sydHustle. Soliciting or agreeing to be paid outside the app —
-              to avoid fees or otherwise — strips both sides of Escrow
+              sydHustle. Soliciting or agreeing to be paid outside the app,
+              to avoid fees or otherwise, strips both sides of Escrow
               protection and the dispute process, and is a violation for the
               person who proposes it.
             </Sub>
@@ -115,7 +115,7 @@ export default function CommunityStandardsPage() {
               real transaction you were part of: fake, incentivised,
               retaliatory or traded reviews are removed, and manipulating
               ratings, impressions or placement is a violation. Prices must
-              be stated honestly — a listing is not a bait for a different
+              be stated honestly, a listing is not a bait for a different
               deal in chat.
             </p>
           </Clause>
@@ -123,7 +123,7 @@ export default function CommunityStandardsPage() {
           <Clause number="6" title="Stay Safe In Person">
             <p>
               Meet where the engagement reasonably requires, be punctual, and
-              keep the arrangement to what was agreed in the app — the
+              keep the arrangement to what was agreed in the app, the
               conversation record is what protects you both. Never ask
               someone to meet before payment is locked, and never pressure
               anyone into sharing an address the platform has not yet
@@ -135,7 +135,7 @@ export default function CommunityStandardsPage() {
           <Clause number="7" title="How Moderation Works">
             <Sub n="7.1">
               <Term>Before publication.</Term> Hustle posts and messages pass
-              through automated screening before they become visible —
+              through automated screening before they become visible,
               checking for prohibited content, contact details in public
               fields, and off-platform payment solicitation. Content that
               fails is never published; attempting it repeatedly is itself
@@ -145,8 +145,8 @@ export default function CommunityStandardsPage() {
               <Term>After a report.</Term> Every report goes into a review
               queue with a snapshot of the reported content, so it can be
               assessed even if edited or deleted afterwards. Reports are
-              reviewed by a person, with safety-critical reports — threats,
-              suspected illegal activity — prioritised. You are notified when
+              reviewed by a person, with safety-critical reports, threats,
+              suspected illegal activity, prioritised. You are notified when
               your report is resolved.
             </Sub>
             <Sub n="7.3">
@@ -158,7 +158,7 @@ export default function CommunityStandardsPage() {
             </Sub>
             <Sub n="7.4">
               <Term>Appeals.</Term> If your content is removed or your
-              account is actioned, you can appeal in the app — including
+              account is actioned, you can appeal in the app, including
               appealing a review you believe violates these Standards. Each
               appeal is decided by a person and the outcome recorded, either
               way.
@@ -169,9 +169,9 @@ export default function CommunityStandardsPage() {
             <Sub n="8.1">
               A <Term>Report</Term> action is available on every profile,
               Hustle post, Skill listing, review and message thread. Choose
-              the reason that fits — spam or scam, harassment, hate speech,
+              the reason that fits, spam or scam, harassment, hate speech,
               explicit content, impersonation, off-platform payment, illegal
-              activity, or other — and add detail if you can.
+              activity, or other, and add detail if you can.
             </Sub>
             <Sub n="8.2">
               <Term>Block</Term> is available on every profile and message
@@ -187,8 +187,8 @@ export default function CommunityStandardsPage() {
 
           <Clause number="9" title="Contact">
             <p>
-              To raise anything these Standards cover — or to report content
-              you cannot report in-app — reach us at{" "}
+              To raise anything these Standards cover, or to report content
+              you cannot report in-app, reach us at{" "}
               <a
                 className="text-accent underline-offset-4 hover:underline"
                 href="mailto:support@sydhustle.com"

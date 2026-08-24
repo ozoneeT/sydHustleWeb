@@ -15,7 +15,7 @@ export const metadata: Metadata = {
  * The Privacy Policy, as a numbered instrument beside the Terms.
  *
  * Drafted against the Nigeria Data Protection Act 2023 and written to
- * describe what the app ACTUALLY does — the NIN check through a
+ * describe what the app ACTUALLY does, the NIN check through a
  * licensed verification provider, the coarse location that drives
  * distances, the first-party activity signals that rank the Skills
  * feed, and the deliberate walls between them (verification data never
@@ -70,7 +70,7 @@ export default function PrivacyPage() {
             <Sub n="1.1">
               <Term>Account and profile data.</Term> Your name, email address,
               phone number and password (stored only in hashed form); and the
-              profile you choose to publish — display name, photograph, bio,
+              profile you choose to publish, display name, photograph, bio,
               the Skills you offer, and the ratings and reviews you receive.
               Your published profile is, by design, visible to other Users.
             </Sub>
@@ -93,14 +93,14 @@ export default function PrivacyPage() {
               belong to real people before in-person work and withdrawals, we
               collect your National Identification Number (NIN) and obtain,
               through a duly licensed verification provider (currently
-              Interswitch), the identity record registered against it —
+              Interswitch), the identity record registered against it,
               including name, date of birth, gender, registered address and
               phone number, and photograph. We retain an encrypted copy of
               that record, the provider&rsquo;s reference, and a record of
               which fields matched. This data is restricted to authorised
-              staff, is never shown to other Users, and —{" "}
+              staff, is never shown to other Users, and,{" "}
               <Term>
-                deliberately — is never used to personalise, rank or recommend
+                deliberately, is never used to personalise, rank or recommend
                 anything
               </Term>
               . Its sole purposes are verification, fraud and safety
@@ -125,7 +125,7 @@ export default function PrivacyPage() {
             </Sub>
             <Sub n="1.6">
               <Term>Messages and content.</Term> The content of conversations
-              conducted through in-app chat, and the content you post —
+              conducted through in-app chat, and the content you post,
               Hustles, Skill listings, photographs, reviews and appeals.
               In-app conversations are the record on which disputes under the
               Terms are decided.
@@ -138,8 +138,8 @@ export default function PrivacyPage() {
             </Sub>
             <Sub n="1.8">
               <Term>Activity and device data.</Term> First-party signals about
-              how you use the Platform — the listings you view, book, dismiss
-              or report, and the notifications delivered to you — together
+              how you use the Platform, the listings you view, book, dismiss
+              or report, and the notifications delivered to you, together
               with device type, operating system version, app version and
               crash diagnostics. Activity signals are processed on our own
               systems to rank the Skills feed and keep the marketplace fair;
@@ -155,24 +155,24 @@ export default function PrivacyPage() {
             </Sub>
             <ul className="ml-5 list-disc space-y-2">
               <li>
-                <Term>Performance of a contract</Term> — operating your
+                <Term>Performance of a contract</Term>, operating your
                 account, matching Clients and Hustlers, messaging, payments,
                 Escrow, release of funds and dispute handling under the Terms;
               </li>
               <li>
-                <Term>Legal obligation</Term> — identity verification,
+                <Term>Legal obligation</Term>, identity verification,
                 financial record-keeping and reporting under Applicable Law,
                 including the Money Laundering (Prevention and Prohibition)
                 Act 2022;
               </li>
               <li>
-                <Term>Legitimate interests</Term> — securing the Platform,
+                <Term>Legitimate interests</Term>, securing the Platform,
                 preventing fraud, moderating content, ranking the feed from
-                first-party activity, and improving the service — in each case
+                first-party activity, and improving the service, in each case
                 balanced against your rights and freedoms; and
               </li>
               <li>
-                <Term>Consent</Term> — location access, notification delivery,
+                <Term>Consent</Term>, location access, notification delivery,
                 and the optional preferences in Clause 1.4. Consent may be
                 withdrawn at any time without affecting the lawfulness of
                 processing before withdrawal.
@@ -191,7 +191,7 @@ export default function PrivacyPage() {
             <ul className="ml-5 list-disc space-y-2">
               <li>
                 <Term>with other Users</Term>, limited to what the marketplace
-                requires — your published profile, ratings and reviews, your
+                requires, your published profile, ratings and reviews, your
                 messages with a specific counterparty, and coarse
                 location/distance as described in Clause 1.2;
               </li>
@@ -214,8 +214,8 @@ export default function PrivacyPage() {
               </li>
               <li>
                 <Term>with service providers</Term> engaged to operate the
-                Platform — cloud hosting, database infrastructure, messaging
-                and notification delivery — each bound by a data-processing
+                Platform, cloud hosting, database infrastructure, messaging
+                and notification delivery, each bound by a data-processing
                 agreement and permitted to use the data only for the engaged
                 purpose; and
               </li>
@@ -238,7 +238,7 @@ export default function PrivacyPage() {
               The Platform runs on cloud infrastructure whose servers may be
               located outside Nigeria. Where personal data is transferred
               outside Nigeria, the transfer is made in accordance with Part
-              VIII of the NDPA — to jurisdictions providing an adequate level
+              VIII of the NDPA, to jurisdictions providing an adequate level
               of protection, or otherwise under appropriate safeguards such as
               contractual clauses binding the recipient to protections
               equivalent to the NDPA.
@@ -287,7 +287,7 @@ export default function PrivacyPage() {
               where processing is by automated means.
             </Sub>
             <Sub n="7.2">
-              Most of these can be exercised directly in the app — editing
+              Most of these can be exercised directly in the app, editing
               your profile, clearing volunteered preferences, revoking
               location or notification permissions in device settings, and
               deleting your account (Settings &rarr; Delete Account). Anything

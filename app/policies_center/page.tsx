@@ -7,12 +7,12 @@ import { SiteHeader } from "@/components/SiteHeader";
 export const metadata: Metadata = {
   title: "Terms and Policies",
   description:
-    "Every sydHustle policy in one place — the Terms & Conditions you agree to, how your data is handled, and what is and isn't allowed on the platform.",
+    "Every sydHustle policy in one place, the Terms & Conditions you agree to, how your data is handled, and what is and isn't allowed on the platform.",
   alternates: { canonical: "/policies_center" },
 };
 
 /**
- * The policies hub — one address that fans out to every legal and
+ * The policies hub, one address that fans out to every legal and
  * policy document, so "where do I find the rules" has a single answer
  * that app screens, store listings and support replies can all link.
  */
@@ -73,8 +73,8 @@ export default function PoliciesCenterPage() {
               >
                 {/* Square source shown square: the illustrations are
                     complete compositions, and cropping one to a banner
-                    would cut the thing it is a picture of. 720px WebP —
-                    2x the card's rendered width — from the original
+                    would cut the thing it is a picture of. 720px WebP,
+                    2x the card's rendered width, from the original
                     2MB PNGs, so all three cost less than a tenth of one
                     original. */}
                 {/* eslint-disable-next-line @next/next/no-img-element */}
