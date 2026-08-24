@@ -63,11 +63,16 @@ export type PlatformSettings = {
   deposit_fee_cap: number | null;
   escrow_cut_percent: number;
   escrow_cut_applies_to: "none" | "provider" | "hustler" | "both";
-  sms_daily_price: number;
   sms_weekly_price: number;
   sms_monthly_price: number;
-  /** Naira to open a slot to change the SMS alert number. */
-  sms_number_change_fee: number;
+  /** Texts a subscriber gets per billing period. Enforced by the send
+   * worker, and stated on the app's plan picker, which reads these
+   * rather than shipping a copy - so raising one here is visible to
+   * users without a release. The store listing's description is the
+   * one place that does NOT follow automatically: change it too, or the
+   * subscription delivers something other than what it advertises. */
+  sms_weekly_cap: number;
+  sms_monthly_cap: number;
   /** A government levy on payouts at or above the threshold, passed
    * through at cost. Never sydHustle revenue. */
   stamp_duty_amount: number;
@@ -93,7 +98,7 @@ export async function getPlatformSettings(): Promise<PlatformSettings> {
   const { data, error } = await supabase
     .from("platform_settings")
     .select(
-      "withdrawal_cut_percent, withdrawal_fee_flat, withdrawal_fee_cap, deposit_fee_percent, deposit_fee_flat, deposit_fee_cap, escrow_cut_percent, escrow_cut_applies_to, sms_daily_price, sms_weekly_price, sms_monthly_price, sms_number_change_fee, stamp_duty_amount, stamp_duty_threshold, apple_commission_percent, google_commission_percent, funding_provider, payout_provider, nin_provider, bvn_provider, updated_at"
+      "withdrawal_cut_percent, withdrawal_fee_flat, withdrawal_fee_cap, deposit_fee_percent, deposit_fee_flat, deposit_fee_cap, escrow_cut_percent, escrow_cut_applies_to, sms_weekly_price, sms_monthly_price, sms_weekly_cap, sms_monthly_cap, stamp_duty_amount, stamp_duty_threshold, apple_commission_percent, google_commission_percent, funding_provider, payout_provider, nin_provider, bvn_provider, updated_at"
     )
     .eq("id", 1)
     .single();
@@ -113,10 +118,10 @@ export async function getPlatformSettings(): Promise<PlatformSettings> {
     apple_commission_percent: Number(data.apple_commission_percent ?? 0),
     google_commission_percent: Number(data.google_commission_percent ?? 0),
     escrow_cut_percent: Number(data.escrow_cut_percent),
-    sms_daily_price: Number(data.sms_daily_price),
     sms_weekly_price: Number(data.sms_weekly_price),
     sms_monthly_price: Number(data.sms_monthly_price),
-    sms_number_change_fee: Number(data.sms_number_change_fee),
+    sms_weekly_cap: Number(data.sms_weekly_cap),
+    sms_monthly_cap: Number(data.sms_monthly_cap),
   } as PlatformSettings;
 }
 

@@ -36,10 +36,14 @@ const earningsSchema = z.object({
   google_commission_percent: z.coerce.number().min(0).max(50),
   escrow_cut_percent: z.coerce.number().min(0).max(30),
   escrow_cut_applies_to: z.enum(["none", "provider", "hustler", "both"]),
-  sms_daily_price: z.coerce.number().min(0).max(10000),
   sms_weekly_price: z.coerce.number().min(0).max(10000),
   sms_monthly_price: z.coerce.number().min(0).max(10000),
-  sms_number_change_fee: z.coerce.number().min(0).max(10000),
+  /** Whole texts, and never negative - the column's own check refuses
+   * that anyway. Integer because half a text is not a thing that can be
+   * sent, and a fractional cap would round somewhere the operator
+   * cannot see. */
+  sms_weekly_cap: z.coerce.number().int().min(0).max(10000),
+  sms_monthly_cap: z.coerce.number().int().min(0).max(10000),
 });
 
 export type EarningsState = { error: string | null; saved: boolean };
@@ -66,15 +70,15 @@ export async function updateEarningsSettings(
     google_commission_percent: formData.get("google_commission_percent"),
     escrow_cut_percent: formData.get("escrow_cut_percent"),
     escrow_cut_applies_to: formData.get("escrow_cut_applies_to"),
-    sms_daily_price: formData.get("sms_daily_price"),
     sms_weekly_price: formData.get("sms_weekly_price"),
     sms_monthly_price: formData.get("sms_monthly_price"),
-    sms_number_change_fee: formData.get("sms_number_change_fee"),
+    sms_weekly_cap: formData.get("sms_weekly_cap"),
+    sms_monthly_cap: formData.get("sms_monthly_cap"),
   });
   if (!parsed.success) {
     return {
       error:
-        "Percentages must be 0–30, flat fees 0–100,000, and SMS prices 0–10,000. Leave a cap blank for no cap.",
+        "Percentages must be 0–30, flat fees 0–100,000, SMS prices 0–10,000, and SMS allowances whole numbers 0–10,000. Leave a fee cap blank for no cap.",
       saved: false,
     };
   }

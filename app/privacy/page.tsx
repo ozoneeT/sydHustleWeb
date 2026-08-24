@@ -23,7 +23,7 @@ export const metadata: Metadata = {
  * that describes is a defence.
  */
 
-const EFFECTIVE_DATE = "13 August 2026";
+const EFFECTIVE_DATE = "24 August 2026";
 
 export default function PrivacyPage() {
   return (
@@ -203,6 +203,14 @@ export default function PrivacyPage() {
               <li>
                 <Term>with our verification provider</Term>, to perform the
                 one-time identity check described in Clause 1.3;
+              </li>
+              <li>
+                <Term>with an automated content-moderation provider</Term>,
+                which analyses the content of messages and listings to detect
+                prohibited material and returns only a classification of it.
+                That provider is bound by a data-processing agreement, may use
+                the content solely to perform the check, and may not use it to
+                train its own models;
               </li>
               <li>
                 <Term>with service providers</Term> engaged to operate the

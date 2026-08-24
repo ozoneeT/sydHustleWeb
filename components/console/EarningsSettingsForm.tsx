@@ -283,10 +283,12 @@ export function EarningsSettingsForm({
 
       <div className="space-y-2">
         <Label>SMS booking alerts — subscription prices (₦)</Label>
-        <div className="grid grid-cols-3 gap-2">
+        {/* Two plans, not three. The daily plan was retired when SMS moved
+            to store billing and its subscribers were moved to weekly, so
+            an editable daily price was a control over nothing. */}
+        <div className="grid grid-cols-2 gap-2">
           {(
             [
-              { name: "sms_daily_price", label: "Daily", value: settings.sms_daily_price },
               { name: "sms_weekly_price", label: "Weekly", value: settings.sms_weekly_price },
               { name: "sms_monthly_price", label: "Monthly", value: settings.sms_monthly_price },
             ] as const
@@ -311,24 +313,39 @@ export function EarningsSettingsForm({
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="sms_number_change_fee">
-          SMS alerts — number change fee (₦)
-        </Label>
-        <Input
-          defaultValue={settings.sms_number_change_fee}
-          id="sms_number_change_fee"
-          max={10000}
-          min={0}
-          name="sms_number_change_fee"
-          step="1"
-          type="number"
-        />
+        <Label>SMS booking alerts — texts per period</Label>
+        <div className="grid grid-cols-2 gap-2">
+          {(
+            [
+              { name: "sms_weekly_cap", label: "Weekly", value: settings.sms_weekly_cap },
+              { name: "sms_monthly_cap", label: "Monthly", value: settings.sms_monthly_cap },
+            ] as const
+          ).map((field) => (
+            <div key={field.name}>
+              <p className="mb-1 text-xs text-muted-foreground">{field.label}</p>
+              <Input
+                defaultValue={field.value}
+                max={10000}
+                min={0}
+                name={field.name}
+                step="1"
+                type="number"
+              />
+            </div>
+          ))}
+        </div>
         <p className="text-xs text-muted-foreground">
-          Charged once when a subscriber moves their alerts to a different
-          number — it covers re-verifying the new handset by text. It buys
-          the change, not the attempt: someone who pays and then backs out
-          keeps the credit and changes later for free. Repricing only
-          affects slots bought from now on.
+          How many texts a subscription includes. Applies to the current
+          period, not just the next one, and the app&apos;s plan picker
+          reads these live — so a change here is on screen without a
+          release. Over the cap is not silence: the booking still arrives
+          as a push, with a message saying why.
+        </p>
+        <p className="text-xs text-amber-400">
+          Changing an allowance means changing the subscription&apos;s
+          description in App Store Connect and Play Console to match.
+          Delivering something other than what the listing promises is a
+          store policy problem, not just a stale figure.
         </p>
       </div>
 
