@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
+import { audienceSchema, type AudienceFilters } from "@/lib/console/audience";
 import { requireConsole } from "@/lib/console/dal";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 
@@ -104,6 +105,25 @@ const bannerSchema = z.object({
   sort_order: z.coerce.number().int().min(1).max(999),
 });
 
+/**
+ * Read one filter set out of the form.
+ *
+ * Travels as JSON for the same reason the broadcast's does: the shape is
+ * nested and flattening it into form keys would mean encoding it in two
+ * places free to disagree. `null` means "malformed", which the caller
+ * rejects rather than coerces, because a silently-dropped exemption
+ * shows a banner to the very people it was meant to spare.
+ */
+function parseAudience(raw: FormDataEntryValue | null): AudienceFilters | null {
+  if (typeof raw !== "string" || raw.trim() === "") return {};
+  try {
+    const parsed = audienceSchema.safeParse(JSON.parse(raw));
+    return parsed.success ? parsed.data : null;
+  } catch {
+    return null;
+  }
+}
+
 function parse(formData: FormData) {
   return bannerSchema.safeParse({
     kind: formData.get("kind"),
@@ -174,6 +194,12 @@ export async function savePromoBanner(
     return { error: "A custom banner needs a headline.", done: false };
   }
 
+  const audience = parseAudience(formData.get("audience"));
+  const exclude = parseAudience(formData.get("exclude"));
+  if (!audience || !exclude) {
+    return { error: "That audience isn't valid. Reset it and try again.", done: false };
+  }
+
   const row = {
     kind: v.kind,
     eyebrow: nullify(v.eyebrow),
@@ -213,6 +239,8 @@ export async function savePromoBanner(
     show_on_wallet: v.show_on_wallet,
     show_on_messages: v.show_on_messages,
     is_active: v.is_active,
+    audience,
+    exclude,
     sort_order: v.sort_order,
   };
 

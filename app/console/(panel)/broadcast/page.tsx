@@ -1,6 +1,10 @@
 import { BroadcastForm } from "@/components/console/BroadcastForm";
 import { Card } from "@/components/ui/card";
-import { describeAudience, type AudienceFilters } from "@/lib/console/audience";
+import {
+  describeAudience,
+  isEmptyAudience,
+  type AudienceFilters,
+} from "@/lib/console/audience";
 import { listBroadcasts } from "@/lib/console/data";
 import { shortDate } from "@/lib/console/format";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
@@ -71,6 +75,14 @@ export default async function BroadcastPage() {
                       {describeAudience(
                         (row.filters ?? {}) as AudienceFilters
                       ).join(" · ")}
+                      {!isEmptyAudience((row.exclude ?? {}) as AudienceFilters) ? (
+                        <span className="block text-amber-400/90">
+                          except{" "}
+                          {describeAudience(
+                            row.exclude as AudienceFilters
+                          ).join(" · ")}
+                        </span>
+                      ) : null}
                     </td>
                     <td className="px-4 py-3 text-right tabular-nums">
                       {row.recipients.toLocaleString()}

@@ -3,17 +3,18 @@
 import { useActionState, useEffect, useState } from "react";
 
 import {
+  AudienceFields,
+  type Person,
+} from "@/components/console/AudienceFields";
+import {
   previewBroadcastAudience,
-  searchBroadcastRecipients,
   sendBroadcast,
   type BroadcastState,
 } from "@/lib/console/actions";
 import { APP_ROUTES } from "@/lib/console/app-routes";
 import {
-  CHOICE_FIELDS,
-  choiceValue,
   describeAudience,
-  withChoice,
+  isEmptyAudience,
   type AudienceFilters,
 } from "@/lib/console/audience";
 import { Button } from "@/components/ui/button";
@@ -32,15 +33,15 @@ type Preview = {
   sample: { id: string; name: string }[];
 };
 
-type Person = { id: string; name: string; school: string | null };
-
 export function BroadcastForm({ totalUsers }: { totalUsers: number }) {
   const [state, formAction, pending] = useActionState(
     sendBroadcast,
     initialState
   );
   const [filters, setFilters] = useState<AudienceFilters>({});
+  const [exclude, setExclude] = useState<AudienceFilters>({});
   const [picked, setPicked] = useState<Person[]>([]);
+  const [excluded, setExcluded] = useState<Person[]>([]);
   const [preview, setPreview] = useState<Preview | null>(null);
   const [previewing, setPreviewing] = useState(false);
   /** A failed count and an empty one are both "0 people" to the form, and
@@ -49,7 +50,7 @@ export function BroadcastForm({ totalUsers }: { totalUsers: number }) {
   const [previewFailed, setPreviewFailed] = useState(false);
 
   /**
-   * The count is re-asked for on every filter change, debounced.
+   * The count is re-asked for on every change, debounced.
    *
    * `cancelled` matters more than the debounce does: two edits in quick
    * succession produce two in-flight queries, and the slower one is not
@@ -62,7 +63,7 @@ export function BroadcastForm({ totalUsers }: { totalUsers: number }) {
     let cancelled = false;
     const timer = setTimeout(() => {
       setPreviewing(true);
-      previewBroadcastAudience(filters)
+      previewBroadcastAudience(filters, exclude)
         .then((result) => {
           if (cancelled) return;
           setPreview(result);
@@ -81,41 +82,7 @@ export function BroadcastForm({ totalUsers }: { totalUsers: number }) {
       cancelled = true;
       clearTimeout(timer);
     };
-  }, [filters]);
-
-  const activityMode = filters.inactive_days
-    ? "inactive"
-    : filters.active_within_days
-      ? "active"
-      : "";
-  const activityDays =
-    filters.inactive_days ?? filters.active_within_days ?? 14;
-
-  function setActivity(mode: string, days: number) {
-    const next = { ...filters };
-    delete next.inactive_days;
-    delete next.active_within_days;
-    if (mode === "inactive") next.inactive_days = days;
-    if (mode === "active") next.active_within_days = days;
-    setFilters(next);
-  }
-
-  const joinedMode = filters.joined_within_days
-    ? "within"
-    : filters.joined_before_days
-      ? "before"
-      : "";
-  const joinedDays =
-    filters.joined_within_days ?? filters.joined_before_days ?? 7;
-
-  function setJoined(mode: string, days: number) {
-    const next = { ...filters };
-    delete next.joined_within_days;
-    delete next.joined_before_days;
-    if (mode === "within") next.joined_within_days = days;
-    if (mode === "before") next.joined_before_days = days;
-    setFilters(next);
-  }
+  }, [filters, exclude]);
 
   function setPeople(people: Person[]) {
     setPicked(people);
@@ -125,9 +92,19 @@ export function BroadcastForm({ totalUsers }: { totalUsers: number }) {
     setFilters(next);
   }
 
+  function setExcludedPeople(people: Person[]) {
+    setExcluded(people);
+    const next = { ...exclude };
+    if (people.length === 0) delete next.profile_ids;
+    else next.profile_ids = people.map((person) => person.id);
+    setExclude(next);
+  }
+
   function reset() {
     setPicked([]);
+    setExcluded([]);
     setFilters({});
+    setExclude({});
   }
 
   if (state.sent !== null && state.error === null) {
@@ -156,12 +133,14 @@ export function BroadcastForm({ totalUsers }: { totalUsers: number }) {
   }
 
   const summary = describeAudience(filters);
+  const exemptions = isEmptyAudience(exclude) ? null : describeAudience(exclude);
   const count = preview?.count ?? 0;
   const unreachable = Math.max(0, count - (preview?.reachable ?? 0));
 
   return (
     <form action={formAction} className="space-y-8">
       <input name="filters" type="hidden" value={JSON.stringify(filters)} />
+      <input name="exclude" type="hidden" value={JSON.stringify(exclude)} />
 
       {/* ---------------- Audience ---------------- */}
       <section className="space-y-4">
@@ -178,110 +157,14 @@ export function BroadcastForm({ totalUsers }: { totalUsers: number }) {
           </button>
         </div>
 
-        <div className="grid gap-4 sm:grid-cols-2">
-          {CHOICE_FIELDS.map((field) => (
-            <div className="space-y-1.5" key={field.key}>
-              <Label htmlFor={field.key}>{field.label}</Label>
-              <select
-                className={SELECT_CLASS}
-                id={field.key}
-                onChange={(event) =>
-                  setFilters(withChoice(filters, field.key, event.target.value))
-                }
-                value={choiceValue(filters, field.key)}
-              >
-                {field.options.map((option) => (
-                  <option key={option.value} value={option.value}>
-                    {option.label}
-                  </option>
-                ))}
-              </select>
-              {field.hint ? (
-                <p className="text-xs text-muted-foreground/70">{field.hint}</p>
-              ) : null}
-            </div>
-          ))}
-
-          <div className="space-y-1.5">
-            <Label htmlFor="activity">Last opened the app</Label>
-            <div className="flex gap-2">
-              <select
-                className={SELECT_CLASS}
-                id="activity"
-                onChange={(event) =>
-                  setActivity(event.target.value, activityDays)
-                }
-                value={activityMode}
-              >
-                <option value="">Any</option>
-                <option value="inactive">Not in the last…</option>
-                <option value="active">Within the last…</option>
-              </select>
-              <Input
-                aria-label="Days"
-                className="w-24"
-                disabled={activityMode === ""}
-                max={3650}
-                min={1}
-                onChange={(event) =>
-                  setActivity(activityMode, Number(event.target.value) || 1)
-                }
-                type="number"
-                value={activityDays}
-              />
-            </div>
-            <p className="text-xs text-muted-foreground/70">
-              Someone who signed up and never came back counts as inactive
-              since the day they joined.
-            </p>
-          </div>
-
-          <div className="space-y-1.5">
-            <Label htmlFor="joined">Joined</Label>
-            <div className="flex gap-2">
-              <select
-                className={SELECT_CLASS}
-                id="joined"
-                onChange={(event) => setJoined(event.target.value, joinedDays)}
-                value={joinedMode}
-              >
-                <option value="">Any</option>
-                <option value="within">Within the last…</option>
-                <option value="before">More than … ago</option>
-              </select>
-              <Input
-                aria-label="Days"
-                className="w-24"
-                disabled={joinedMode === ""}
-                max={3650}
-                min={1}
-                onChange={(event) =>
-                  setJoined(joinedMode, Number(event.target.value) || 1)
-                }
-                type="number"
-                value={joinedDays}
-              />
-            </div>
-          </div>
-
-          <div className="space-y-1.5">
-            <Label htmlFor="school">School contains</Label>
-            <Input
-              id="school"
-              onChange={(event) => {
-                const value = event.target.value;
-                const next = { ...filters };
-                if (value.trim().length < 2) delete next.school;
-                else next.school = value.trim();
-                setFilters(next);
-              }}
-              placeholder="e.g. Unilag"
-              value={filters.school ?? ""}
-            />
-          </div>
-        </div>
-
-        <PeoplePicker onChange={setPeople} picked={picked} />
+        <AudienceFields
+          idPrefix="target"
+          onChange={setFilters}
+          onPeopleChange={setPeople}
+          people={picked}
+          value={filters}
+          withPeople
+        />
 
         <label className="flex items-start gap-3 text-sm text-muted-foreground">
           <input
@@ -302,17 +185,26 @@ export function BroadcastForm({ totalUsers }: { totalUsers: number }) {
             anyway.
           </span>
         </label>
-
-        <AudienceCount
-          count={count}
-          failed={previewFailed}
-          loading={previewing}
-          sample={preview?.sample ?? []}
-          summary={summary}
-          totalUsers={totalUsers}
-          unreachable={unreachable}
-        />
       </section>
+
+      {/* ---------------- Exemptions ---------------- */}
+      <ExemptSection
+        onChange={setExclude}
+        onPeopleChange={setExcludedPeople}
+        people={excluded}
+        value={exclude}
+      />
+
+      <AudienceCount
+        count={count}
+        exemptions={exemptions}
+        failed={previewFailed}
+        loading={previewing}
+        sample={preview?.sample ?? []}
+        summary={summary}
+        totalUsers={totalUsers}
+        unreachable={unreachable}
+      />
 
       {/* ---------------- Message ---------------- */}
       <section className="space-y-4">
@@ -345,7 +237,12 @@ export function BroadcastForm({ totalUsers }: { totalUsers: number }) {
 
         <div className="space-y-2">
           <Label htmlFor="url">Opens</Label>
-          <select className={SELECT_CLASS} defaultValue="/notifications" id="url" name="url">
+          <select
+            className={SELECT_CLASS}
+            defaultValue="/notifications"
+            id="url"
+            name="url"
+          >
             {APP_ROUTES.map((group) => (
               <optgroup key={group.group} label={group.group}>
                 {group.routes.map((route) => (
@@ -379,7 +276,8 @@ export function BroadcastForm({ totalUsers }: { totalUsers: number }) {
           <span>
             I understand this goes to{" "}
             <strong className="text-white">{count.toLocaleString()}</strong>{" "}
-            {count === 1 ? "person" : "people"} ({summary.join(" · ")}) and
+            {count === 1 ? "person" : "people"} ({summary.join(" · ")}
+            {exemptions ? `, except ${exemptions.join(" · ")}` : ""}) and
             cannot be unsent.
           </span>
         </label>
@@ -388,7 +286,10 @@ export function BroadcastForm({ totalUsers }: { totalUsers: number }) {
           <p className="text-sm text-red-400">{state.error}</p>
         ) : null}
 
-        <Button disabled={pending || previewFailed || count === 0} type="submit">
+        <Button
+          disabled={pending || previewFailed || count === 0}
+          type="submit"
+        >
           {pending
             ? "Sending…"
             : previewFailed
@@ -403,6 +304,83 @@ export function BroadcastForm({ totalUsers }: { totalUsers: number }) {
 }
 
 /**
+ * The exemption, folded away until it is wanted.
+ *
+ * Open by default it would read as a second required decision, and most
+ * sends have nothing to exempt. Closed, it still announces itself when
+ * something is set, because an exemption the operator has forgotten
+ * about is a silently smaller audience.
+ */
+function ExemptSection({
+  onChange,
+  onPeopleChange,
+  people,
+  value,
+}: {
+  onChange: (filters: AudienceFilters) => void;
+  onPeopleChange: (people: Person[]) => void;
+  people: Person[];
+  value: AudienceFilters;
+}) {
+  const active = !isEmptyAudience(value);
+  const [open, setOpen] = useState(false);
+
+  return (
+    <section className="space-y-4 rounded-xl border border-white/10 bg-white/[0.015] p-4">
+      <div className="flex items-baseline justify-between gap-4">
+        <div>
+          <h2 className="text-sm font-semibold">Except</h2>
+          <p className="text-xs text-muted-foreground">
+            Anyone matching these is left out, whatever the filters above
+            say. Use it to spare the people a message would be pointless
+            for: the ones who already subscribed, already verified, already
+            listed a Skill.
+          </p>
+        </div>
+        <button
+          className="shrink-0 text-xs text-muted-foreground underline hover:text-white"
+          onClick={() => setOpen((was) => !was)}
+          type="button"
+        >
+          {open ? "Hide" : active ? "Edit exemption" : "Add an exemption"}
+        </button>
+      </div>
+
+      {active && !open ? (
+        <p className="text-xs text-amber-400/90">
+          {describeAudience(value).join(" · ")} are being left out.
+        </p>
+      ) : null}
+
+      {open ? (
+        <>
+          <AudienceFields
+            idPrefix="exempt"
+            onChange={onChange}
+            onPeopleChange={onPeopleChange}
+            people={people}
+            value={value}
+            withPeople
+          />
+          {active ? (
+            <button
+              className="text-xs text-muted-foreground underline hover:text-white"
+              onClick={() => {
+                onPeopleChange([]);
+                onChange({});
+              }}
+              type="button"
+            >
+              Clear the exemption
+            </button>
+          ) : null}
+        </>
+      ) : null}
+    </section>
+  );
+}
+
+/**
  * The number, and enough context to tell a good number from a wrong one.
  *
  * A bare count is easy to misread: 4,812 looks fine whether it means
@@ -412,6 +390,7 @@ export function BroadcastForm({ totalUsers }: { totalUsers: number }) {
  */
 function AudienceCount({
   count,
+  exemptions,
   failed,
   loading,
   sample,
@@ -420,6 +399,7 @@ function AudienceCount({
   unreachable,
 }: {
   count: number;
+  exemptions: string[] | null;
   failed: boolean;
   loading: boolean;
   sample: { id: string; name: string }[];
@@ -427,8 +407,7 @@ function AudienceCount({
   totalUsers: number;
   unreachable: number;
 }) {
-  const share =
-    totalUsers > 0 ? Math.round((count / totalUsers) * 100) : 0;
+  const share = totalUsers > 0 ? Math.round((count / totalUsers) * 100) : 0;
 
   return (
     <div className="rounded-xl border border-white/10 bg-white/[0.02] p-4">
@@ -444,7 +423,15 @@ function AudienceCount({
         </span>
       </div>
 
-      <p className="mt-1 text-sm text-muted-foreground">{summary.join(" · ")}</p>
+      <p className="mt-1 text-sm text-muted-foreground">
+        {summary.join(" · ")}
+        {exemptions ? (
+          <span className="text-amber-400/90">
+            {" "}
+            · except {exemptions.join(" · ")}
+          </span>
+        ) : null}
+      </p>
 
       {failed ? (
         <p className="mt-2 text-xs text-red-400">
@@ -466,118 +453,6 @@ function AudienceCount({
           Newest matches: {sample.map((person) => person.name).join(", ")}
         </p>
       ) : null}
-    </div>
-  );
-}
-
-/** Search by name and pin specific people into the audience. */
-function PeoplePicker({
-  onChange,
-  picked,
-}: {
-  onChange: (people: Person[]) => void;
-  picked: Person[];
-}) {
-  const [query, setQuery] = useState("");
-  const [results, setResults] = useState<Person[]>([]);
-
-  const term = query.trim();
-
-  // Results are hidden rather than cleared when the box empties: clearing
-  // them would mean writing state from the effect body, and the stale set
-  // is unreachable anyway, since nothing renders it below two characters.
-  useEffect(() => {
-    if (term.length < 2) return;
-    let cancelled = false;
-    const timer = setTimeout(() => {
-      searchBroadcastRecipients(term)
-        .then((rows) => {
-          if (!cancelled) setResults(rows);
-        })
-        .catch(() => {
-          if (!cancelled) setResults([]);
-        });
-    }, 300);
-    return () => {
-      cancelled = true;
-      clearTimeout(timer);
-    };
-  }, [term]);
-
-  return (
-    <div className="space-y-2">
-      <Label htmlFor="people">Specific people (optional)</Label>
-      <Input
-        autoComplete="off"
-        id="people"
-        onChange={(event) => setQuery(event.target.value)}
-        placeholder="Search by name"
-        value={query}
-      />
-
-      {term.length >= 2 && results.length > 0 ? (
-        <ul className="rounded-lg border border-white/10 text-sm">
-          {results.map((person) => {
-            const already = picked.some((one) => one.id === person.id);
-            return (
-              <li
-                className="flex items-center justify-between border-b border-white/5 px-3 py-2 last:border-0"
-                key={person.id}
-              >
-                <span>
-                  {person.name}
-                  {person.school ? (
-                    <span className="text-muted-foreground">
-                      {" "}
-                      · {person.school}
-                    </span>
-                  ) : null}
-                </span>
-                <button
-                  className="text-xs text-accent disabled:text-muted-foreground"
-                  disabled={already}
-                  onClick={() => {
-                    onChange([...picked, person]);
-                    setQuery("");
-                    setResults([]);
-                  }}
-                  type="button"
-                >
-                  {already ? "Added" : "Add"}
-                </button>
-              </li>
-            );
-          })}
-        </ul>
-      ) : null}
-
-      {picked.length > 0 ? (
-        <div className="flex flex-wrap gap-2">
-          {picked.map((person) => (
-            <span
-              className="flex items-center gap-2 rounded-full border border-white/10 px-3 py-1 text-xs"
-              key={person.id}
-            >
-              {person.name}
-              <button
-                className="text-muted-foreground hover:text-white"
-                onClick={() =>
-                  onChange(picked.filter((one) => one.id !== person.id))
-                }
-                type="button"
-              >
-                ×
-              </button>
-            </span>
-          ))}
-        </div>
-      ) : null}
-
-      <p className="text-xs text-muted-foreground/70">
-        Names narrow the audience like every other filter rather than
-        replacing it, so a pick that contradicts the filters above previews
-        as nobody instead of quietly overriding them.
-      </p>
     </div>
   );
 }

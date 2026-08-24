@@ -4,6 +4,7 @@ import {
   PROMO_SURFACES,
   type PromoSurfaceField,
 } from "@/lib/console/app-routes";
+import type { AudienceFilters } from "@/lib/console/audience";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 
 /**
@@ -68,6 +69,12 @@ export type PromoBannerRow = {
    * Ignored on Home, Messages and Wallet. */
   feed_slot: number;
   is_active: boolean;
+  /** Who sees it. Empty means everybody. */
+  audience: AudienceFilters;
+  /** Who is spared it, checked after `audience`. Empty exempts nobody,
+   * which is not the same as an empty `audience`: an empty exemption
+   * leaves everyone in, an empty audience lets everyone through. */
+  exclude: AudienceFilters;
   sort_order: number;
   starts_at: string | null;
   ends_at: string | null;

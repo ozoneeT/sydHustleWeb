@@ -560,6 +560,7 @@ export type BroadcastRow = {
   body: string;
   url: string;
   filters: Record<string, unknown>;
+  exclude: Record<string, unknown>;
   note: string | null;
   recipients: number;
   delivered: number;
@@ -581,7 +582,7 @@ export async function listBroadcasts(): Promise<BroadcastRow[]> {
   const { data, error } = await supabase
     .from("console_broadcast_results")
     .select(
-      "id, title, body, url, filters, note, recipients, delivered, opened, created_at"
+      "id, title, body, url, filters, exclude, note, recipients, delivered, opened, created_at"
     )
     .order("created_at", { ascending: false })
     .limit(25);

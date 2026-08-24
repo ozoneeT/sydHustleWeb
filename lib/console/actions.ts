@@ -371,16 +371,21 @@ function parseFilters(raw: FormDataEntryValue | null): AudienceFilters | null {
  * query every time rather than a cached one for the same reason.
  */
 export async function previewBroadcastAudience(
-  filters: AudienceFilters
+  filters: AudienceFilters,
+  exclude: AudienceFilters = {}
 ): Promise<{ count: number; reachable: number; sample: { id: string; name: string }[] }> {
   await requireConsole();
 
   const parsed = audienceSchema.safeParse(filters);
-  if (!parsed.success) return { count: 0, reachable: 0, sample: [] };
+  const parsedExclude = audienceSchema.safeParse(exclude);
+  if (!parsed.success || !parsedExclude.success) {
+    return { count: 0, reachable: 0, sample: [] };
+  }
 
   const supabase = createServerSupabaseClient();
   const { data, error } = await supabase.rpc("console_broadcast_preview", {
     p_filters: parsed.data,
+    p_exclude: parsedExclude.data,
   });
   if (error) throw new Error(error.message);
 
@@ -435,6 +440,43 @@ export async function searchBroadcastRecipients(
 }
 
 /**
+ * Names for profile ids already saved in a filter set.
+ *
+ * The promo form persists named individuals as bare ids. Without this,
+ * reopening a banner would show an empty chip list over a filter that
+ * still holds ids, and adding one more person would overwrite the saved
+ * ones instead of appending to them.
+ */
+export async function lookupBroadcastRecipients(
+  ids: string[]
+): Promise<{ id: string; name: string; school: string | null }[]> {
+  await requireConsole();
+
+  const parsed = z.array(z.string().uuid()).max(500).safeParse(ids);
+  if (!parsed.success || parsed.data.length === 0) return [];
+
+  const supabase = createServerSupabaseClient();
+  const { data, error } = await supabase
+    .from("profiles")
+    .select("id, full_name, display_name, school")
+    .in("id", parsed.data);
+  if (error) throw new Error(error.message);
+
+  return (
+    (data ?? []) as {
+      id: string;
+      full_name: string | null;
+      display_name: string | null;
+      school: string | null;
+    }[]
+  ).map((row) => ({
+    id: row.id,
+    name: row.display_name?.trim() || row.full_name?.trim() || "Unnamed",
+    school: row.school,
+  }));
+}
+
+/**
  * Send an announcement to a targeted audience.
  *
  * The audience is resolved inside the database function, in the same
@@ -470,7 +512,8 @@ export async function sendBroadcast(
   }
 
   const filters = parseFilters(formData.get("filters"));
-  if (!filters) {
+  const exclude = parseFilters(formData.get("exclude"));
+  if (!filters || !exclude) {
     return { error: "That audience isn't valid. Reset it and try again.", sent: null };
   }
 
@@ -487,6 +530,7 @@ export async function sendBroadcast(
     p_body: parsed.data.body,
     p_url: url,
     p_filters: filters,
+    p_exclude: exclude,
     p_note: parsed.data.note ?? null,
   });
   if (error) {

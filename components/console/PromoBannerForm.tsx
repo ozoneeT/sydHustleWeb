@@ -1,11 +1,24 @@
 "use client";
 
-import { useActionState, useRef, useState } from "react";
+import { useActionState, useEffect, useRef, useState } from "react";
 
 import { ImagePlacer } from "@/components/console/ImagePlacer";
 import { contrastText, PromoPreview } from "@/components/console/PromoPreview";
 import { PromoSizePreview } from "@/components/console/PromoSizePreview";
 import { Button } from "@/components/ui/button";
+import {
+  AudienceFields,
+  type Person,
+} from "@/components/console/AudienceFields";
+import {
+  lookupBroadcastRecipients,
+  previewBroadcastAudience,
+} from "@/lib/console/actions";
+import {
+  describeAudience,
+  isEmptyAudience,
+  type AudienceFilters,
+} from "@/lib/console/audience";
 import { Input } from "@/components/ui/input";
 import { APP_ROUTE_PATHS, PROMO_SURFACES } from "@/lib/console/app-routes";
 import {
@@ -110,6 +123,61 @@ export function PromoBannerForm({ banner }: { banner?: PromoBannerRow }) {
   );
   const [bgDarkTo, setBgDarkTo] = useState(banner?.bg_dark_to ?? "#081A1A");
   const [icon, setIcon] = useState(banner?.icon ?? "");
+  const [audience, setAudience] = useState<AudienceFilters>(
+    banner?.audience ?? {},
+  );
+  const [exclude, setExclude] = useState<AudienceFilters>(banner?.exclude ?? {});
+  const [audiencePeople, setAudiencePeople] = useState<Person[]>([]);
+  const [excludePeople, setExcludePeople] = useState<Person[]>([]);
+
+  /**
+   * Named individuals are stored as bare ids, so reopening a saved
+   * banner has ids with no names to draw. Resolved once on mount: the
+   * chips have to be populated before the operator touches the picker,
+   * or adding one more person would replace the saved list rather than
+   * extend it.
+   */
+  useEffect(() => {
+    const targetIds = banner?.audience?.profile_ids ?? [];
+    const exemptIds = banner?.exclude?.profile_ids ?? [];
+    if (targetIds.length === 0 && exemptIds.length === 0) return;
+
+    let cancelled = false;
+    lookupBroadcastRecipients([...targetIds, ...exemptIds])
+      .then((rows) => {
+        if (cancelled) return;
+        const byId = new Map(rows.map((row) => [row.id, row]));
+        const pick = (ids: string[]) =>
+          ids
+            .map((id) => byId.get(id))
+            .filter((row): row is Person => row !== undefined);
+        setAudiencePeople(pick(targetIds));
+        setExcludePeople(pick(exemptIds));
+      })
+      .catch(() => {
+        // Names are decoration; the ids in the filter are the fact. A
+        // failed lookup must not blank a saved audience.
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [banner]);
+
+  function setAudiencePeopleAndFilter(people: Person[]) {
+    setAudiencePeople(people);
+    const next = { ...audience };
+    if (people.length === 0) delete next.profile_ids;
+    else next.profile_ids = people.map((person) => person.id);
+    setAudience(next);
+  }
+
+  function setExcludePeopleAndFilter(people: Person[]) {
+    setExcludePeople(people);
+    const next = { ...exclude };
+    if (people.length === 0) delete next.profile_ids;
+    else next.profile_ids = people.map((person) => person.id);
+    setExclude(next);
+  }
   const [imageZoom, setImageZoom] = useState(Number(banner?.image_zoom ?? 1));
   const [focusX, setFocusX] = useState(banner?.image_focus_x ?? 50);
   const [focusY, setFocusY] = useState(banner?.image_focus_y ?? 50);
@@ -742,6 +810,69 @@ export function PromoBannerForm({ banner }: { banner?: PromoBannerRow }) {
           </p>
         </Section>
 
+        <Section
+          hint="A banner nobody needs is worse than no banner: it teaches people to look past the slot. Leave both empty to show it to everybody."
+          title="Who sees it"
+        >
+          <input
+            name="audience"
+            type="hidden"
+            value={JSON.stringify(audience)}
+          />
+          <input name="exclude" type="hidden" value={JSON.stringify(exclude)} />
+
+          <AudienceReach audience={audience} exclude={exclude} />
+
+          <div className="space-y-2">
+            <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+              Show it to
+            </p>
+            <AudienceFields
+              idPrefix="promo-target"
+              onChange={setAudience}
+              onPeopleChange={setAudiencePeopleAndFilter}
+              people={audiencePeople}
+              value={audience}
+              withPeople
+              withReachable={false}
+            />
+          </div>
+
+          <div className="space-y-2 border-t border-white/5 pt-4">
+            <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+              Except
+            </p>
+            <p className="text-xs text-muted-foreground">
+              Checked after the target, so anyone here is left out whatever
+              the filters above say. This is the half that matters when you
+              are selling something: a banner for SMS alerts should exempt
+              the people already paying for SMS alerts, and one asking for a
+              NIN should exempt the people already verified.
+            </p>
+            <AudienceFields
+              idPrefix="promo-exempt"
+              onChange={setExclude}
+              onPeopleChange={setExcludePeopleAndFilter}
+              people={excludePeople}
+              value={exclude}
+              withPeople
+              withReachable={false}
+            />
+            {!isEmptyAudience(exclude) ? (
+              <button
+                className="text-xs text-muted-foreground underline hover:text-white"
+                onClick={() => {
+                  setExcludePeople([]);
+                  setExclude({});
+                }}
+                type="button"
+              >
+                Clear the exemption
+              </button>
+            ) : null}
+          </div>
+        </Section>
+
         <div className="flex flex-wrap items-center gap-2">
           <Button disabled={pending} type="submit">
             {pending ? "Saving…" : banner ? "Save changes" : "Create banner"}
@@ -831,6 +962,77 @@ const ACCENT = "#14B8A6";
  * the picker takes the line off auto, since that is plainly what
  * someone reaching for it means; the Auto chip puts it back.
  */
+/**
+ * How many accounts are currently eligible to see this banner.
+ *
+ * Eligible, not reached: a banner is drawn to whoever opens the surface
+ * it sits on, and this cannot know who that will be. It answers the
+ * question the filters actually raise, which is whether they select
+ * roughly the group the operator had in mind, or twelve people by
+ * accident.
+ */
+function AudienceReach({
+  audience,
+  exclude,
+}: {
+  audience: AudienceFilters;
+  exclude: AudienceFilters;
+}) {
+  const [count, setCount] = useState<number | null>(null);
+  const [failed, setFailed] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    const timer = setTimeout(() => {
+      previewBroadcastAudience(audience, exclude)
+        .then((result) => {
+          if (cancelled) return;
+          setCount(result.count);
+          setFailed(false);
+        })
+        .catch(() => {
+          if (cancelled) return;
+          setCount(null);
+          setFailed(true);
+        });
+    }, 350);
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+  }, [audience, exclude]);
+
+  const targeted = !isEmptyAudience(audience);
+  const exempting = !isEmptyAudience(exclude);
+
+  return (
+    <div className="rounded-lg border border-white/10 bg-white/[0.02] p-3 text-sm">
+      <p>
+        <strong className="text-base tabular-nums">
+          {failed ? "?" : (count?.toLocaleString() ?? "…")}
+        </strong>{" "}
+        <span className="text-muted-foreground">
+          accounts are eligible to see this
+        </span>
+      </p>
+      <p className="mt-1 text-xs text-muted-foreground">
+        {targeted ? describeAudience(audience).join(" · ") : "Everyone"}
+        {exempting ? (
+          <span className="text-amber-400/90">
+            {" "}
+            · except {describeAudience(exclude).join(" · ")}
+          </span>
+        ) : null}
+      </p>
+      {failed ? (
+        <p className="mt-1 text-xs text-red-400">
+          Could not count that audience just now. The filters still save.
+        </p>
+      ) : null}
+    </div>
+  );
+}
+
 function TextLine({
   label,
   size,

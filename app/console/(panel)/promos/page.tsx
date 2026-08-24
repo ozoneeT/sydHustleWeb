@@ -4,6 +4,10 @@ import {
   PromoToggle,
 } from "@/components/console/PromoBannerForm";
 import { StatCard } from "@/components/moderator/StatCard";
+import {
+  describeAudience,
+  isEmptyAudience,
+} from "@/lib/console/audience";
 import { APP_ROUTES, PROMO_SURFACES } from "@/lib/console/app-routes";
 import {
   isLive,
@@ -155,6 +159,10 @@ function BannerCard({ banner }: { banner: PromoBannerRow }) {
   const where = PROMO_SURFACES.filter((surface) => banner[surface.field]).map(
     (surface) => surface.label,
   );
+  // Only shown when it says something: "Everyone, except nobody" on every
+  // untargeted banner would be a row of noise to read past.
+  const targeted = !isEmptyAudience(banner.audience ?? {});
+  const exempting = !isEmptyAudience(banner.exclude ?? {});
 
   return (
     <div className="rounded-xl border border-white/10">
@@ -190,6 +198,21 @@ function BannerCard({ banner }: { banner: PromoBannerRow }) {
               ? ` · ${banner.featured_count} shown, reshuffled every ${banner.rotate_minutes}m`
               : ""}
           </p>
+          {targeted || exempting ? (
+            <p className="text-xs text-muted-foreground">
+              <span className="text-accent">
+                {targeted
+                  ? describeAudience(banner.audience).join(" · ")
+                  : "Everyone"}
+              </span>
+              {exempting ? (
+                <span className="text-amber-400/90">
+                  {" "}
+                  · except {describeAudience(banner.exclude).join(" · ")}
+                </span>
+              ) : null}
+            </p>
+          ) : null}
         </div>
         <PromoToggle active={banner.is_active} id={banner.id} />
         <PromoDelete id={banner.id} />

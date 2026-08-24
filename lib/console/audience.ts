@@ -243,3 +243,11 @@ export function describeAudience(filters: AudienceFilters): string[] {
 
   return parts.length > 0 ? parts : ["Everyone"];
 }
+
+/** Nothing chosen. An empty `profile_ids` array counts as nothing, since
+ * that is what removing the last chip leaves behind. */
+export function isEmptyAudience(filters: AudienceFilters): boolean {
+  return Object.entries(filters).every(([, value]) =>
+    Array.isArray(value) ? value.length === 0 : value === undefined
+  );
+}
