@@ -5,6 +5,7 @@ import { PaymentProvidersForm } from "@/components/console/PaymentProvidersForm"
 import { ProviderFees } from "@/components/console/ProviderFees";
 import { Card } from "@/components/ui/card";
 import { getPlatformSettings } from "@/lib/console/data";
+import { describeFeeTiers, listFeeTiers, summariseFeeTiers } from "@/lib/console/fee-tiers";
 import { PROVIDER_LABELS } from "@/lib/console/payment-providers";
 import { naira } from "@/lib/console/format";
 import { getPaymentRails } from "@/lib/console/payments";
@@ -19,9 +20,10 @@ export const metadata = { title: "Payments — sydHustle Console" };
 export const dynamic = "force-dynamic";
 
 export default async function PaymentsPage() {
-  const [settings, rails] = await Promise.all([
+  const [settings, rails, feeTiers] = await Promise.all([
     getPlatformSettings(),
     getPaymentRails(),
+    listFeeTiers(),
   ]);
 
   return (
@@ -173,11 +175,25 @@ export default async function PaymentsPage() {
             <p className="text-xs uppercase tracking-wide text-muted-foreground">
               Release fee
             </p>
-            <p className="mt-1 text-lg font-semibold">10% → 4%, by size</p>
-            <p className="mt-1 text-xs text-muted-foreground">
-              The main stream. Tiered in `platform_fee_tiers`; the whole
-              Hustle is charged at the rate its size falls into.
+            <p className="mt-1 text-lg font-semibold">
+              {summariseFeeTiers(feeTiers)}
             </p>
+            <p className="mt-1 text-xs text-muted-foreground">
+              The main stream. The whole Hustle is charged at the rate its
+              size falls into, and the card is set on{" "}
+              <Link className="underline" href="/console/earnings">
+                Earnings
+              </Link>
+              .
+            </p>
+            <dl className="mt-2 space-y-0.5 text-xs">
+              {describeFeeTiers(feeTiers).map((band) => (
+                <div className="flex justify-between gap-4" key={band.band}>
+                  <dt className="text-muted-foreground">{band.band}</dt>
+                  <dd className="font-mono">{band.rate}</dd>
+                </div>
+              ))}
+            </dl>
           </div>
 
           <div className="rounded-lg border border-white/10 p-4">

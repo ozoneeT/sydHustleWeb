@@ -3,6 +3,7 @@ import Link from "next/link";
 
 import { Footer } from "@/components/Footer";
 import { SiteHeader } from "@/components/SiteHeader";
+import { feeTierSentence, listFeeTiersSafe } from "@/lib/console/fee-tiers";
 
 export const metadata: Metadata = {
   title: "Support",
@@ -28,13 +29,22 @@ export const metadata: Metadata = {
  * broken to read them. If the in-app copy changes, change it here too.
  */
 
+/**
+ * The release fee rates are set from the console and change without a
+ * deploy, so the fees answer carries a placeholder and the page fills it
+ * in at render. Same token, same substitution and the same fallback as
+ * the app's help screen, which is what keeps the two readings of the
+ * rate card identical.
+ */
+const FEE_TIERS_TOKEN = "{RELEASE_FEE_TIERS}";
+
 const SECTIONS: { group: string; topics: { q: string; a: string }[] }[] = [
   {
     group: "Money",
     topics: [
       { q: "Where is my money? My balance looks short", a: "When you pay for a Hustle or a Skill, the amount leaves your available balance and is held in escrow - it belongs to neither side until the work is done. You'll see it under “In motion” on the Wallet. It is released to the Hustler when you confirm the work is complete, or by a decision if a dispute is raised." },
       { q: "When does the Hustler actually get paid?", a: "The moment you confirm the work is done. If you neither confirm nor raise a dispute after the Hustler marks it complete, we may release the payment after giving you notice - otherwise a Hustler could be left unpaid indefinitely by someone simply not answering." },
-      { q: "What does sydHustle charge?", a: "One fee, and only the Hustler pays it: a service fee taken from the payment when a Hustle is released. It slides with the size of the work - 10% up to \\u20a65,000, 8% to \\u20a620,000, 6% to \\u20a650,000, 5% to \\u20a6100,000, and 4% above that - so bigger jobs are charged proportionally less. You are told what you'll receive before you accept a price, and the receipt for every release shows the exact fee taken. Withdrawing your money is free. sydHustle charges nothing to send it to your bank and covers the transfer cost itself. On transfers of \\u20a610,000 or more your bank's \\u20a650 stamp duty applies - that is a government levy, not our fee, and it is the same \\u20a650 you would pay sending that amount yourself. If a Hustle is cancelled or refunded after the money was locked, a 5% escrow administration fee applies instead. Rates can change; whatever is shown to you before you agree a price is what applies to that Hustle." },
+      { q: "What does sydHustle charge?", a: "One fee, and only the Hustler pays it: a service fee taken from the payment when a Hustle is released. It slides with the size of the work - {RELEASE_FEE_TIERS} - so bigger jobs are charged proportionally less. You are told what you'll receive before you accept a price, and the receipt for every release shows the exact fee taken. Withdrawing your money is free. sydHustle charges nothing to send it to your bank and covers the transfer cost itself. On transfers of ₦10,000 or more your bank's ₦50 stamp duty applies - that is a government levy, not our fee, and it is the same ₦50 you would pay sending that amount yourself. If a Hustle is cancelled or refunded after the money was locked, a 5% escrow administration fee applies instead. Rates can change; whatever is shown to you before you agree a price is what applies to that Hustle." },
       { q: "My withdrawal hasn't arrived", a: "Withdrawals go to the bank account registered in your Wallet, and bank transfers in Nigeria can take a few hours. First check the account details are the right ones - a wrong account number is the commonest cause. If the money has left your sydHustle balance and hasn't landed after a day, message us with the date and amount." },
       { q: "How do I see everything that has moved?", a: "Wallet → See all shows every payment, hold, release and withdrawal on your account, newest first. Tap any row for its reference, which is what to quote if you contact us about it." },
     ],
@@ -72,7 +82,21 @@ const SECTIONS: { group: string; topics: { q: string; a: string }[] }[] = [
 const SUPPORT_EMAIL = "support@sydhustle.com";
 const WHATSAPP_URL = "https://wa.me/2347088569014";
 
-export default function SupportPage() {
+/**
+ * Rebuilt hourly, and immediately whenever the console saves a new rate
+ * card (`revalidatePath("/support")` in lib/console/fee-tier-actions.ts).
+ *
+ * This page is the Support URL on the App Store listing, so it has to
+ * render whether or not the database answers - hence `listFeeTiersSafe`,
+ * which falls back to the card this build shipped with rather than
+ * throwing. A rate card an hour behind is a small wrong; a support page
+ * that 500s is a rejected submission.
+ */
+export const revalidate = 3600;
+
+export default async function SupportPage() {
+  const liveFeeTiers = feeTierSentence(await listFeeTiersSafe());
+
   return (
     <>
       <SiteHeader />
@@ -129,7 +153,7 @@ export default function SupportPage() {
                       {topic.q}
                     </summary>
                     <p className="mt-3 text-sm leading-6 text-muted-foreground">
-                      {topic.a}
+                      {topic.a.split(FEE_TIERS_TOKEN).join(liveFeeTiers)}
                     </p>
                   </details>
                 ))}

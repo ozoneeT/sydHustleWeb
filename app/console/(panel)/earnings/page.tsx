@@ -1,9 +1,11 @@
 import { EarningsSettingsForm } from "@/components/console/EarningsSettingsForm";
+import { FeeTiersForm } from "@/components/console/FeeTiersForm";
 import { StatCard } from "@/components/moderator/StatCard";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { getConsoleStats, getPlatformSettings } from "@/lib/console/data";
+import { summariseFeeTiers } from "@/lib/console/fee-tiers";
 import { naira } from "@/lib/console/format";
 import { getProfitAndLoss } from "@/lib/console/pnl";
 
@@ -54,7 +56,7 @@ export default async function EarningsPage({
         <StatCard
           label="Release fees"
           value={naira(stats.revenue.release_fees)}
-          hint="4-10% of every released Hustle"
+          hint={`${summariseFeeTiers(pnl.releaseFee.tiers)} of every released Hustle`}
         />
         <StatCard
           label="Escrow service fees"
@@ -150,7 +152,20 @@ export default async function EarningsPage({
                 <td className="px-4 py-3">
                   Release fees
                   <span className="block text-xs text-muted-foreground">
-                    sydHustle&apos;s cut of every released Hustle
+                    {/* The realised rate, not a rung. It reflects the mix
+                        of Hustle sizes as well as the card, so it is the
+                        figure that says whether a rate change actually
+                        did what it was meant to. */}
+                    {pnl.releaseFee.effectivePercent !== null ? (
+                      <>
+                        {pnl.releaseFee.effectivePercent}% of{" "}
+                        {naira(pnl.releaseFee.gross)} released across{" "}
+                        {pnl.releaseFee.releases.toLocaleString("en-NG")}{" "}
+                        {pnl.releaseFee.releases === 1 ? "Hustle" : "Hustles"}
+                      </>
+                    ) : (
+                      <>sydHustle&apos;s cut of every released Hustle</>
+                    )}
                   </span>
                 </td>
                 <td className="px-4 py-3 text-right font-mono">
@@ -305,12 +320,29 @@ export default async function EarningsPage({
             </tbody>
           </table>
         </div>
+
+        {pnl.releaseFee.changesInPeriod > 0 ? (
+          <p className="text-xs text-amber-400">
+            The release fee card was changed{" "}
+            {pnl.releaseFee.changesInPeriod === 1
+              ? "once"
+              : `${pnl.releaseFee.changesInPeriod} times`}{" "}
+            inside this period, so the release line above spans more than
+            one price and the rate beside it is an average across them.
+          </p>
+        ) : null}
       </section>
 
-      <div className="max-w-xl">
-        <h2 className="mb-4 text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-          Rates
-        </h2>
+      <div className="max-w-xl space-y-8">
+        <div>
+          <h2 className="mb-4 text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+            Rates
+          </h2>
+          {/* The release card first: it is the main revenue line, and
+              every other rate on this page is set against what it
+              earns. */}
+          <FeeTiersForm tiers={pnl.releaseFee.tiers} />
+        </div>
         <EarningsSettingsForm settings={settings} />
       </div>
     </div>

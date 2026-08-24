@@ -1,6 +1,11 @@
 import "server-only";
 
 import { listCosts } from "@/lib/console/costs";
+import {
+  listFeeTierChanges,
+  listFeeTiers,
+  type FeeTier,
+} from "@/lib/console/fee-tiers";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 
 /**
@@ -71,6 +76,37 @@ export type ProfitAndLoss = {
      * estimate rather than a reported figure - which payouts always are. */
     providerEstimated: boolean;
     total: number;
+  };
+  /**
+   * The rate card behind the release line, and what it actually yielded.
+   *
+   * The fees themselves have always been dynamic - they are recorded
+   * revenue events written by `platform_fee_for()`, so whatever the
+   * console sets is what the statement counts, without anything here
+   * knowing the rates. What the statement could not do was EXPLAIN that
+   * line, and now that the card is editable from a form it has to: a
+   * card cut from 10% to 8% and a fortnight of fewer releases move this
+   * number the same way, and telling them apart is the difference
+   * between a pricing decision and a panic.
+   *
+   * `effectivePercent` is the realised rate over the period - fees over
+   * the gross they were charged on - so it reflects the mix of Hustle
+   * sizes as well as the card. It will not equal any single rung, and
+   * that is the point.
+   */
+  releaseFee: {
+    /** The card in force right now, not during the period. Stated as
+     * such wherever it is shown. */
+    tiers: FeeTier[];
+    /** Value of the Hustles those fees were charged on. */
+    gross: number;
+    releases: number;
+    /** Fees as a percentage of that gross. Null when nothing was
+     * released, because zero would read as "we charged nothing". */
+    effectivePercent: number | null;
+    /** How many times the card was edited inside the period. Anything
+     * above zero means the line below spans more than one price. */
+    changesInPeriod: number;
   };
   net: number;
 };
@@ -150,13 +186,42 @@ export async function getProfitAndLoss(
     chargeQuery = chargeQuery.lt("created_at", new Date(toEndMs).toISOString());
   }
 
+  // The gross those release fees were charged on, counted over the same
+  // window and the same revenue rows as the line above - see
+  // `release_fee_stats` in 20260824235000_editable_fee_tiers.sql.
+  const releaseStatsQuery = supabase.rpc("release_fee_stats", {
+    p_from: from ? new Date(Date.parse(from)).toISOString() : null,
+    p_to: toEndMs !== null ? new Date(toEndMs).toISOString() : null,
+  });
+
   const [
     { data: revenueRows, error },
     { data: dutyRows },
     { data: chargeRows },
     costRows,
-  ] = await Promise.all([revenueQuery, dutyQuery, chargeQuery, listCosts()]);
+    { data: releaseStats },
+    feeTiers,
+    feeTierChanges,
+  ] = await Promise.all([
+    revenueQuery,
+    dutyQuery,
+    chargeQuery,
+    listCosts(),
+    releaseStatsQuery,
+    listFeeTiers(),
+    listFeeTierChanges(
+      from,
+      toEndMs !== null ? new Date(toEndMs).toISOString() : null
+    ),
+  ]);
   if (error) throw new Error(error.message);
+
+  const releaseGross = Number(
+    (releaseStats as { gross?: number } | null)?.gross ?? 0
+  );
+  const releaseCount = Number(
+    (releaseStats as { releases?: number } | null)?.releases ?? 0
+  );
 
   const stampDuty = (dutyRows ?? []).reduce(
     (sum, row) => sum + Number(row.levy ?? 0),
@@ -254,6 +319,16 @@ export async function getProfitAndLoss(
     },
     passThrough: {
       stampDuty: round(stampDuty),
+    },
+    releaseFee: {
+      tiers: feeTiers,
+      gross: round(releaseGross),
+      releases: releaseCount,
+      effectivePercent:
+        releaseGross > 0
+          ? Math.round((releaseFees / releaseGross) * 10000) / 100
+          : null,
+      changesInPeriod: feeTierChanges.length,
     },
     costs: {
       recurringAccrued: round(recurringAccrued),
