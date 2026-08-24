@@ -35,7 +35,7 @@ export function SiteHeader() {
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src="/sydhustle-icon.webp"
-            alt="sydHustle app icon — geometric teal S mark"
+            alt="sydHustle app icon, geometric teal S mark"
             width={28}
             height={28}
             className="h-7 w-7 object-contain"
