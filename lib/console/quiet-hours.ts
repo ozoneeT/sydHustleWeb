@@ -84,7 +84,7 @@ export async function saveQuietHours(
   // guessing which one somebody meant is worse than asking.
   if (enabled === "on" && start === end) {
     return {
-      error: "Start and end can't be the same time — that's not a window.",
+      error: "Start and end can't be the same time. That's not a window.",
       done: false,
     };
   }

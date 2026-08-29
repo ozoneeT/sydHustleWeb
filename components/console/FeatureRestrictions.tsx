@@ -94,7 +94,7 @@ function FeatureRow({
               {current.restricted_until
                 ? `until ${new Date(current.restricted_until).toLocaleString("en-NG")}`
                 : "indefinitely"}{" "}
-              — {current.reason}
+              · {current.reason}
             </p>
           ) : null}
         </div>
@@ -155,7 +155,7 @@ function FeatureRow({
             className="block text-xs text-muted-foreground"
             htmlFor={`reason-${feature}`}
           >
-            Why. Not sent to them — this is the note the next moderator reads.
+            Why. Not sent to them; this is the note the next moderator reads.
           </label>
           <textarea
             className="min-h-[4rem] w-full rounded-lg border border-white/10 bg-transparent p-3 text-sm outline-none focus:border-accent/50"
@@ -163,7 +163,7 @@ function FeatureRow({
             maxLength={1000}
             minLength={10}
             name="reason"
-            placeholder="Report #123 — repeatedly asking to settle outside the app."
+            placeholder="Report #123, repeatedly asking to settle outside the app."
             required
           />
 

@@ -68,7 +68,7 @@ export function QuietHoursForm({ settings }: { settings: QuietHoursSettings }) {
 
       <p className="text-xs text-muted-foreground">
         Times are West Africa Time, as they read on a clock in Nigeria. A
-        window that crosses midnight is fine — 23:00 to 05:00 means what it
+        window that crosses midnight is fine: 23:00 to 05:00 means what it
         looks like.
       </p>
 

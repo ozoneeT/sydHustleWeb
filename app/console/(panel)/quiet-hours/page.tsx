@@ -38,7 +38,7 @@ export default async function QuietHoursPage() {
         <ul className="list-disc space-y-1 pl-5">
           <li>
             <strong className="text-foreground">The Panic button.</strong> It
-            is never gated by this or anything else — the hours it would be
+            is never gated by this or anything else. The hours it would be
             switched off are the hours it exists for.
           </li>
           <li>

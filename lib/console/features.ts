@@ -50,7 +50,7 @@ export const FEATURES = [
   {
     key: "messaging",
     label: "Messaging",
-    blast: "Cannot send messages — including in a Hustle already under way.",
+    blast: "Cannot send messages, including in a Hustle already under way.",
   },
 ] as const;
 

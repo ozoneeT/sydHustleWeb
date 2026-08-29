@@ -68,7 +68,7 @@ export default async function UserDetailPage({
         <h2 className="text-lg font-semibold">Feature access</h2>
         <p className="mb-4 text-sm text-muted-foreground">
           Pause one thing while a report or review is open, instead of the
-          whole account. Work already agreed keeps running either way — these
+          whole account. Work already agreed keeps running either way: these
           stop new actions, not in-flight ones.
         </p>
         <FeatureRestrictions
@@ -82,7 +82,7 @@ export default async function UserDetailPage({
           <h2 className="text-lg font-semibold">History</h2>
           <p className="mb-4 text-sm text-muted-foreground">
             Everything ever paused on this account, including what has since
-            expired — so a repeat is visible as a repeat.
+            expired, so a repeat is visible as a repeat.
           </p>
           <ul className="space-y-2 text-sm">
             {restrictions.map((r) => (
