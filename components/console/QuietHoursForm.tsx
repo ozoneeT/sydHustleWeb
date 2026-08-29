@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { useActionState } from "react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -18,16 +18,19 @@ function toInput(value: string): string {
 
 export function QuietHoursForm({ settings }: { settings: QuietHoursSettings }) {
   const [state, submit, pending] = useActionState(saveQuietHours, INITIAL);
-  const [enabled, setEnabled] = useState(settings.enabled);
 
   return (
     <form action={submit} className="space-y-5">
       <label className="flex items-start gap-3">
+        {/* Uncontrolled. `useState(settings.enabled)` reads the prop once
+            and never re-syncs, so after a save and revalidate the box could
+            show one thing while the server held another - and that stale
+            state was what the next save would have submitted. Nothing else
+            on this form depends on the value, so the DOM can own it. */}
         <input
-          checked={enabled}
           className="mt-1 h-4 w-4 accent-blue-500"
+          defaultChecked={settings.enabled}
           name="enabled"
-          onChange={(event) => setEnabled(event.target.checked)}
           type="checkbox"
           value="on"
         />
