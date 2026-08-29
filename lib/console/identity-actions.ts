@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
 import { requireConsole } from "@/lib/console/dal";
+import { createServerSupabaseClient } from "@/lib/supabase/server";
 
 /**
  * Opening a retained identity record.
@@ -104,4 +105,83 @@ export async function revealIdentityRecord(
   // person disclosing should see their own entry appear.
   revalidatePath("/console/identity");
   return { error: null, record: body };
+}
+
+/* ------------------------------------------------------------------ */
+/* Handing a verification attempt back                                  */
+/* ------------------------------------------------------------------ */
+
+function operator(): string {
+  return process.env.CONSOLE_EMAIL ?? "console";
+}
+
+const waiveSchema = z.object({
+  profileId: z.string().uuid(),
+  kind: z.enum(["nin", "bvn"]),
+  reason: z
+    .string()
+    .trim()
+    .min(10, "Say why this is not fraud — it goes on the attempt, permanently.")
+    .max(500),
+});
+
+export type WaiveState = { error: string | null; done: string | null };
+
+/**
+ * Let someone try again today.
+ *
+ * The refusal in the app ends "or contact support", and until now
+ * support had nothing to do but edit a seven-year audit record. So the
+ * attempts are not deleted here: `grant_verification_attempts` writes
+ * `waived_at`, `waived_by` and `waived_reason` beside rows it leaves
+ * otherwise untouched, and both KYC gates skip waived failures when
+ * they tally strikes. The audit gains a fact instead of losing one.
+ *
+ * The reason is required for the same reason the disclosure reason is:
+ * an override nobody has to justify is the hole it was meant to close,
+ * dug more politely.
+ *
+ * It does NOT clear the one-minute cooldown between submissions. A
+ * waiver is more tries, not permission to hammer a provider we pay per
+ * lookup.
+ */
+export async function waiveVerificationAttempts(
+  _prev: WaiveState,
+  formData: FormData
+): Promise<WaiveState> {
+  await requireConsole();
+
+  const parsed = waiveSchema.safeParse({
+    profileId: formData.get("profileId"),
+    kind: formData.get("kind"),
+    reason: formData.get("reason"),
+  });
+  if (!parsed.success) {
+    return {
+      error: parsed.error.issues[0]?.message ?? "Pick an account and give a reason.",
+      done: null,
+    };
+  }
+
+  const supabase = createServerSupabaseClient();
+  const { data, error } = await supabase.rpc("grant_verification_attempts", {
+    p_profile: parsed.data.profileId,
+    p_kind: parsed.data.kind,
+    p_waived_by: operator(),
+    p_reason: parsed.data.reason,
+  });
+  if (error) return { error: error.message, done: null };
+
+  const granted = typeof data === "number" ? data : 0;
+  revalidatePath("/console/identity");
+
+  // Zero is a real answer, not a failure, and saying so saves the next
+  // ten minutes: it means the cap was never what was stopping them.
+  return {
+    error: null,
+    done:
+      granted === 0
+        ? "Nothing to hand back — whatever is blocking them is not the daily cap."
+        : `${granted} ${granted === 1 ? "attempt" : "attempts"} handed back. They can try again now.`,
+  };
 }

@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 import { listUsers } from "@/lib/console/data";
 import { naira, shortDate } from "@/lib/console/format";
 import { Input } from "@/components/ui/input";
@@ -51,7 +53,16 @@ export default async function UsersPage({
             {users.map((user) => (
               <tr className="border-b border-white/5" key={user.id}>
                 <td className="px-4 py-3 font-medium">
-                  {user.full_name ?? "—"}
+                  {/* The name is the way in to everything done about a
+                      person - feature pauses today, whatever the desk needs
+                      next. A row that is not clickable makes moderators
+                      search for the same account twice. */}
+                  <Link
+                    className="hover:text-accent hover:underline"
+                    href={`/console/users/${user.id}`}
+                  >
+                    {user.full_name ?? "Unnamed account"}
+                  </Link>
                 </td>
                 <td className="px-4 py-3 text-muted-foreground">
                   {user.email ?? "—"}

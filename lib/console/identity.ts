@@ -104,6 +104,45 @@ export async function listRetainedIdentityRecords(
   );
 }
 
+/**
+ * An account the verification cap is currently counting against, and
+ * whether it has tipped over into a refusal.
+ *
+ * Deliberately not a search box. The people who hit this cap are mostly
+ * blocked by their own NIMC record rather than by anything they did — a
+ * record filed with no state of origin, names in an order they did not
+ * expect — and those are exactly the people least likely to work out who
+ * to write to. A desk that can only answer "waive attempts for this
+ * uuid" needs the uuid to arrive by email first. So the queue comes to
+ * the desk instead.
+ */
+export type VerificationBlockRow = {
+  profile_id: string;
+  kind: "nin" | "bvn";
+  strikes: number;
+  cap: number;
+  blocked: boolean;
+  last_attempt_at: string;
+  display_name: string | null;
+};
+
+export async function listVerificationBlocks(): Promise<VerificationBlockRow[]> {
+  const supabase = createServerSupabaseClient();
+  const { data, error } = await supabase
+    .from("verification_attempt_blocks")
+    .select(
+      "profile_id, kind, strikes, cap, blocked, last_attempt_at, display_name"
+    )
+    // Refusals first, then whoever tried most recently. Someone at two of
+    // three is worth seeing before someone at one of five, and someone
+    // still trying right now is worth seeing before either.
+    .order("blocked", { ascending: false })
+    .order("last_attempt_at", { ascending: false })
+    .limit(100);
+  if (error) throw new Error(error.message);
+  return (data ?? []) as VerificationBlockRow[];
+}
+
 export type DisclosureRow = {
   id: string;
   profile_id: string;

@@ -2,10 +2,12 @@ import { Button } from "@/components/ui/button";
 import { BvnRequest } from "@/components/console/BvnRequest";
 import { IdentityReveal } from "@/components/console/IdentityReveal";
 import { Input } from "@/components/ui/input";
+import { WaiveAttempts } from "@/components/console/WaiveAttempts";
 import { shortDate } from "@/lib/console/format";
 import {
   listIdentityDisclosures,
   listRetainedIdentityRecords,
+  listVerificationBlocks,
 } from "@/lib/console/identity";
 
 export const metadata = { title: "Identity — sydHustle Console" };
@@ -19,9 +21,10 @@ export default async function IdentityPage({
   searchParams: Promise<{ q?: string }>;
 }) {
   const { q } = await searchParams;
-  const [records, disclosures] = await Promise.all([
+  const [records, disclosures, blocks] = await Promise.all([
     listRetainedIdentityRecords(q),
     listIdentityDisclosures(),
+    listVerificationBlocks(),
   ]);
 
   return (
@@ -47,6 +50,66 @@ export default async function IdentityPage({
             Search
           </Button>
         </form>
+      </div>
+
+      {/* First on the page, and above the vault, because it is the only
+          thing here anybody has to ACT on. The records list is reference
+          - it answers questions when they are asked. This is a queue of
+          people who are stuck right now, and it is one muted line on the
+          days nobody is. */}
+      <div className="space-y-3">
+        <div>
+          <h2 className="text-lg font-semibold">Verification attempts today</h2>
+          <p className="max-w-2xl text-sm text-muted-foreground">
+            Failed NIN and BVN checks in the last 24 hours. Three strikes on
+            NIN or five on BVN and the app refuses until tomorrow — mostly to
+            people whose NIMC record is missing a field, not to anyone
+            dishonest. Handing attempts back never deletes one: the reason you
+            give is written onto the attempt permanently.
+          </p>
+        </div>
+        {blocks.length === 0 ? (
+          <p className="rounded-xl border border-white/10 px-4 py-6 text-sm text-muted-foreground">
+            Nobody has a failed verification attempt in the last 24 hours.
+          </p>
+        ) : (
+          blocks.map((block) => (
+            <div
+              className="rounded-xl border border-white/10 p-4"
+              key={`${block.profile_id}-${block.kind}`}
+            >
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <p className="font-medium">
+                    {block.display_name ?? "Unnamed account"}
+                    <span className="ml-2 rounded bg-white/10 px-2 py-0.5 text-[10px] uppercase tracking-wide text-muted-foreground">
+                      {block.kind}
+                    </span>
+                    {block.blocked ? (
+                      <span className="ml-2 rounded bg-red-500/15 px-2 py-0.5 text-[10px] uppercase tracking-wide text-red-300">
+                        locked out
+                      </span>
+                    ) : null}
+                  </p>
+                  <p className="font-mono text-xs text-muted-foreground">
+                    {block.profile_id}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    {block.strikes} of {block.cap} strikes · last tried{" "}
+                    {shortDate(block.last_attempt_at)}
+                  </p>
+                </div>
+                <div className="flex flex-wrap items-center justify-end gap-3">
+                  <WaiveAttempts
+                    blocked={block.blocked}
+                    kind={block.kind}
+                    profileId={block.profile_id}
+                  />
+                </div>
+              </div>
+            </div>
+          ))
+        )}
       </div>
 
       <div className="space-y-3">
