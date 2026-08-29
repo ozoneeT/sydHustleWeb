@@ -29,6 +29,7 @@ import {
   Users,
   Wallet,
   X,
+  Moon,
 } from "lucide-react";
 
 import { ConsoleLogoutButton } from "@/components/console/ConsoleLogoutButton";
@@ -105,6 +106,7 @@ const GROUPS: NavGroup[] = [
       { href: "/console/holds", label: "Held funds", icon: Lock },
       { href: "/console/limits", label: "Money limits", icon: Gauge },
       { href: "/console/panic", label: "Panic", icon: Siren },
+      { href: "/console/quiet-hours", label: "Quiet hours", icon: Moon },
       { href: "/console/location", label: "Location", icon: MapPin },
     ],
   },
