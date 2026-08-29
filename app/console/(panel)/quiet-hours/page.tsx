@@ -23,7 +23,8 @@ export default async function QuietHoursPage() {
       {settings.enabled && settings.activeNow ? (
         <Card className="border-blue-500/40 bg-blue-500/5 p-4 text-sm text-blue-200">
           Quiet hours are running right now. The app is in its blue state and
-          refusing new Hustles, applications, bookings, messages and calls.
+          refusing new Hustles, applications, bookings, messages and calls,
+          including inside Hustles already under way.
         </Card>
       ) : null}
 
@@ -42,14 +43,25 @@ export default async function QuietHoursPage() {
             switched off are the hours it exists for.
           </li>
           <li>
-            Hustles already scheduled and running. Quiet hours stop new
-            engagements forming; they do not cancel work already agreed.
-          </li>
-          <li>
             Wallet balances, browsing, and everything else that does not put
             two people in a room together.
           </li>
+          <li>
+            Hustles already agreed are not cancelled, and a scheduled one
+            stays scheduled.
+          </li>
         </ul>
+        <p className="mt-3 text-amber-300/90">
+          <strong className="text-amber-200">
+            But the two parties cannot reach each other.
+          </strong>{" "}
+          Messaging, calling and directions are blocked for everyone during
+          the window, including a Hustler already on their way to a venue.
+          That is deliberate, and it is the sharpest edge of this setting:
+          somebody mid-journey at closing time can still raise the Panic
+          button, and can do nothing else. Worth weighing when you choose
+          where the window starts.
+        </p>
         <p className="mt-3">
           Hustles also cannot be <em>scheduled for</em> a time inside the
           window, so the rule cannot be sidestepped by posting at lunchtime
