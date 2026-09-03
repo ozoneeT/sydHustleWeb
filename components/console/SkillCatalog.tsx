@@ -1,7 +1,7 @@
 "use client";
 
-import { useActionState, useMemo, useState } from "react";
-import { Check, Plus, RotateCcw, Search, Trash2, X } from "lucide-react";
+import { Fragment, useActionState, useMemo, useState } from "react";
+import { Check, Pencil, Plus, RotateCcw, Search, Trash2, X } from "lucide-react";
 
 import {
   deleteSkill,
@@ -376,7 +376,15 @@ function SkillForm({
 /* Removing                                                            */
 /* ------------------------------------------------------------------ */
 
-function RowActions({ skill }: { skill: ConsoleSkill }) {
+function RowActions({
+  editing,
+  onEdit,
+  skill,
+}: {
+  editing: boolean;
+  onEdit: () => void;
+  skill: ConsoleSkill;
+}) {
   const [retireState, retireAction, retiring] = useActionState(
     retireSkill,
     initialState
@@ -391,6 +399,14 @@ function RowActions({ skill }: { skill: ConsoleSkill }) {
   return (
     <div className="space-y-2">
       <div className="flex flex-wrap justify-end gap-1.5">
+        <Button
+          onClick={onEdit}
+          size="sm"
+          type="button"
+          variant={editing ? "secondary" : "ghost"}
+        >
+          <Pencil className="size-3.5" /> {editing ? "Close" : "Edit"}
+        </Button>
         <form action={retireAction}>
           <input name="id" type="hidden" value={skill.id} />
           <input

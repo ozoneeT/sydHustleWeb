@@ -19,8 +19,9 @@ export const metadata: Metadata = {
 
 const POLICIES: {
   href: string;
-  image: string;
-  alt: string;
+  /** Optional: a card with no illustration yet falls back to its initial. */
+  image?: string;
+  alt?: string;
   title: string;
   blurb: string;
 }[] = [
@@ -44,6 +45,12 @@ const POLICIES: {
     alt: "Illustration of three people standing together under a shield",
     title: "Community Standards",
     blurb: "What isn't allowed, and how to report it when you see it.",
+  },
+  {
+    href: "/delete-account",
+    title: "Delete your account",
+    blurb:
+      "How to close your account, what that removes, and what we have to keep.",
   },
 ];
 
@@ -75,17 +82,32 @@ export default function PoliciesCenterPage() {
                     complete compositions, and cropping one to a banner
                     would cut the thing it is a picture of. 720px WebP,
                     2x the card's rendered width, from the original
-                    2MB PNGs, so all three cost less than a tenth of one
-                    original. */}
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  alt={policy.alt}
-                  className="aspect-square w-full rounded-xl object-cover transition-transform duration-300 group-hover:scale-[1.02]"
-                  height={720}
-                  loading="lazy"
-                  src={policy.image}
-                  width={720}
-                />
+                    2MB PNGs, so the illustrated three together cost less
+                    than a tenth of one original.
+
+                    A card with no illustration yet shows its initial at
+                    the same aspect ratio, so the grid keeps its rhythm
+                    instead of collapsing one cell. */}
+                {policy.image ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    alt={policy.alt ?? ""}
+                    className="aspect-square w-full rounded-xl object-cover transition-transform duration-300 group-hover:scale-[1.02]"
+                    height={720}
+                    loading="lazy"
+                    src={policy.image}
+                    width={720}
+                  />
+                ) : (
+                  <div
+                    aria-hidden
+                    className="flex aspect-square w-full items-center justify-center rounded-xl border border-white/10 bg-white/[0.02] transition-transform duration-300 group-hover:scale-[1.02]"
+                  >
+                    <span className="text-6xl font-extrabold tracking-tight text-accent/30">
+                      {policy.title.charAt(0)}
+                    </span>
+                  </div>
+                )}
                 <h2 className="mt-5 text-lg font-bold tracking-tight text-foreground group-hover:text-accent">
                   {policy.title}
                 </h2>
