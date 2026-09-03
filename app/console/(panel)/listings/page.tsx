@@ -154,10 +154,12 @@ export default async function ListingsPage({
           reviewable later and what settles the dispute it sometimes causes.
         </p>
         <p>
-          Every one of the three notifies the owner as an account action, which
-          is the one notification type that cannot be switched off. A listing
-          that quietly stops appearing while its owner still sees it in their
-          own list is the failure this avoids.
+          All three reach the owner on three channels: in-app, a push, and an
+          email from noreply@sydhustle.com. The notification is an account
+          action — the one type that cannot be switched off — and the email
+          carries the same words you typed, because a push cannot be re-read
+          days later and cannot be replied to. Replies go to support, who
+          pick it up from there.
         </p>
       </Card>
     </div>

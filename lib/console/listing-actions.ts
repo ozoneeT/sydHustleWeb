@@ -59,7 +59,8 @@ export async function suspendListing(
   refresh();
   return {
     error: null,
-    message: "Hidden, and the owner has been asked. It moves to Needs info.",
+    message:
+      "Hidden. The owner has the push and the email; it moves to Needs info.",
   };
 }
 
@@ -81,7 +82,10 @@ export async function removeListing(
   if (error) return { error: explain(error.message), message: null };
 
   refresh();
-  return { error: null, message: "Taken down, and the owner has been told." };
+  return {
+    error: null,
+    message: "Taken down. The owner has been told by push and email.",
+  };
 }
 
 export async function restoreListing(
@@ -98,5 +102,8 @@ export async function restoreListing(
   if (error) return { error: explain(error.message), message: null };
 
   refresh();
-  return { error: null, message: "Live again, and the owner has been told." };
+  return {
+    error: null,
+    message: "Live again. The owner has been told by push and email.",
+  };
 }

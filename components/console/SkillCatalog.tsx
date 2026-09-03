@@ -490,6 +490,9 @@ function RowActions({
           <p className="text-right text-xs text-muted-foreground">
             Where should its {skill.listing_count.toLocaleString("en-NG")}{" "}
             {skill.listing_count === 1 ? "listing" : "listings"} go?
+            {skill.listing_count > skill.live_count
+              ? " Withheld ones move with them."
+              : ""}
           </p>
           <Input
             className="h-8 text-xs"
@@ -617,11 +620,17 @@ function RailRow({
         <div>
           <p className="font-medium">{rail.display_name}</p>
           <p className="text-xs text-muted-foreground">
-            {rail.listing_count.toLocaleString("en-NG")}{" "}
+            {rail.listing_count.toLocaleString("en-NG")} live{" "}
             {rail.listing_count === 1 ? "listing" : "listings"}
             {rail.owned_count > 0
               ? ` · ${rail.owned_count} from a real account`
               : " · demo listings only"}
+            {/* Named, because the move takes them too. A count that
+                showed only the live ones would make the result look
+                like it had reached further than it was asked to. */}
+            {rail.withheld_count > 0
+              ? ` · ${rail.withheld_count} withheld (moved too)`
+              : ""}
             {rail.certified_count > 0
               ? ` · ${rail.certified_count} certified (cannot be moved)`
               : ""}
@@ -956,7 +965,17 @@ export function SkillCatalog({
                     {skill.icon}
                   </td>
                   <td className="py-2.5 text-right tabular-nums">
-                    {skill.listing_count.toLocaleString("en-NG")}
+                    {skill.live_count.toLocaleString("en-NG")}
+                    {/* The gap matters: deletion is gated on the TOTAL,
+                        because a withheld listing still points here. */}
+                    {skill.listing_count > skill.live_count ? (
+                      <span className="block text-xs text-muted-foreground">
+                        +{(skill.listing_count - skill.live_count).toLocaleString(
+                          "en-NG"
+                        )}{" "}
+                        withheld
+                      </span>
+                    ) : null}
                   </td>
                   <td className="py-2.5">
                     {skill.featured_rank !== null ? (

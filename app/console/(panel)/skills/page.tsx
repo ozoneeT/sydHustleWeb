@@ -52,6 +52,14 @@ export default async function SkillsPage() {
           skills with none. Use it for something added by mistake.
         </p>
         <p>
+          A rail with nothing live left on it drops out of Uncategorised
+          entirely — if you took its last listing down on Listings, the
+          decision is already made and it is not waiting on you. The
+          Listings column counts what a user would find, with anything
+          withheld noted underneath, because deletion is gated on the total:
+          a removed listing still points at the catalogue row.
+        </p>
+        <p>
           <strong className="text-foreground">Move listings</strong> is the
           way out of both. A skill you would rather not offer can have its
           listings filed under one that fits — the Hustler&apos;s own

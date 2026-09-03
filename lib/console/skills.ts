@@ -21,9 +21,12 @@ export type ConsoleSkill = {
   sort_order: number;
   featured_rank: number | null;
   retired_at: string | null;
-  /** Published listings railing under this skill. The number that
-   * decides whether it can be deleted or only retired. */
+  /** EVERY listing railing under this skill, withheld ones included.
+   * This is what gates deletion: a removed listing still points here by
+   * `skill_id`, so erasing the row would re-rail it just the same. */
   listing_count: number;
+  /** What a user would actually find on the Skills feed. */
+  live_count: number;
 };
 
 export async function listConsoleSkills(): Promise<ConsoleSkill[]> {
@@ -44,6 +47,7 @@ export async function listConsoleSkills(): Promise<ConsoleSkill[]> {
         : Number(row.featured_rank),
     retired_at: row.retired_at === null ? null : String(row.retired_at),
     listing_count: Number(row.listing_count ?? 0),
+    live_count: Number(row.live_count ?? 0),
   }));
 }
 
@@ -58,7 +62,12 @@ export async function listConsoleSkills(): Promise<ConsoleSkill[]> {
 export type UncategorizedRail = {
   rail_id: string;
   display_name: string;
+  /** Live listings only. A rail with nothing live left on it does not
+   * appear at all — the decision was already taken on Listings. */
   listing_count: number;
+  /** Suspended or taken down. Moved along with the rest, but not a
+   * reason on their own for the rail to be in this queue. */
+  withheld_count: number;
   /** Owned by a real account, as opposed to the seeded demo listings. */
   owned_count: number;
   /** Frozen by certification — these cannot be moved. See the migration. */
@@ -75,6 +84,7 @@ export async function listUncategorizedRails(): Promise<UncategorizedRail[]> {
     rail_id: String(row.rail_id),
     display_name: String(row.display_name),
     listing_count: Number(row.listing_count ?? 0),
+    withheld_count: Number(row.withheld_count ?? 0),
     owned_count: Number(row.owned_count ?? 0),
     certified_count: Number(row.certified_count ?? 0),
     newest_at: row.newest_at === null ? null : String(row.newest_at),
