@@ -482,6 +482,17 @@ export function SkillCatalog({
   const [editing, setEditing] = useState<ConsoleSkill | null>(null);
   const [adding, setAdding] = useState(false);
 
+  /**
+   * The skill name and the row's Edit button are two affordances for one
+   * action, so the toggle lives here rather than being written twice and
+   * drifting. Opening an editor always closes the add form: two open
+   * forms writing to the same catalogue is a way to lose an edit.
+   */
+  const toggleEdit = (skill: ConsoleSkill) => {
+    setAdding(false);
+    setEditing((current) => (current?.id === skill.id ? null : skill));
+  };
+
   const taken = useMemo(
     () => new Set(skills.map((skill) => skill.icon)),
     [skills]
@@ -572,12 +583,7 @@ export function SkillCatalog({
                   <td className="py-2.5">
                     <button
                       className="text-left font-medium hover:underline"
-                      onClick={() => {
-                        setAdding(false);
-                        setEditing((current) =>
-                          current?.id === skill.id ? null : skill
-                        );
-                      }}
+                      onClick={() => toggleEdit(skill)}
                       type="button"
                     >
                       {skill.name}
@@ -619,7 +625,11 @@ export function SkillCatalog({
                     )}
                   </td>
                   <td className="py-2.5">
-                    <RowActions skill={skill} />
+                    <RowActions
+                      editing={editing?.id === skill.id}
+                      onEdit={() => toggleEdit(skill)}
+                      skill={skill}
+                    />
                   </td>
                 </tr>
               ))}
