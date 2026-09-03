@@ -31,6 +31,7 @@ import {
   X,
   Moon,
   Wrench,
+  LayoutList,
 } from "lucide-react";
 
 import { ConsoleLogoutButton } from "@/components/console/ConsoleLogoutButton";
@@ -104,6 +105,7 @@ const GROUPS: NavGroup[] = [
         icon: MessageSquareWarning,
       },
       { href: "/console/moderation", label: "Moderation", icon: ShieldAlert },
+      { href: "/console/listings", label: "Listings", icon: LayoutList },
       { href: "/console/holds", label: "Held funds", icon: Lock },
       { href: "/console/limits", label: "Money limits", icon: Gauge },
       { href: "/console/panic", label: "Panic", icon: Siren },
