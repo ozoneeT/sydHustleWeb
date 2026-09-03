@@ -58,7 +58,16 @@ export async function sendAppealMessage(
 const resolveSchema = z.object({
   kind: kindSchema,
   sourceId: z.string().uuid(),
-  awardedTo: z.enum(["provider", "hustler"]),
+  awardedTo: z.enum(["provider", "hustler", "split"]),
+  /**
+   * The Hustler's share, 1-99, and only on a split.
+   *
+   * Coerced from the form string and bounded here as well as in the
+   * database. The database's check is the one that counts — this one
+   * exists so a typo is a form error rather than a Postgres exception
+   * shown to an admin mid-decision.
+   */
+  hustlerPercent: z.coerce.number().int().min(1).max(99).optional(),
   note: z.string().trim().max(2000).optional(),
   /** Typed by the admin. A mis-click here pays the wrong person and there
    * is no undo, so the decision has to be spelled out. */
@@ -77,11 +86,18 @@ export async function resolveAppeal(
     kind: formData.get("kind"),
     sourceId: formData.get("sourceId"),
     awardedTo: formData.get("awardedTo"),
+    hustlerPercent: formData.get("hustlerPercent") || undefined,
     note: formData.get("note") ?? undefined,
     confirm: formData.get("confirm"),
   });
   if (!parsed.success) {
     return { error: "Choose who the money goes to.", resolved: false };
+  }
+  if (parsed.data.awardedTo === "split" && parsed.data.hustlerPercent === undefined) {
+    return {
+      error: "Enter the Hustler's share, between 1 and 99 percent.",
+      resolved: false,
+    };
   }
   if (parsed.data.confirm.trim().toUpperCase() !== "AWARD") {
     return { error: "Type AWARD to confirm the decision.", resolved: false };
@@ -93,12 +109,20 @@ export async function resolveAppeal(
     p_source_id: parsed.data.sourceId,
     p_awarded_to: parsed.data.awardedTo,
     p_note: parsed.data.note ?? null,
+    p_hustler_percent:
+      parsed.data.awardedTo === "split"
+        ? (parsed.data.hustlerPercent ?? null)
+        : null,
   });
   if (error) {
     // The database's own refusals are the useful ones here.
     const message = error.message.includes("already_resolved")
       ? "This appeal has already been decided."
-      : error.message;
+      : error.message.includes("invalid_split")
+        ? "A split needs a Hustler share between 1 and 99 percent. For all or nothing, award it outright."
+        : error.message.includes("percent_without_split")
+          ? "A percentage only applies to a split award."
+          : error.message;
     return { error: message, resolved: false };
   }
 

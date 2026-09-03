@@ -36,7 +36,22 @@ export function AppealDecision({
   amountLabel,
 }: AppealDecisionProps) {
   const [state, formAction, pending] = useActionState(resolveAppeal, INITIAL);
-  const [awardedTo, setAwardedTo] = useState<"provider" | "hustler" | null>(null);
+  const [awardedTo, setAwardedTo] = useState<
+    "provider" | "hustler" | "split" | null
+  >(null);
+  /**
+   * The Hustler's share on a split, as a string so the field can be
+   * empty rather than defaulting to a number nobody chose. 1-99: 0 and
+   * 100 are the outright awards above, and offering them here would give
+   * the same decision two spellings with different records.
+   */
+  const [percent, setPercent] = useState("");
+  const percentValue = Number(percent);
+  const percentValid =
+    percent.trim() !== "" &&
+    Number.isInteger(percentValue) &&
+    percentValue >= 1 &&
+    percentValue <= 99;
 
   if (state.resolved) {
     return (
@@ -54,9 +69,14 @@ export function AppealDecision({
       <input name="kind" type="hidden" value={kind} />
       <input name="sourceId" type="hidden" value={sourceId} />
       <input name="awardedTo" type="hidden" value={awardedTo ?? ""} />
+      <input
+        name="hustlerPercent"
+        type="hidden"
+        value={awardedTo === "split" ? percent : ""}
+      />
 
       <div>
-        <h2 className="text-sm font-semibold">Award {amountLabel} to</h2>
+        <h2 className="text-sm font-semibold">Award {amountLabel}</h2>
         <p className="mt-1 text-xs text-muted-foreground">
           This cannot be undone.
         </p>
@@ -67,6 +87,11 @@ export function AppealDecision({
           [
             ["hustler", hustlerName, "Work was done — release the payment"],
             ["provider", providerName, "Work wasn't done — refund the payer"],
+            [
+              "split",
+              "Split it",
+              "Partly done, or fault on both sides — divide the money",
+            ],
           ] as const
         ).map(([role, name, why]) => (
           <button
@@ -87,6 +112,36 @@ export function AppealDecision({
         ))}
       </div>
 
+      {/* Only once a split is chosen. A percentage field standing open
+          beside two outright buttons invites somebody to fill it in and
+          then award outright, which records a decision nobody made. */}
+      {awardedTo === "split" ? (
+        <div className="rounded-xl border border-white/10 p-3">
+          <label className="block text-sm font-semibold" htmlFor="split-share">
+            {hustlerName}&apos;s share
+          </label>
+          <div className="mt-2 flex items-center gap-2">
+            <Input
+              className="max-w-24"
+              id="split-share"
+              inputMode="numeric"
+              max={99}
+              min={1}
+              onChange={(event) => setPercent(event.target.value)}
+              placeholder="50"
+              type="number"
+              value={percent}
+            />
+            <span className="text-sm text-muted-foreground">%</span>
+          </div>
+          <p className="mt-2 text-xs text-muted-foreground">
+            {percentValid
+              ? `${percentValue}% to ${hustlerName}, the remaining ${100 - percentValue}% back to ${providerName}. The platform fee is charged on the Hustler's share only.`
+              : "Between 1 and 99. For all or nothing, use the buttons above."}
+          </p>
+        </div>
+      ) : null}
+
       <Textarea
         name="note"
         placeholder="Why (kept as the record of this decision)"
@@ -104,10 +159,16 @@ export function AppealDecision({
             moves money, and it should not look like the Send button. */}
         <Button
           className="bg-red-500 text-white shadow-red-500/25 hover:bg-red-500/90"
-          disabled={pending || !awardedTo}
+          disabled={
+            pending || !awardedTo || (awardedTo === "split" && !percentValid)
+          }
           type="submit"
         >
-          {pending ? "Awarding…" : "Award the money"}
+          {pending
+            ? "Awarding…"
+            : awardedTo === "split" && percentValid
+              ? `Split ${percentValue}/${100 - percentValue}`
+              : "Award the money"}
         </Button>
       </div>
 
