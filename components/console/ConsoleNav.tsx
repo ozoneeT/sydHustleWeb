@@ -30,6 +30,7 @@ import {
   Wallet,
   X,
   Moon,
+  Wrench,
 } from "lucide-react";
 
 import { ConsoleLogoutButton } from "@/components/console/ConsoleLogoutButton";
@@ -113,6 +114,7 @@ const GROUPS: NavGroup[] = [
   {
     label: "Ops",
     links: [
+      { href: "/console/skills", label: "Skills", icon: Wrench },
       { href: "/console/featured", label: "Subscriptions", icon: Star },
       { href: "/console/promos", label: "Promotions", icon: BadgePercent },
       { href: "/console/broadcast", label: "Broadcast", icon: Megaphone },

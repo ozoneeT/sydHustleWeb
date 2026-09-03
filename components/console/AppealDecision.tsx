@@ -136,7 +136,7 @@ export function AppealDecision({
           </div>
           <p className="mt-2 text-xs text-muted-foreground">
             {percentValid
-              ? `${percentValue}% to ${hustlerName}, the remaining ${100 - percentValue}% back to ${providerName}. The platform fee is charged on the Hustler's share only.`
+              ? `${percentValue}% to ${hustlerName}, the remaining ${100 - percentValue}% back to ${providerName}. Each side is charged on their own share — ${hustlerName} the platform fee at this Hustle's rate, ${providerName} the escrow cut — so neither pays a whole-job fee on a part-job outcome.`
               : "Between 1 and 99. For all or nothing, use the buttons above."}
           </p>
         </div>
