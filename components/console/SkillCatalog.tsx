@@ -1,21 +1,34 @@
 "use client";
 
 import { Fragment, useActionState, useMemo, useState } from "react";
-import { Check, Pencil, Plus, RotateCcw, Search, Trash2, X } from "lucide-react";
+import {
+  Check,
+  FolderInput,
+  Pencil,
+  Plus,
+  RotateCcw,
+  Search,
+  Trash2,
+  X,
+} from "lucide-react";
 
 import {
   deleteSkill,
+  moveListings,
+  promoteRail,
   retireSkill,
   saveSkill,
   setFeaturedSkills,
+  type MoveState,
   type SkillFormState,
 } from "@/lib/console/skill-actions";
-import type { ConsoleSkill } from "@/lib/console/skills";
+import type { ConsoleSkill, UncategorizedRail } from "@/lib/console/skills";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 
 const initialState: SkillFormState = { error: null, saved: false };
+const initialMove: MoveState = { error: null, message: null };
 
 /** What the wizard will draw. Mirrors DEFAULT_SUGGESTION_LIMIT in the app. */
 const MAX_FEATURED = 8;
@@ -380,10 +393,12 @@ function RowActions({
   editing,
   onEdit,
   skill,
+  skills,
 }: {
   editing: boolean;
   onEdit: () => void;
   skill: ConsoleSkill;
+  skills: ConsoleSkill[];
 }) {
   const [retireState, retireAction, retiring] = useActionState(
     retireSkill,
@@ -393,8 +408,24 @@ function RowActions({
     deleteSkill,
     initialState
   );
+  const [moveState, moveAction, moving] = useActionState(
+    moveListings,
+    initialMove
+  );
   const [confirming, setConfirming] = useState(false);
+  const [emptying, setEmptying] = useState(false);
+  const [target, setTarget] = useState("");
+  const [targetQuery, setTargetQuery] = useState("");
   const deletable = skill.listing_count === 0;
+
+  const targets = skills
+    .filter((other) => other.id !== skill.id && other.retired_at === null)
+    .filter(
+      (other) =>
+        !targetQuery.trim() ||
+        other.name.toLowerCase().includes(targetQuery.trim().toLowerCase())
+    )
+    .slice(0, 24);
 
   return (
     <div className="space-y-2">
@@ -437,8 +468,57 @@ function RowActions({
           >
             <Trash2 className="size-3.5" />
           </Button>
-        ) : null}
+        ) : (
+          /* The way OUT of "can't delete this". Move the listings
+             somewhere they belong and the trash appears on the next
+             render, because the count is then zero. */
+          <Button
+            onClick={() => setEmptying((value) => !value)}
+            size="sm"
+            type="button"
+            variant={emptying ? "secondary" : "ghost"}
+          >
+            <FolderInput className="size-3.5" /> Move listings
+          </Button>
+        )}
       </div>
+
+      {emptying && !deletable ? (
+        <form action={moveAction} className="space-y-2">
+          <input name="rail_id" type="hidden" value={skill.id} />
+          <input name="skill_id" type="hidden" value={target} />
+          <p className="text-right text-xs text-muted-foreground">
+            Where should its {skill.listing_count.toLocaleString("en-NG")}{" "}
+            {skill.listing_count === 1 ? "listing" : "listings"} go?
+          </p>
+          <Input
+            className="h-8 text-xs"
+            onChange={(event) => setTargetQuery(event.target.value)}
+            placeholder="Search the catalogue"
+            value={targetQuery}
+          />
+          <div className="flex max-h-28 flex-wrap justify-end gap-1.5 overflow-y-auto">
+            {targets.map((other) => (
+              <button
+                className={`rounded-md px-2 py-1 text-xs transition-colors ${
+                  target === other.id
+                    ? "bg-emerald-500/20 text-emerald-200"
+                    : "text-muted-foreground hover:bg-white/5"
+                }`}
+                key={other.id}
+                onClick={() => setTarget(other.id)}
+                type="button"
+              >
+                {other.name}
+              </button>
+            ))}
+          </div>
+          <MoveNotice state={moveState} />
+          <Button disabled={moving || !target} size="sm" type="submit">
+            {moving ? "Moving…" : "Move them"}
+          </Button>
+        </form>
+      ) : null}
 
       {confirming && deletable ? (
         <form action={deleteAction} className="space-y-2 text-right">
@@ -468,14 +548,276 @@ function RowActions({
 }
 
 /* ------------------------------------------------------------------ */
+/* Uncategorised rails                                                 */
+/* ------------------------------------------------------------------ */
+
+function MoveNotice({ state }: { state: MoveState }) {
+  if (state.error) {
+    return (
+      <p className="rounded-lg bg-red-500/10 px-3 py-2 text-sm text-red-300">
+        {state.error}
+      </p>
+    );
+  }
+  if (state.message) {
+    return (
+      <p className="rounded-lg bg-emerald-500/10 px-3 py-2 text-sm text-emerald-300">
+        {state.message}
+      </p>
+    );
+  }
+  return null;
+}
+
+/**
+ * One typed rail, and the two things worth doing with it.
+ *
+ * File it under a catalogue skill that already covers it, or promote it
+ * into a catalogue skill of its own. Both leave the Hustler's own
+ * wording on the card untouched — see the migration header for why the
+ * rail is the category and the name is the trade.
+ */
+function RailRow({
+  iconNames,
+  rail,
+  skills,
+  taken,
+}: {
+  iconNames: readonly string[];
+  rail: UncategorizedRail;
+  skills: ConsoleSkill[];
+  taken: Set<string>;
+}) {
+  const [moveState, moveAction, moving] = useActionState(
+    moveListings,
+    initialMove
+  );
+  const [promoteState, promoteAction, promoting] = useActionState(
+    promoteRail,
+    initialMove
+  );
+  const [mode, setMode] = useState<"idle" | "move" | "promote">("idle");
+  const [target, setTarget] = useState("");
+  const [icon, setIcon] = useState("");
+  const [iconQuery, setIconQuery] = useState("");
+
+  const free = useMemo(() => {
+    const needle = iconQuery.trim().toLowerCase();
+    return iconNames
+      .filter((name) => !taken.has(name))
+      .filter((name) => !needle || name.includes(needle))
+      .slice(0, 40);
+  }, [iconNames, taken, iconQuery]);
+
+  const live = skills.filter((skill) => skill.retired_at === null);
+
+  return (
+    <li className="space-y-3 rounded-xl border border-white/10 p-3">
+      <div className="flex flex-wrap items-start justify-between gap-2">
+        <div>
+          <p className="font-medium">{rail.display_name}</p>
+          <p className="text-xs text-muted-foreground">
+            {rail.listing_count.toLocaleString("en-NG")}{" "}
+            {rail.listing_count === 1 ? "listing" : "listings"}
+            {rail.owned_count > 0
+              ? ` · ${rail.owned_count} from a real account`
+              : " · demo listings only"}
+            {rail.certified_count > 0
+              ? ` · ${rail.certified_count} certified (cannot be moved)`
+              : ""}
+          </p>
+        </div>
+        <div className="flex gap-1.5">
+          <Button
+            onClick={() => setMode(mode === "move" ? "idle" : "move")}
+            size="sm"
+            type="button"
+            variant={mode === "move" ? "secondary" : "ghost"}
+          >
+            <FolderInput className="size-3.5" /> File under…
+          </Button>
+          <Button
+            onClick={() => setMode(mode === "promote" ? "idle" : "promote")}
+            size="sm"
+            type="button"
+            variant={mode === "promote" ? "secondary" : "ghost"}
+          >
+            <Plus className="size-3.5" /> Make it a skill
+          </Button>
+        </div>
+      </div>
+
+      {mode === "move" ? (
+        <form action={moveAction} className="space-y-2">
+          <input name="rail_id" type="hidden" value={rail.rail_id} />
+          <input name="skill_id" type="hidden" value={target} />
+          <Input
+            onChange={(event) => setIconQuery(event.target.value)}
+            placeholder="Search the catalogue for where this belongs"
+            value={iconQuery}
+          />
+          <div className="flex max-h-32 flex-wrap gap-1.5 overflow-y-auto">
+            {live
+              .filter(
+                (skill) =>
+                  !iconQuery.trim() ||
+                  skill.name.toLowerCase().includes(iconQuery.trim().toLowerCase())
+              )
+              .slice(0, 24)
+              .map((skill) => (
+                <button
+                  className={`rounded-md px-2 py-1 text-xs transition-colors ${
+                    target === skill.id
+                      ? "bg-emerald-500/20 text-emerald-200"
+                      : "text-muted-foreground hover:bg-white/5"
+                  }`}
+                  key={skill.id}
+                  onClick={() => setTarget(skill.id)}
+                  type="button"
+                >
+                  {skill.name}
+                </button>
+              ))}
+          </div>
+          <MoveNotice state={moveState} />
+          <Button disabled={moving || !target} size="sm" type="submit">
+            {moving ? "Moving…" : "Move these listings"}
+          </Button>
+        </form>
+      ) : null}
+
+      {mode === "promote" ? (
+        <form action={promoteAction} className="space-y-3">
+          <input name="rail_id" type="hidden" value={rail.rail_id} />
+          <input name="icon" type="hidden" value={icon} />
+          <div className="grid gap-2 sm:grid-cols-2">
+            <Input
+              defaultValue={rail.display_name}
+              name="name"
+              placeholder="Name"
+              required
+            />
+            <Input name="name_plural" placeholder="Plural (optional)" />
+          </div>
+          <Input
+            onChange={(event) => setIconQuery(event.target.value)}
+            placeholder="Search icons"
+            value={iconQuery}
+          />
+          <div className="flex max-h-32 flex-wrap gap-1.5 overflow-y-auto rounded-lg border border-white/10 p-2">
+            {free.map((name) => (
+              <button
+                className={`rounded-md px-2 py-1 text-xs transition-colors ${
+                  icon === name
+                    ? "bg-emerald-500/20 text-emerald-200"
+                    : "text-muted-foreground hover:bg-white/5"
+                }`}
+                key={name}
+                onClick={() => setIcon(name)}
+                type="button"
+              >
+                {name}
+              </button>
+            ))}
+          </div>
+          <label className="flex items-center gap-2 text-xs">
+            <input name="licensed_trade" type="checkbox" />
+            Licensed trade
+          </label>
+          <MoveNotice state={promoteState} />
+          <Button disabled={promoting || !icon} size="sm" type="submit">
+            {promoting ? "Adding…" : "Add to catalogue and file these here"}
+          </Button>
+        </form>
+      ) : null}
+    </li>
+  );
+}
+
+function UncategorizedCard({
+  iconNames,
+  rails,
+  skills,
+  taken,
+}: {
+  iconNames: readonly string[];
+  rails: UncategorizedRail[];
+  skills: ConsoleSkill[];
+  taken: Set<string>;
+}) {
+  const [query, setQuery] = useState("");
+  const shown = useMemo(() => {
+    const needle = query.trim().toLowerCase();
+    if (!needle) return rails;
+    return rails.filter((rail) =>
+      rail.display_name.toLowerCase().includes(needle)
+    );
+  }, [rails, query]);
+
+  const owned = rails.filter((rail) => rail.owned_count > 0).length;
+
+  return (
+    <Card className="space-y-4 p-5">
+      <div>
+        <h2 className="font-semibold">Uncategorised</h2>
+        <p className="max-w-3xl text-sm text-muted-foreground">
+          Trades a Hustler typed instead of picking. Each one is its own
+          rail on the Skills feed with nothing in the catalogue behind it,
+          which is why searching here for a skill you have seen in the app
+          can come back empty. {rails.length} of them,{" "}
+          {owned > 0
+            ? `${owned} with a listing from a real account`
+            : "all from the seeded demo listings"}
+          .
+        </p>
+      </div>
+
+      {rails.length === 0 ? (
+        <p className="text-sm text-muted-foreground">
+          Nothing uncategorised — every listing sits under a catalogue skill.
+        </p>
+      ) : (
+        <>
+          <div className="relative">
+            <Search
+              aria-hidden
+              className="pointer-events-none absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground"
+            />
+            <Input
+              className="pl-8"
+              onChange={(event) => setQuery(event.target.value)}
+              placeholder="Search typed skills"
+              value={query}
+            />
+          </div>
+          <ul className="space-y-2">
+            {shown.map((rail) => (
+              <RailRow
+                iconNames={iconNames}
+                key={rail.rail_id}
+                rail={rail}
+                skills={skills}
+                taken={taken}
+              />
+            ))}
+          </ul>
+        </>
+      )}
+    </Card>
+  );
+}
+
+/* ------------------------------------------------------------------ */
 /* The page                                                            */
 /* ------------------------------------------------------------------ */
 
 export function SkillCatalog({
   iconNames,
+  rails,
   skills,
 }: {
   iconNames: readonly string[];
+  rails: UncategorizedRail[];
   skills: ConsoleSkill[];
 }) {
   const [query, setQuery] = useState("");
@@ -514,6 +856,13 @@ export function SkillCatalog({
   return (
     <div className="space-y-8">
       <FeaturedEditor skills={skills} />
+
+      <UncategorizedCard
+        iconNames={iconNames}
+        rails={rails}
+        skills={skills}
+        taken={taken}
+      />
 
       <Card className="space-y-4 p-5">
         <div className="flex flex-wrap items-start justify-between gap-3">
@@ -629,6 +978,7 @@ export function SkillCatalog({
                       editing={editing?.id === skill.id}
                       onEdit={() => toggleEdit(skill)}
                       skill={skill}
+                      skills={skills}
                     />
                   </td>
                 </tr>

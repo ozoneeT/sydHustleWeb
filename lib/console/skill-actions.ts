@@ -66,6 +66,9 @@ function explain(message: string): string {
   if (message.includes("unknown_skill")) {
     return "That skill is no longer in the catalogue. Reload the page.";
   }
+  if (message.includes("rail_required")) {
+    return "Nothing to move.";
+  }
   if (message.includes("too_many_featured")) {
     return "Eight chips is the most the wizard will draw.";
   }
@@ -213,4 +216,97 @@ export async function setFeaturedSkills(
 
   refresh();
   return { error: null, saved: true };
+}
+
+/**
+ * Report a move in the only terms that are true.
+ *
+ * `console_move_listings` returns what it actually did, because a
+ * certified listing has its trade frozen by a trigger that reverts the
+ * field WITHOUT raising - so a move that counted rows before the update
+ * would report a success it never achieved.
+ */
+function describeMove(result: unknown): string {
+  const row = (result ?? {}) as { moved?: number; skipped_certified?: number };
+  const moved = Number(row.moved ?? 0);
+  const skipped = Number(row.skipped_certified ?? 0);
+  const listings = `${moved} ${moved === 1 ? "listing" : "listings"}`;
+  if (skipped > 0) {
+    return `Moved ${listings}. ${skipped} certified ${
+      skipped === 1 ? "listing was" : "listings were"
+    } left where they are — a certificate is issued against a trade, so the trade cannot be reassigned from here.`;
+  }
+  return `Moved ${listings}.`;
+}
+
+export type MoveState = {
+  error: string | null;
+  message: string | null;
+};
+
+export async function moveListings(
+  _prev: MoveState,
+  formData: FormData
+): Promise<MoveState> {
+  await requireConsole();
+
+  const rail = String(formData.get("rail_id") ?? "");
+  // Empty means "send them back to their own typed rail", which is how a
+  // move is undone: `rail_id` is generated from the name nothing touched.
+  const target = String(formData.get("skill_id") ?? "").trim() || null;
+  if (!rail) return { error: "Nothing to move.", message: null };
+
+  const supabase = createServerSupabaseClient();
+  const { data, error } = await supabase.rpc("console_move_listings", {
+    p_rail_id: rail,
+    p_skill_id: target,
+  });
+  if (error) return { error: explain(error.message), message: null };
+
+  refresh();
+  return { error: null, message: describeMove(data) };
+}
+
+export async function promoteRail(
+  _prev: MoveState,
+  formData: FormData
+): Promise<MoveState> {
+  await requireConsole();
+
+  const rail = String(formData.get("rail_id") ?? "");
+  const parsed = skillSchema.safeParse({
+    name: formData.get("name"),
+    name_plural: (formData.get("name_plural") as string) || undefined,
+    icon: formData.get("icon"),
+    licensed_trade: formData.get("licensed_trade") === "on",
+  });
+  if (!rail) return { error: "Nothing to promote.", message: null };
+  if (!parsed.success) {
+    return {
+      error: "A skill needs a name of at least two characters and an icon.",
+      message: null,
+    };
+  }
+  if (!iconExists(parsed.data.icon)) {
+    return {
+      error: `\u201c${parsed.data.icon}\u201d isn't an Ionicons name. Pick one from the list.`,
+      message: null,
+    };
+  }
+
+  const supabase = createServerSupabaseClient();
+  const { data, error } = await supabase.rpc("console_promote_rail", {
+    p_rail_id: rail,
+    p_name: parsed.data.name,
+    p_name_plural: parsed.data.name_plural ?? parsed.data.name,
+    p_icon: parsed.data.icon,
+    p_licensed_trade: parsed.data.licensed_trade,
+  });
+  if (error) return { error: explain(error.message), message: null };
+
+  refresh();
+  return {
+    error: null,
+    message: `Added to the catalogue. ${describeMove(data)}`,
+  };
 }

@@ -1,6 +1,10 @@
 import { SkillCatalog } from "@/components/console/SkillCatalog";
 import { Card } from "@/components/ui/card";
-import { ICON_NAMES, listConsoleSkills } from "@/lib/console/skills";
+import {
+  ICON_NAMES,
+  listConsoleSkills,
+  listUncategorizedRails,
+} from "@/lib/console/skills";
 
 export const metadata = { title: "Skills — sydHustle Console" };
 
@@ -8,7 +12,10 @@ export const metadata = { title: "Skills — sydHustle Console" };
 export const dynamic = "force-dynamic";
 
 export default async function SkillsPage() {
-  const skills = await listConsoleSkills();
+  const [skills, rails] = await Promise.all([
+    listConsoleSkills(),
+    listUncategorizedRails(),
+  ]);
 
   return (
     <div className="space-y-8">
@@ -23,7 +30,7 @@ export default async function SkillsPage() {
         </p>
       </div>
 
-      <SkillCatalog iconNames={ICON_NAMES} skills={skills} />
+      <SkillCatalog iconNames={ICON_NAMES} rails={rails} skills={skills} />
 
       <Card className="space-y-2 p-5 text-sm text-muted-foreground">
         <p className="font-medium text-foreground">
@@ -43,6 +50,20 @@ export default async function SkillsPage() {
           with the fallback icon — Hustlers who did nothing, told nothing. So
           it is refused while even one listing remains, and only offered on
           skills with none. Use it for something added by mistake.
+        </p>
+        <p>
+          <strong className="text-foreground">Move listings</strong> is the
+          way out of both. A skill you would rather not offer can have its
+          listings filed under one that fits — the Hustler&apos;s own
+          wording stays on their card, only the rail changes — and once the
+          count reaches zero the delete becomes available. The same action
+          folds an uncategorised rail into the catalogue.
+        </p>
+        <p>
+          Certified listings are the exception: a certificate is issued
+          against a trade, so their trade is frozen and a move leaves them
+          where they are. The console says how many it skipped rather than
+          reporting a success it did not achieve.
         </p>
         <p>
           Icons are outline-only and unique per skill, both enforced by the

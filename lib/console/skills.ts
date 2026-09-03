@@ -48,6 +48,40 @@ export async function listConsoleSkills(): Promise<ConsoleSkill[]> {
 }
 
 /**
+ * The rails nobody wrote down.
+ *
+ * A Hustler who types their own trade instead of picking one gets a rail
+ * of their own on the Skills feed, keyed on their wording, with no
+ * catalogue row behind it. Those are two thirds of what the app shows
+ * and none of it was reachable from a console that reads the catalogue.
+ */
+export type UncategorizedRail = {
+  rail_id: string;
+  display_name: string;
+  listing_count: number;
+  /** Owned by a real account, as opposed to the seeded demo listings. */
+  owned_count: number;
+  /** Frozen by certification — these cannot be moved. See the migration. */
+  certified_count: number;
+  newest_at: string | null;
+};
+
+export async function listUncategorizedRails(): Promise<UncategorizedRail[]> {
+  const supabase = createServerSupabaseClient();
+  const { data, error } = await supabase.rpc("console_uncategorized_rails");
+  if (error) throw new Error(error.message);
+
+  return (data ?? []).map((row: Record<string, unknown>) => ({
+    rail_id: String(row.rail_id),
+    display_name: String(row.display_name),
+    listing_count: Number(row.listing_count ?? 0),
+    owned_count: Number(row.owned_count ?? 0),
+    certified_count: Number(row.certified_count ?? 0),
+    newest_at: row.newest_at === null ? null : String(row.newest_at),
+  }));
+}
+
+/**
  * Every outline glyph Ionicons ships, read out of the app's own icon
  * font at the version it bundles.
  *
