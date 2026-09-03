@@ -21,7 +21,12 @@ import { createServerSupabaseClient } from "@/lib/supabase/server";
 
 export type SkillFormState = { error: string | null; saved: boolean };
 
-const EMPTY: SkillFormState = { error: null, saved: false };
+// The starting state lives in the component, not here. A "use server"
+// module may export ONLY async functions - every other export is
+// registered as a server reference, and Next throws when it turns out
+// not to be callable. It throws when the action RUNS rather than when
+// the file is built, so the whole file compiles, deploys, renders its
+// page, and then fails on the first button press.
 
 const skillSchema = z.object({
   id: z.string().trim().max(64).optional(),
@@ -209,5 +214,3 @@ export async function setFeaturedSkills(
   refresh();
   return { error: null, saved: true };
 }
-
-export const INITIAL_SKILL_STATE = EMPTY;

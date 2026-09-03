@@ -19,7 +19,7 @@ export type PanicActionState = { error: string | null; done: boolean };
  * anybody will have to judge that call by is this sentence.
  *
  * Write who was spoken to and how they were identified: "Rang Ifemi
- * (sister, on file) 21:40, she had spoken to David, he is home" decides
+ * (sister, on file) 21:40, she had spoken to Emeka, he is home" decides
  * itself on review. "Confirmed safe" does not.
  */
 const clearSchema = z.object({
