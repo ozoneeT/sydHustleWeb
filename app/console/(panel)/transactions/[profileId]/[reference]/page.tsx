@@ -5,6 +5,7 @@ import { PrintButton } from "@/components/console/PrintButton";
 import { Card } from "@/components/ui/card";
 import { naira, shortDate } from "@/lib/console/format";
 import { getTransactionDetail, REASON_LABELS } from "@/lib/console/transactions";
+import { requireConsole } from "@/lib/console/dal";
 
 export const metadata = { title: "Transaction — sydHustle Console" };
 export const dynamic = "force-dynamic";
@@ -92,6 +93,8 @@ export default async function TransactionDetailPage({
 }: {
   params: Promise<{ profileId: string; reference: string }>;
 }) {
+  await requireConsole("transactions");
+
   const { profileId, reference } = await params;
   const detail = await getTransactionDetail(reference);
   if (!detail) notFound();

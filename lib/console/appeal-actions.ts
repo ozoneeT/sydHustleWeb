@@ -26,7 +26,7 @@ export async function sendAppealMessage(
   _prev: AppealMessageState,
   formData: FormData
 ): Promise<AppealMessageState> {
-  await requireConsole();
+  await requireConsole("appeals");
 
   const parsed = messageSchema.safeParse({
     kind: formData.get("kind"),
@@ -80,7 +80,7 @@ export async function resolveAppeal(
   _prev: ResolveAppealState,
   formData: FormData
 ): Promise<ResolveAppealState> {
-  await requireConsole();
+  await requireConsole("appeals");
 
   const parsed = resolveSchema.safeParse({
     kind: formData.get("kind"),

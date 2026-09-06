@@ -15,9 +15,9 @@ Built with Next.js, Tailwind CSS, and Supabase.
 2. **Set up Supabase**
 
    - Create a project at [supabase.com](https://supabase.com)
-   - Open the SQL Editor and run the migrations in order: [`001_initial.sql`](supabase/migrations/001_initial.sql), [`002_survey_redesign.sql`](supabase/migrations/002_survey_redesign.sql), [`003_marketing_team_and_waitlist_fields.sql`](supabase/migrations/003_marketing_team_and_waitlist_fields.sql), [`004_surveyors.sql`](supabase/migrations/004_surveyors.sql), [`005_email_verifications.sql`](supabase/migrations/005_email_verifications.sql), then [`006_join_waitlist_question.sql`](supabase/migrations/006_join_waitlist_question.sql)
+   - Open the SQL Editor and run the migrations in order: [`001_initial.sql`](supabase/migrations/001_initial.sql), [`002_survey_redesign.sql`](supabase/migrations/002_survey_redesign.sql), [`003_marketing_team_and_waitlist_fields.sql`](supabase/migrations/003_marketing_team_and_waitlist_fields.sql), [`004_surveyors.sql`](supabase/migrations/004_surveyors.sql), [`005_email_verifications.sql`](supabase/migrations/005_email_verifications.sql), [`006_join_waitlist_question.sql`](supabase/migrations/006_join_waitlist_question.sql), [`007_email_campaigns.sql`](supabase/migrations/007_email_campaigns.sql), then [`008_console_rbac.sql`](supabase/migrations/008_console_rbac.sql)
    - Copy your project URL, anon key, and service role key from **Project Settings → API**
-   - **Seed your admin account** — surveyors sign themselves up, but the first admin has to be inserted manually. Run this in the SQL editor with your own name and a PIN you choose:
+   - **Seed a moderator PIN** — `/survey` won't start without one. Run this in the SQL editor with a name and a PIN you choose (the survey list itself is opened with `CONSOLE_EMAIL` / `CONSOLE_PASSWORD`, not a PIN):
      ```sql
      insert into public.surveyors (name, pin, role)
      values ('Your Name', '482913', 'admin');
@@ -53,10 +53,11 @@ Built with Next.js, Tailwind CSS, and Supabase.
 |-------|---------|
 | `/` | Landing page — waitlist signup, survey CTA |
 | `/survey` | Student side hustle validation questionnaire (requires a moderator PIN to start) |
-| `/moderator` | Log in with name + PIN — routes to `/dashboard` (surveyor) or `/admin` |
-| `/moderator/signup` | Surveyors sign up with just their name and get a unique 6-digit PIN |
-| `/dashboard` | A surveyor's own responses, live counts, and their PIN to reshare |
-| `/admin` | All responses across every surveyor, with a per-surveyor leaderboard |
+| `/surveylist` | The pre-launch contact list — every respondent and moderator, with copyable emails and phone numbers. Sign in with the admin details (`CONSOLE_EMAIL` / `CONSOLE_PASSWORD`) |
+| `/console` | Business console — operators. What each person sees depends on their role |
+| `/admin` | Access control — roles and staff. The account owner only |
+| `/console/campaigns` | Email marketing dashboard — write, preview, test and send bulk campaigns |
+| `/unsubscribe` | Where a campaign's unsubscribe link lands |
 
 ## Data
 
@@ -66,20 +67,67 @@ Responses are stored in Supabase tables:
 - **`survey_responses`** — full survey answers, each linked to the surveyor (`surveyor_id`) who collected it
 - **`surveyors`** — surveyor/admin accounts (name, unique PIN, role)
 - **`email_verifications`** — short-lived 6-digit codes used to confirm a respondent owns the email they entered (see below)
+- **`email_campaigns`** / **`email_campaign_recipients`** — a marketing campaign and one row per person it was sent to, which doubles as the send queue
+- **`email_unsubscribes`** — the suppression list, checked before every batch and never overridden by anything
+- **`console_roles`** / **`console_staff`** / **`console_staff_roles`** — who works in the console and which tabs their roles open
+- **`console_invitations`** — one-time invitation tokens, stored only as hashes
 
-Review responses in the Supabase **Table Editor**, or via the `/admin` dashboard.
+Review responses in the Supabase **Table Editor**, or via `/surveylist`.
 
-### Moderator / surveyor accounts
+### Moderators and the survey list
 
-There are no passwords or email-based accounts for surveyors — this is intentionally lightweight for a small internal team:
+Field collection is over, so there are no moderator accounts to log into any more — the surveyor dashboards (`/moderator`, `/moderator/signup`, `/dashboard`) and the old `/admin` page are gone, replaced by a single `/surveylist`:
 
-- **Sign up** (`/moderator/signup`) just takes a name. The server generates a random, unique 6-digit PIN and shows it once — the surveyor needs to save it.
-- **Login** (`/moderator`) takes name + PIN. On success, a signed session cookie is issued (see `lib/moderator/session.ts`); there's no Supabase Auth involved.
-- Every `/survey` respondent must enter a valid moderator PIN before question one — this is what links their response to a surveyor (`survey_responses.surveyor_id`).
-- Dashboards use React's `cache()`-backed Data Access Layer (`lib/moderator/dal.ts`) to verify the session and scope every query to the logged-in surveyor (or, for admins, to everyone). `proxy.ts` only does a fast optimistic redirect; the real authorization check happens in the DAL on every request.
-- New responses trigger a lightweight Realtime Broadcast ping (`lib/moderator/realtime.ts`) to the relevant surveyor's channel and the admin channel, which tells open dashboards to refresh — no PII is ever sent over that channel, only a "something changed, go refetch" signal.
+- **Login** uses the same admin details as the console (`CONSOLE_EMAIL` / `CONSOLE_PASSWORD`), posted to `/surveylist/login`. It mints its own cookie (`lib/surveylist/session.ts`), scoped to `/surveylist` — the same credentials open both doors, but neither session is the other, so a stolen list cookie can't open the books.
+- **The list** is a contact sheet first (`lib/survey/contacts.ts` + `components/surveylist/ContactsTable.tsx`): name, email, phone, school, primary use and marketing interest, with search, filters, per-value copy, "copy every email", CSV export and paging. Under it sit the moderator table and the full expandable responses.
+- **Moderators are contacts too.** Where a moderator also filled the survey their own row is badged; the rest appear name-only, because the `surveyors` table never collected an email.
+- Every `/survey` respondent still enters a moderator PIN before question one — that's the only surveyor-facing check left (`lib/survey/pin-actions.ts`), and it's what links a response to whoever collected it (`survey_responses.surveyor_id`).
+- New responses trigger a lightweight Realtime Broadcast ping (`lib/survey/realtime.ts`), which tells an open survey list to refetch — no PII is ever sent over that channel, only a "something changed, go refetch" signal.
 
-**Known trade-off:** a 6-digit PIN is a small guess-space (there's no rate-limiting yet). This is fine for a small, trusted team of surveyors, but isn't meant to scale to a public-facing login.
+## Console access control
+
+The console used to have one account: `CONSOLE_EMAIL` / `CONSOLE_PASSWORD` from the environment. It still does — that account is the **owner**, opens every tab, and is deliberately not a database row, so it can't be demoted, deleted, or locked out through the screen that administers everyone else. An empty staff table is a working console.
+
+Everyone else is staff, managed at **`/admin`**.
+
+**A role is a set of console tabs.** Nothing finer for now — no per-record rules, no allow/deny precedence. Someone's access is the union of the roles they hold, so what you tick is exactly what they get. Four roles ship as starting points (Finance, Support, Trust & Safety, Growth); all four are editable and deletable, and none is special to the code.
+
+**Tabs are declared once**, in [`lib/console/tabs.ts`](lib/console/tabs.ts). The sidebar renders from it, the roles editor offers it as checkboxes, the proxy maps a URL to it, and `requireConsole` demands one. `ConsoleTab` is the union of those keys, so a tab that isn't in the list can't be granted, and a page that names a tab which doesn't exist won't compile.
+
+**Inviting someone** (`/admin/staff`) creates the account, attaches the roles, and emails a one-time link through Resend. Only the link's SHA-256 is stored, so a database dump contains no usable way in. They set their own password at `/console/accept?token=…` — the owner never sees it — and land straight on the first tab their role opens. Links expire in 7 days, and re-inviting invalidates the previous one.
+
+**Enforcement is in three places**, on purpose:
+
+1. **`proxy.ts`** maps the URL to a tab and checks the list cached in the session token. This is optimistic and exists for speed — no database round trip on every navigation.
+2. **`requireConsole(tab)`** in every page and every server action is the real check. It re-reads the roles from the database on each request, so access removed in `/admin` — or a suspension — takes effect on their very next click rather than when the token expires.
+3. **The sidebar** shows only the tabs someone holds. That is a courtesy, not a control; hiding a link protects nobody.
+
+The argument to `requireConsole` is **not optional**, and that is the whole point. Server actions are reachable by direct POST, not only through the UI, so an action that forgot to say which tab it belongs to would be an open door for any signed-in staff member. Making the tab a required parameter turns "did we remember to check?" into a compile error.
+
+**`/admin` has its own sign-in**, using the same owner credentials but a separate two-hour cookie scoped to `/admin`. A console session left open all day can't be walked up to and used to grant somebody the panic desk. Staff can never reach it: it is gated on a password that lives in the environment and cannot be granted by any role.
+
+**Suspend rather than delete** when someone leaves — it is reversible, and it ends their open session immediately.
+
+## Email marketing
+
+`/console/campaigns` sends bulk email to the pre-launch list through Resend. One template, one audience picker, one send button — the parts that are easy to get catastrophically wrong are the parts you cannot edit.
+
+**The template** ([`lib/email/template.ts`](lib/email/template.ts)) is filled in by slots — subject, preview text, heading, body, button, optional banner, closing note — not by typing HTML. Every campaign therefore carries the same header, the same button, the same footer, the same unsubscribe line, and a plain-text alternative built from the same content. `{{first_name}}` and `{{name}}` work in any slot. The composer's live preview calls that exact function in an iframe, so what you approve is byte-for-byte what leaves the building.
+
+**The audience** ([`lib/email/audience.ts`](lib/email/audience.ts)) is the survey and waitlist tables, de-duplicated by address, optionally narrowed by school, minus everyone on the suppression list. App users in `profiles` are deliberately unreachable from here: an account is not a marketing opt-in, and the app promises no promotional messaging.
+
+**The send** ([`lib/console/campaign-actions.ts`](lib/console/campaign-actions.ts)) resolves the audience once into `email_campaign_recipients`, then works through it 100 at a time using Resend's batch endpoint. The queue lives in Postgres, so:
+
+- closing the tab pauses the send instead of losing it — reopen the campaign and press resume;
+- a row leaves `pending` the moment it is sent, so nobody is ever mailed twice;
+- the suppression list is re-read for every batch, so an unsubscribe that lands mid-send takes effect in *this* campaign;
+- a failure that is worth retrying (429, 5xx) leaves the batch pending; one that isn't gets marked failed with the reason, and "Retry failed" puts them back.
+
+**Unsubscribing** is one signed token per address ([`lib/email/unsubscribe.ts`](lib/email/unsubscribe.ts)) — no login, and nobody can unsubscribe anyone else by editing a URL. Every campaign carries `List-Unsubscribe` and `List-Unsubscribe-Post` headers, so Gmail and Yahoo show their own one-click unsubscribe next to the sender name and POST to `/api/email/unsubscribe`; that is now effectively mandatory for bulk senders, and its absence is what pushes mail into spam. The visible footer link lands on `/unsubscribe`, which does **not** unsubscribe on page load — a link scanner opening every URL in the email would otherwise unsubscribe people who never clicked.
+
+**Delivery tracking** is optional and arrives by webhook. Point a Resend webhook at `/api/email/webhook`, put its `whsec_...` secret in `RESEND_WEBHOOK_SECRET`, and delivered/opened/clicked/bounced/complained flow into the dashboard. Hard bounces and spam complaints add themselves to the suppression list within seconds — the single most valuable thing this endpoint does. Without the secret it refuses everything and campaigns simply stop reporting at "sent".
+
+**Before a real send:** send yourself a test from the composer, check it on a phone, and remember a Resend free-tier account covers 3,000 emails a month.
 
 ## Email verification
 

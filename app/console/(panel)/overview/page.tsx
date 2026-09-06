@@ -1,11 +1,14 @@
-import { StatCard } from "@/components/moderator/StatCard";
+import { StatCard } from "@/components/ui/stat-card";
 import { Card } from "@/components/ui/card";
 import { getConsoleStats } from "@/lib/console/data";
 import { naira } from "@/lib/console/format";
+import { requireConsole } from "@/lib/console/dal";
 
 export const metadata = { title: "Overview — sydHustle Console" };
 
 export default async function OverviewPage() {
+  await requireConsole("overview");
+
   const stats = await getConsoleStats();
 
   const netFlow30d = stats.flows.money_in_30d - stats.flows.money_out_30d;

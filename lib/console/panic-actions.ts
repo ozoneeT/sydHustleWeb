@@ -31,7 +31,7 @@ export async function clearPanicAlert(
   _prev: PanicActionState,
   formData: FormData
 ): Promise<PanicActionState> {
-  await requireConsole();
+  await requireConsole("panic");
 
   const parsed = clearSchema.safeParse({
     id: formData.get("id"),
@@ -84,7 +84,7 @@ export async function decideHoldAppeal(
   _prev: PanicActionState,
   formData: FormData
 ): Promise<PanicActionState> {
-  await requireConsole();
+  await requireConsole("panic");
 
   const parsed = decideSchema.safeParse({
     id: formData.get("id"),

@@ -27,7 +27,7 @@ async function decide(
   rpc: "uphold_review_appeal" | "reject_review_appeal",
   formData: FormData
 ): Promise<ReviewAppealActionState> {
-  await requireConsole();
+  await requireConsole("review-appeals");
 
   const parsed = decisionSchema.safeParse({
     id: formData.get("id"),

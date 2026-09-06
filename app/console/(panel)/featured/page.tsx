@@ -1,5 +1,5 @@
 import { BoostCancel, BoostRank } from "@/components/console/FeatureRowActions";
-import { StatCard } from "@/components/moderator/StatCard";
+import { StatCard } from "@/components/ui/stat-card";
 import {
   clickThrough,
   isLive,
@@ -10,6 +10,7 @@ import {
   type SmsUsageRow,
 } from "@/lib/console/featured";
 import { shortDate } from "@/lib/console/format";
+import { requireConsole } from "@/lib/console/dal";
 
 export const metadata = { title: "Subscriptions — sydHustle Console" };
 
@@ -23,6 +24,8 @@ const STATUS_STYLES: Record<string, string> = {
 };
 
 export default async function SubscriptionsPage() {
+  await requireConsole("featured");
+
   const [boosts, smsUsage] = await Promise.all([listBoosts(), listSmsUsage()]);
 
   const live = boosts.filter(isLive);

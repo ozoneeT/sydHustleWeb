@@ -4,6 +4,7 @@ import { listUsers } from "@/lib/console/data";
 import { naira, shortDate } from "@/lib/console/format";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { requireConsole } from "@/lib/console/dal";
 
 export const metadata = { title: "Users — sydHustle Console" };
 
@@ -12,6 +13,8 @@ export default async function UsersPage({
 }: {
   searchParams: Promise<{ q?: string }>;
 }) {
+  await requireConsole("users");
+
   const { q } = await searchParams;
   const users = await listUsers(q);
 

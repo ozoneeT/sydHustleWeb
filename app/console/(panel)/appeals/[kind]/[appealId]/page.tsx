@@ -10,6 +10,7 @@ import {
   type AppealKind,
 } from "@/lib/console/appeals";
 import { naira, shortDate } from "@/lib/console/format";
+import { requireConsole } from "@/lib/console/dal";
 
 export const metadata = { title: "Appeal — sydHustle Console" };
 
@@ -18,6 +19,8 @@ export default async function AppealDetailPage({
 }: {
   params: Promise<{ kind: string; appealId: string }>;
 }) {
+  await requireConsole("appeals");
+
   const { kind, appealId } = await params;
   if (kind !== "hustle" && kind !== "booking") notFound();
 

@@ -3,10 +3,13 @@ import Link from "next/link";
 import { Card } from "@/components/ui/card";
 import { listAppeals } from "@/lib/console/appeals";
 import { naira, shortDate } from "@/lib/console/format";
+import { requireConsole } from "@/lib/console/dal";
 
 export const metadata = { title: "Appeals — sydHustle Console" };
 
 export default async function AppealsPage() {
+  await requireConsole("appeals");
+
   const rows = await listAppeals();
   const open = rows.filter((row) => !row.resolvedAt);
   const held = open.reduce((sum, row) => sum + (row.escrowHeld ? row.amount : 0), 0);

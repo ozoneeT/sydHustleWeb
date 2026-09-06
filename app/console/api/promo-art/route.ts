@@ -1,7 +1,7 @@
 import { AwsClient } from "aws4fetch";
 import { NextResponse } from "next/server";
 
-import { hasConsoleSession } from "@/lib/console/session";
+import { consoleActorCan } from "@/lib/console/dal";
 
 /**
  * Banner artwork upload.
@@ -57,8 +57,14 @@ const TYPES = ["image/jpeg", "image/png", "image/webp"];
 const PREFIX = "promo";
 
 export async function POST(request: Request) {
-  if (!(await hasConsoleSession())) {
-    return NextResponse.json({ error: "Not signed in." }, { status: 401 });
+  // Banner artwork belongs to the Promotions tab, so this is gated by the
+  // same permission as the page that uploads it — a staff member without
+  // Promotions can't publish an image by posting straight to this route.
+  if (!(await consoleActorCan("promos"))) {
+    return NextResponse.json(
+      { error: "Not signed in, or no access to Promotions." },
+      { status: 403 }
+    );
   }
 
   const form = await request.formData();

@@ -39,7 +39,7 @@ export async function askDepositReview(
   _prev: HoldState,
   formData: FormData
 ): Promise<HoldState> {
-  await requireConsole();
+  await requireConsole("holds");
 
   const parsed = askSchema.safeParse({
     reviewId: formData.get("reviewId"),
@@ -78,7 +78,7 @@ export async function clearDepositReview(
   _prev: HoldState,
   formData: FormData
 ): Promise<HoldState> {
-  await requireConsole();
+  await requireConsole("holds");
 
   const parsed = clearSchema.safeParse({
     reviewId: formData.get("reviewId"),
@@ -131,7 +131,7 @@ export async function markDepositRefunded(
   _prev: HoldState,
   formData: FormData
 ): Promise<HoldState> {
-  await requireConsole();
+  await requireConsole("holds");
 
   const parsed = refundedSchema.safeParse({
     reviewId: formData.get("reviewId"),
@@ -192,7 +192,7 @@ export async function flagTransaction(
   _prev: HoldState,
   formData: FormData
 ): Promise<HoldState> {
-  await requireConsole();
+  await requireConsole("holds");
 
   const parsed = flagSchema.safeParse({
     reference: formData.get("reference"),
@@ -247,7 +247,7 @@ export async function requestBvn(
   _prev: HoldState,
   formData: FormData
 ): Promise<HoldState> {
-  await requireConsole();
+  await requireConsole("identity");
 
   const parsed = bvnRequestSchema.safeParse({
     profileId: formData.get("profileId"),
@@ -282,7 +282,7 @@ export async function withdrawBvnRequest(
   _prev: HoldState,
   formData: FormData
 ): Promise<HoldState> {
-  await requireConsole();
+  await requireConsole("identity");
 
   const parsed = withdrawRequestSchema.safeParse({
     profileId: formData.get("profileId"),

@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { naira, shortDate } from "@/lib/console/format";
 import { listTransactionUsers } from "@/lib/console/transactions";
+import { requireConsole } from "@/lib/console/dal";
 
 export const metadata = { title: "Transactions — sydHustle Console" };
 
@@ -24,6 +25,8 @@ export default async function TransactionsPage({
 }: {
   searchParams: Promise<{ q?: string }>;
 }) {
+  await requireConsole("transactions");
+
   const { q } = await searchParams;
   const users = await listTransactionUsers(q);
 

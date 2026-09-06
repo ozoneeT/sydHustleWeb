@@ -36,7 +36,7 @@ export default async function TransactionReportsPage({
 }: {
   searchParams: Promise<{ status?: string }>;
 }) {
-  await requireConsole();
+  await requireConsole("transaction-reports");
 
   const { status } = await searchParams;
   const active = STATUSES.includes(status as TransactionReportStatus)

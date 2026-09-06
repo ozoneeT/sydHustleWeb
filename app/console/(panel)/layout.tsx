@@ -1,6 +1,8 @@
 import type { ReactNode } from "react";
+import { redirect } from "next/navigation";
 
 import { ConsoleNav } from "@/components/console/ConsoleNav";
+import { getConsoleActor } from "@/lib/console/dal";
 
 export const metadata = {
   robots: { index: false, follow: false },
@@ -25,13 +27,30 @@ export const metadata = {
  */
 export const dynamic = "force-dynamic";
 
-// Auth is enforced in proxy.ts for /console/* so this layout stays sync —
-// that lets loading.tsx show instantly on client navigations.
-
-export default function ConsolePanelLayout({
+/**
+ * The layout resolves who is signed in so the sidebar can show their tabs
+ * and nobody else's. It is async now, which costs a Supabase read per
+ * navigation for staff — the superadmin's session needs none.
+ *
+ * This is presentation, not authorization: every page under here calls
+ * `requireConsole` with its own tab, and the proxy checks the URL before
+ * either of them runs. Hiding a link the person can't use is a courtesy.
+ */
+export default async function ConsolePanelLayout({
   children,
 }: {
   children: ReactNode;
 }) {
-  return <ConsoleNav>{children}</ConsoleNav>;
+  const actor = await getConsoleActor();
+  if (!actor) redirect("/console");
+
+  return (
+    <ConsoleNav
+      permissions={actor.permissions}
+      actorLabel={actor.kind === "super" ? "Superadmin" : actor.name}
+      isSuperAdmin={actor.kind === "super"}
+    >
+      {children}
+    </ConsoleNav>
+  );
 }

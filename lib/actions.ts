@@ -3,7 +3,7 @@
 import { z } from "zod";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { allHustlesRated } from "@/lib/hustle-tasks";
-import { broadcastNewResponse } from "@/lib/moderator/realtime";
+import { broadcastNewResponse } from "@/lib/survey/realtime";
 import { hasValidMxRecord } from "@/lib/email/mx";
 import { isEmailVerified } from "@/lib/email/verification";
 
@@ -487,7 +487,7 @@ export async function submitSurvey(
       };
     }
 
-    await broadcastNewResponse(supabase, parsed.data.surveyorId);
+    await broadcastNewResponse(supabase);
 
     if (email) {
       const { error: waitlistError } = await supabase.from("waitlist").upsert(
@@ -560,15 +560,13 @@ export async function submitMarketingInterest(
 
   try {
     const supabase = createServerSupabaseClient();
-    const { data, error } = await supabase
+    const { error } = await supabase
       .from("survey_responses")
       .update({
         join_marketing_team: parsed.data.joinMarketingTeam,
         marketing_whatsapp: parsed.data.marketingWhatsapp || null,
       })
-      .eq("id", parsed.data.responseId)
-      .select("surveyor_id")
-      .single();
+      .eq("id", parsed.data.responseId);
 
     if (error) {
       console.error("failed to record marketing interest:", error);
@@ -578,9 +576,7 @@ export async function submitMarketingInterest(
       };
     }
 
-    if (data?.surveyor_id) {
-      await broadcastNewResponse(supabase, data.surveyor_id);
-    }
+    await broadcastNewResponse(supabase);
 
     return {
       success: true,

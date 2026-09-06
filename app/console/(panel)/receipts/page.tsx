@@ -16,7 +16,7 @@ export const metadata = { title: "Receipt check — sydHustle Console" };
  * pinned to one exact ledger row instead of a screenshot and a memory.
  */
 export default async function ReceiptsPage() {
-  await requireConsole();
+  await requireConsole("receipts");
 
   return (
     <div className="space-y-6">

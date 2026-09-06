@@ -8,10 +8,13 @@ import {
 import { listBroadcasts } from "@/lib/console/data";
 import { shortDate } from "@/lib/console/format";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
+import { requireConsole } from "@/lib/console/dal";
 
 export const metadata = { title: "Broadcast — sydHustle Console" };
 
 export default async function BroadcastPage() {
+  await requireConsole("broadcast");
+
   const supabase = createServerSupabaseClient();
   const [{ count }, history] = await Promise.all([
     supabase.from("profiles").select("id", { count: "exact", head: true }),

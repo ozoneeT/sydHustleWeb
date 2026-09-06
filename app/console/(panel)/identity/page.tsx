@@ -4,6 +4,7 @@ import { IdentityReveal } from "@/components/console/IdentityReveal";
 import { Input } from "@/components/ui/input";
 import { WaiveAttempts } from "@/components/console/WaiveAttempts";
 import { shortDate } from "@/lib/console/format";
+import { requireConsole } from "@/lib/console/dal";
 import {
   listIdentityDisclosures,
   listRetainedIdentityRecords,
@@ -20,6 +21,8 @@ export default async function IdentityPage({
 }: {
   searchParams: Promise<{ q?: string }>;
 }) {
+  await requireConsole("identity");
+
   const { q } = await searchParams;
   const [records, disclosures, blocks] = await Promise.all([
     listRetainedIdentityRecords(q),

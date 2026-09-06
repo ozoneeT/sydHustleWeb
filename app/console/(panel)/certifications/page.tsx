@@ -17,7 +17,7 @@ export const metadata = { title: "Certifications — sydHustle Console" };
  * ones.
  */
 export default async function CertificationsPage() {
-  await requireConsole();
+  await requireConsole("certifications");
   const reviews = await listCertificationReviews();
 
   const waiting = reviews.filter((review) => review.status === "submitted");

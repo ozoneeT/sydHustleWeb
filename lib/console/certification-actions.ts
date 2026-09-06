@@ -137,7 +137,7 @@ export async function requestCertificationInfo(
   _previous: CertificationActionState,
   formData: FormData,
 ): Promise<CertificationActionState> {
-  await requireConsole();
+  await requireConsole("certifications");
 
   const parsed = askSchema.safeParse({
     skillId: formData.get("skillId"),
@@ -194,7 +194,7 @@ export async function certifySkill(
   _previous: CertificationActionState,
   formData: FormData,
 ): Promise<CertificationActionState> {
-  await requireConsole();
+  await requireConsole("certifications");
 
   const parsed = decideSchema.safeParse({
     skillId: formData.get("skillId"),
@@ -246,7 +246,7 @@ export async function rejectCertification(
   _previous: CertificationActionState,
   formData: FormData,
 ): Promise<CertificationActionState> {
-  await requireConsole();
+  await requireConsole("certifications");
 
   const parsed = askSchema.safeParse({
     skillId: formData.get("skillId"),

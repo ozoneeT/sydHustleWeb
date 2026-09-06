@@ -31,7 +31,7 @@ export type RestrictionState = { error: string | null; done: boolean };
 export async function listRestrictions(
   profileId: string
 ): Promise<FeatureRestriction[]> {
-  await requireConsole();
+  await requireConsole("users");
   const supabase = createServerSupabaseClient();
   const { data, error } = await supabase.rpc("feature_restrictions_for", {
     p_profile: profileId,
@@ -68,7 +68,7 @@ export async function setFeatureRestriction(
   _prev: RestrictionState,
   formData: FormData
 ): Promise<RestrictionState> {
-  await requireConsole();
+  await requireConsole("users");
 
   const parsed = schema.safeParse({
     profileId: formData.get("profileId"),
@@ -141,7 +141,7 @@ export type ConsoleUserProfile = {
 export async function getConsoleUser(
   profileId: string
 ): Promise<ConsoleUserProfile | null> {
-  await requireConsole();
+  await requireConsole("users");
   const supabase = createServerSupabaseClient();
   const { data, error } = await supabase
     .from("profiles")

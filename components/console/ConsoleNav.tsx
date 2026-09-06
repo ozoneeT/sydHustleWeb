@@ -3,7 +3,13 @@
 import Link from "next/link";
 import { useLinkStatus } from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect, useState, type ComponentType, type ReactNode } from "react";
+import {
+  useEffect,
+  useMemo,
+  useState,
+  type ComponentType,
+  type ReactNode,
+} from "react";
 import {
   BadgePercent,
   Banknote,
@@ -16,6 +22,7 @@ import {
   LayoutDashboard,
   Lock,
   Mail,
+  MailPlus,
   MapPin,
   Megaphone,
   Menu,
@@ -35,6 +42,7 @@ import {
 } from "lucide-react";
 
 import { ConsoleLogoutButton } from "@/components/console/ConsoleLogoutButton";
+import { groupedTabs, tabHref } from "@/lib/console/tabs";
 import { cn } from "@/lib/utils";
 
 function NavPendingHint() {
@@ -52,77 +60,37 @@ function NavPendingHint() {
 
 type NavIcon = ComponentType<{ className?: string; strokeWidth?: number }>;
 
-type NavLink = {
-  href: string;
-  label: string;
-  icon: NavIcon;
+/** Tabs are declared as data in lib/console/tabs.ts, which the roles editor
+ * and the permission checks also read. Only the icons live here, because a
+ * React component can't sit in a list the server serialises. */
+const ICONS: Record<string, NavIcon> = {
+  LayoutDashboard,
+  CircleDollarSign,
+  Receipt,
+  Banknote,
+  Wallet,
+  CreditCard,
+  ReceiptText,
+  Users,
+  Mail,
+  Fingerprint,
+  ShieldCheck,
+  Flag,
+  Gavel,
+  MessageSquareWarning,
+  ShieldAlert,
+  LayoutList,
+  Lock,
+  Gauge,
+  Siren,
+  Moon,
+  MapPin,
+  Wrench,
+  Star,
+  BadgePercent,
+  Megaphone,
+  MailPlus,
 };
-
-type NavGroup = {
-  label: string;
-  links: NavLink[];
-};
-
-const GROUPS: NavGroup[] = [
-  {
-    label: "Books",
-    links: [
-      { href: "/console/overview", label: "Overview", icon: LayoutDashboard },
-      { href: "/console/earnings", label: "Earnings", icon: CircleDollarSign },
-      { href: "/console/costs", label: "Costs", icon: Receipt },
-      { href: "/console/transactions", label: "Transactions", icon: Banknote },
-      { href: "/console/withdrawals", label: "Withdrawals", icon: Wallet },
-      { href: "/console/payments", label: "Payments", icon: CreditCard },
-      { href: "/console/receipts", label: "Receipt check", icon: ReceiptText },
-      {
-        href: "/console/transaction-reports",
-        label: "Payment reports",
-        icon: ReceiptText,
-      },
-    ],
-  },
-  {
-    label: "People",
-    links: [
-      { href: "/console/users", label: "Users", icon: Users },
-      { href: "/console/subscribers", label: "Subscribers", icon: Mail },
-      { href: "/console/identity", label: "Identity", icon: Fingerprint },
-      {
-        href: "/console/certifications",
-        label: "Certifications",
-        icon: ShieldCheck,
-      },
-    ],
-  },
-  {
-    label: "Risk",
-    links: [
-      { href: "/console/reports", label: "Reports", icon: Flag },
-      { href: "/console/appeals", label: "Appeals", icon: Gavel },
-      {
-        href: "/console/review-appeals",
-        label: "Review appeals",
-        icon: MessageSquareWarning,
-      },
-      { href: "/console/moderation", label: "Moderation", icon: ShieldAlert },
-      { href: "/console/listings", label: "Listings", icon: LayoutList },
-      { href: "/console/holds", label: "Held funds", icon: Lock },
-      { href: "/console/limits", label: "Money limits", icon: Gauge },
-      { href: "/console/panic", label: "Panic", icon: Siren },
-      { href: "/console/quiet-hours", label: "Quiet hours", icon: Moon },
-      { href: "/console/location", label: "Location", icon: MapPin },
-    ],
-  },
-  {
-    label: "Ops",
-    links: [
-      { href: "/console/skills", label: "Skills", icon: Wrench },
-      { href: "/console/featured", label: "Subscriptions", icon: Star },
-      { href: "/console/promos", label: "Promotions", icon: BadgePercent },
-      { href: "/console/broadcast", label: "Broadcast", icon: Megaphone },
-    ],
-  },
-];
 
 function isActive(pathname: string, href: string) {
   return pathname === href || pathname.startsWith(`${href}/`);
@@ -130,9 +98,15 @@ function isActive(pathname: string, href: string) {
 
 function SidebarBody({
   pathname,
+  groups,
+  actorLabel,
+  isSuperAdmin,
   onNavigate,
 }: {
   pathname: string;
+  groups: ReturnType<typeof groupedTabs>;
+  actorLabel: string;
+  isSuperAdmin: boolean;
   onNavigate?: () => void;
 }) {
   return (
@@ -151,7 +125,7 @@ function SidebarBody({
                 <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-40" />
                 <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-emerald-400" />
               </span>
-              Operator session
+              {actorLabel}
             </p>
           </div>
         </div>
@@ -159,19 +133,20 @@ function SidebarBody({
 
       <nav className="flex-1 overflow-y-auto px-3 py-4">
         <div className="space-y-5">
-          {GROUPS.map((group) => (
+          {groups.map((group) => (
             <div key={group.label}>
               <p className="mb-1.5 px-2 text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground/70">
                 {group.label}
               </p>
               <ul className="space-y-0.5">
-                {group.links.map((link) => {
-                  const active = isActive(pathname, link.href);
-                  const Icon = link.icon;
+                {group.tabs.map((tab) => {
+                  const href = tabHref(tab.key);
+                  const active = isActive(pathname, href);
+                  const Icon = ICONS[tab.icon] ?? LayoutDashboard;
                   return (
-                    <li key={link.href}>
+                    <li key={tab.key}>
                       <Link
-                        href={link.href}
+                        href={href}
                         onClick={onNavigate}
                         className={cn(
                           "group relative flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-sm transition-colors",
@@ -192,7 +167,7 @@ function SidebarBody({
                           )}
                           strokeWidth={1.75}
                         />
-                        <span className="truncate">{link.label}</span>
+                        <span className="truncate">{tab.label}</span>
                         <NavPendingHint />
                       </Link>
                     </li>
@@ -201,17 +176,46 @@ function SidebarBody({
               </ul>
             </div>
           ))}
+
+          {groups.length === 0 && (
+            <p className="px-2 text-xs text-muted-foreground">
+              No tabs have been assigned to your role yet.
+            </p>
+          )}
         </div>
       </nav>
 
-      <div className="border-t border-white/10 p-3">
+      <div className="space-y-1 border-t border-white/10 p-3">
+        {isSuperAdmin && (
+          <Link
+            href="/admin"
+            onClick={onNavigate}
+            className="flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-sm text-muted-foreground transition-colors hover:bg-white/5 hover:text-white"
+          >
+            <ShieldCheck className="h-4 w-4 shrink-0 text-amber-300/80" strokeWidth={1.75} />
+            <span className="truncate">Roles &amp; staff</span>
+          </Link>
+        )}
         <ConsoleLogoutButton />
       </div>
     </>
   );
 }
 
-export function ConsoleNav({ children }: { children: ReactNode }) {
+export function ConsoleNav({
+  children,
+  permissions,
+  actorLabel,
+  isSuperAdmin,
+}: {
+  children: ReactNode;
+  /** The tabs this person holds — the sidebar renders nothing else. Hiding
+   * a tab is a courtesy, not the control: the pages and actions behind it
+   * refuse independently. */
+  permissions: readonly string[];
+  actorLabel: string;
+  isSuperAdmin: boolean;
+}) {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
 
@@ -235,16 +239,23 @@ export function ConsoleNav({ children }: { children: ReactNode }) {
     };
   }, [open]);
 
+  const groups = useMemo(() => groupedTabs(permissions), [permissions]);
+
   const activeLabel =
-    GROUPS.flatMap((group) => group.links).find((link) =>
-      isActive(pathname, link.href)
-    )?.label ?? "Console";
+    groups
+      .flatMap((group) => group.tabs)
+      .find((tab) => isActive(pathname, tabHref(tab.key)))?.label ?? "Console";
 
   return (
     <div className="flex h-dvh overflow-hidden bg-[radial-gradient(1200px_600px_at_10%_-10%,rgba(45,212,191,0.08),transparent_55%),#0b1120]">
       {/* Desktop sidebar */}
       <aside className="hidden h-dvh w-64 shrink-0 flex-col border-r border-white/10 bg-[#070d1a]/95 lg:flex">
-        <SidebarBody pathname={pathname} />
+        <SidebarBody
+          pathname={pathname}
+          groups={groups}
+          actorLabel={actorLabel}
+          isSuperAdmin={isSuperAdmin}
+        />
       </aside>
 
       <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
@@ -306,7 +317,13 @@ export function ConsoleNav({ children }: { children: ReactNode }) {
           >
             <X className="h-4 w-4" />
           </button>
-          <SidebarBody pathname={pathname} onNavigate={() => setOpen(false)} />
+          <SidebarBody
+            pathname={pathname}
+            groups={groups}
+            actorLabel={actorLabel}
+            isSuperAdmin={isSuperAdmin}
+            onNavigate={() => setOpen(false)}
+          />
         </aside>
       </div>
     </div>

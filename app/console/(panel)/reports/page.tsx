@@ -1,7 +1,8 @@
 import { ReportDecision } from "@/components/console/ReportDecision";
 import { ReportEnforcement } from "@/components/console/ReportEnforcement";
-import { StatCard } from "@/components/moderator/StatCard";
+import { StatCard } from "@/components/ui/stat-card";
 import { shortDate } from "@/lib/console/format";
+import { requireConsole } from "@/lib/console/dal";
 import {
   listReports,
   REPORT_REASON_LABELS,
@@ -35,6 +36,8 @@ export default async function ReportsPage({
 }: {
   searchParams: Promise<Search>;
 }) {
+  await requireConsole("reports");
+
   const { status = "pending", type = "all" } = await searchParams;
   const all = await listReports();
 

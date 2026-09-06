@@ -22,7 +22,7 @@ import { createServerSupabaseClient } from "@/lib/supabase/server";
  * after, the hold and when it moved, the withdrawal with its provider
  * reference and failure reason.
  *
- * `requireConsole()` first, always: this returns another person's bank
+ * `requireConsole("receipts")` first, always: this returns another person's bank
  * account number and both parties' wallet balances.
  */
 
@@ -143,7 +143,7 @@ export async function checkReceiptStamp(
   _previous: CheckState,
   formData: FormData,
 ): Promise<CheckState> {
-  await requireConsole();
+  await requireConsole("receipts");
 
   const reference = String(formData.get("reference") ?? "");
   const code = String(formData.get("code") ?? "");

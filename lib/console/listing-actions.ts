@@ -43,7 +43,7 @@ export async function suspendListing(
   _prev: ListingActionState,
   formData: FormData
 ): Promise<ListingActionState> {
-  await requireConsole();
+  await requireConsole("listings");
 
   const id = String(formData.get("id") ?? "");
   const question = String(formData.get("question") ?? "");
@@ -68,7 +68,7 @@ export async function removeListing(
   _prev: ListingActionState,
   formData: FormData
 ): Promise<ListingActionState> {
-  await requireConsole();
+  await requireConsole("listings");
 
   const id = String(formData.get("id") ?? "");
   const reason = String(formData.get("reason") ?? "");
@@ -92,7 +92,7 @@ export async function restoreListing(
   _prev: ListingActionState,
   formData: FormData
 ): Promise<ListingActionState> {
-  await requireConsole();
+  await requireConsole("listings");
 
   const id = String(formData.get("id") ?? "");
   if (!id) return { error: "Nothing to restore.", message: null };

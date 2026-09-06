@@ -32,7 +32,7 @@ export async function updateMoneyLimits(
   _prev: LimitsState,
   formData: FormData
 ): Promise<LimitsState> {
-  await requireConsole();
+  await requireConsole("limits");
 
   const rows: z.infer<typeof rowSchema>[] = [];
   for (const track of ["hustler", "provider"] as const) {
@@ -128,7 +128,7 @@ export async function updateBvnMode(
   _prev: BvnModeState,
   formData: FormData
 ): Promise<BvnModeState> {
-  await requireConsole();
+  await requireConsole("limits");
 
   const enabled = formData.get("bvn_required_for_all") === "on";
 

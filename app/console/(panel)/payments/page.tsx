@@ -9,6 +9,7 @@ import { describeFeeTiers, listFeeTiers, summariseFeeTiers } from "@/lib/console
 import { PROVIDER_LABELS } from "@/lib/console/payment-providers";
 import { naira } from "@/lib/console/format";
 import { getPaymentRails } from "@/lib/console/payments";
+import { requireConsole } from "@/lib/console/dal";
 
 export const metadata = { title: "Payments — sydHustle Console" };
 
@@ -20,6 +21,8 @@ export const metadata = { title: "Payments — sydHustle Console" };
 export const dynamic = "force-dynamic";
 
 export default async function PaymentsPage() {
+  await requireConsole("payments");
+
   const [settings, rails, feeTiers] = await Promise.all([
     getPlatformSettings(),
     getPaymentRails(),

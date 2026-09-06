@@ -63,7 +63,7 @@ export async function updateFeeTiers(
   _prev: FeeTiersState,
   formData: FormData
 ): Promise<FeeTiersState> {
-  await requireConsole();
+  await requireConsole("earnings");
 
   // The form posts one `above_amount` and one `percent` per row, in
   // document order. Read as parallel lists rather than by index, so

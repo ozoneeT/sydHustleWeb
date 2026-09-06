@@ -3,12 +3,13 @@ import {
   PromoDelete,
   PromoToggle,
 } from "@/components/console/PromoBannerForm";
-import { StatCard } from "@/components/moderator/StatCard";
+import { StatCard } from "@/components/ui/stat-card";
 import {
   describeAudience,
   isEmptyAudience,
 } from "@/lib/console/audience";
 import { APP_ROUTES, PROMO_SURFACES } from "@/lib/console/app-routes";
+import { requireConsole } from "@/lib/console/dal";
 import {
   isLive,
   listPromoBanners,
@@ -23,6 +24,8 @@ export const metadata = { title: "Promotions — sydHustle Console" };
 export const dynamic = "force-dynamic";
 
 export default async function PromosPage() {
+  await requireConsole("promos");
+
   const banners = await listPromoBanners();
   const counts = surfaceCounts(banners);
   const over = PROMO_SURFACES.filter(

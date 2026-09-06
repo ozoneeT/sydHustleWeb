@@ -1,6 +1,6 @@
 import { EarningsSettingsForm } from "@/components/console/EarningsSettingsForm";
 import { FeeTiersForm } from "@/components/console/FeeTiersForm";
-import { StatCard } from "@/components/moderator/StatCard";
+import { StatCard } from "@/components/ui/stat-card";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -8,6 +8,7 @@ import { getConsoleStats, getPlatformSettings } from "@/lib/console/data";
 import { summariseFeeTiers } from "@/lib/console/fee-tiers";
 import { naira } from "@/lib/console/format";
 import { getProfitAndLoss } from "@/lib/console/pnl";
+import { requireConsole } from "@/lib/console/dal";
 
 export const metadata = { title: "Earnings — sydHustle Console" };
 
@@ -25,6 +26,8 @@ export default async function EarningsPage({
 }: {
   searchParams: Promise<{ from?: string; to?: string }>;
 }) {
+  await requireConsole("earnings");
+
   const { from, to } = await searchParams;
   const [stats, settings, pnl] = await Promise.all([
     getConsoleStats(),

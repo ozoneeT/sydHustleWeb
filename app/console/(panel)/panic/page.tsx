@@ -2,8 +2,9 @@ import {
   ClearAlertAction,
   HoldAppealDecision,
 } from "@/components/console/PanicDeskActions";
-import { StatCard } from "@/components/moderator/StatCard";
+import { StatCard } from "@/components/ui/stat-card";
 import { shortDate } from "@/lib/console/format";
+import { requireConsole } from "@/lib/console/dal";
 import {
   HOLD_GROUND_LABELS,
   HOLD_GROUND_TESTS,
@@ -20,6 +21,8 @@ export const metadata = { title: "Panic — sydHustle Console" };
 export const dynamic = "force-dynamic";
 
 export default async function PanicPage() {
+  await requireConsole("panic");
+
   const [alerts, appeals] = await Promise.all([
     listPanicAlerts(),
     listHoldAppeals(),

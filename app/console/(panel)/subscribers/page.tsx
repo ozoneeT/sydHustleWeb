@@ -1,6 +1,7 @@
-import { StatCard } from "@/components/moderator/StatCard";
+import { StatCard } from "@/components/ui/stat-card";
 import { listSubscribers } from "@/lib/console/data";
 import { shortDate } from "@/lib/console/format";
+import { requireConsole } from "@/lib/console/dal";
 
 export const metadata = { title: "Subscribers — sydHustle Console" };
 
@@ -11,6 +12,8 @@ const STATUS_STYLES: Record<string, string> = {
 };
 
 export default async function SubscribersPage() {
+  await requireConsole("subscribers");
+
   const rows = await listSubscribers();
 
   const live = rows.filter((row) => row.live);

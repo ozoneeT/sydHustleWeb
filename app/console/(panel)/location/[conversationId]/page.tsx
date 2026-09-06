@@ -6,6 +6,7 @@ import {
   type FinalPin,
 } from "@/components/console/LiveLocationMap";
 import { Card } from "@/components/ui/card";
+import { requireConsole } from "@/lib/console/dal";
 import {
   getFinalPositions,
   getLiveSession,
@@ -27,6 +28,8 @@ export default async function LiveChannelPage({
 }: {
   params: Promise<{ conversationId: string }>;
 }) {
+  await requireConsole("location");
+
   const { conversationId } = await params;
   if (!/^[0-9a-fA-F-]{36}$/.test(conversationId)) notFound();
 

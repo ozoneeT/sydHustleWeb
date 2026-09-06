@@ -57,7 +57,7 @@ export async function updateEarningsSettings(
   _prev: EarningsState,
   formData: FormData
 ): Promise<EarningsState> {
-  await requireConsole();
+  await requireConsole("earnings");
 
   const parsed = earningsSchema.safeParse({
     withdrawal_cut_percent: formData.get("withdrawal_cut_percent"),
@@ -133,7 +133,7 @@ export async function updatePaymentProviders(
   _prev: ProvidersState,
   formData: FormData
 ): Promise<ProvidersState> {
-  await requireConsole();
+  await requireConsole("payments");
 
   const parsed = providersSchema.safeParse({
     funding_provider: formData.get("funding_provider"),
@@ -177,7 +177,7 @@ export async function updateKycProviders(
   _prev: KycState,
   formData: FormData
 ): Promise<KycState> {
-  await requireConsole();
+  await requireConsole("payments");
 
   const parsed = kycSchema.safeParse({
     nin_provider: formData.get("nin_provider"),
@@ -232,7 +232,7 @@ export async function addCost(
   _prev: CostFormState,
   formData: FormData
 ): Promise<CostFormState> {
-  await requireConsole();
+  await requireConsole("costs");
 
   const parsed = costSchema.safeParse({
     id: formData.get("id") || undefined,
@@ -298,7 +298,7 @@ export async function addCost(
 /** A recurring service you stopped paying for: accrual stops today,
  * the history stays on the books. */
 export async function endCost(formData: FormData) {
-  await requireConsole();
+  await requireConsole("costs");
   const id = String(formData.get("id") ?? "");
   if (!id) return;
 
@@ -320,7 +320,7 @@ export async function endCost(formData: FormData) {
 /** For entry mistakes only — a real cost that ended should be ended, not
  * erased, or the books rewrite history. */
 export async function deleteCost(formData: FormData) {
-  await requireConsole();
+  await requireConsole("costs");
   const id = String(formData.get("id") ?? "");
   if (!id) return;
 
@@ -374,7 +374,7 @@ export async function previewBroadcastAudience(
   filters: AudienceFilters,
   exclude: AudienceFilters = {}
 ): Promise<{ count: number; reachable: number; sample: { id: string; name: string }[] }> {
-  await requireConsole();
+  await requireConsole("broadcast");
 
   const parsed = audienceSchema.safeParse(filters);
   const parsedExclude = audienceSchema.safeParse(exclude);
@@ -412,7 +412,7 @@ export async function previewBroadcastAudience(
 export async function searchBroadcastRecipients(
   query: string
 ): Promise<{ id: string; name: string; school: string | null }[]> {
-  await requireConsole();
+  await requireConsole("broadcast");
 
   const term = query.trim();
   if (term.length < 2) return [];
@@ -450,7 +450,7 @@ export async function searchBroadcastRecipients(
 export async function lookupBroadcastRecipients(
   ids: string[]
 ): Promise<{ id: string; name: string; school: string | null }[]> {
-  await requireConsole();
+  await requireConsole("broadcast");
 
   const parsed = z.array(z.string().uuid()).max(500).safeParse(ids);
   if (!parsed.success || parsed.data.length === 0) return [];
@@ -494,7 +494,7 @@ export async function sendBroadcast(
   _prev: BroadcastState,
   formData: FormData
 ): Promise<BroadcastState> {
-  await requireConsole();
+  await requireConsole("broadcast");
 
   const parsed = broadcastSchema.safeParse({
     title: formData.get("title"),

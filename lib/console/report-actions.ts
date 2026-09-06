@@ -41,7 +41,7 @@ export async function resolveReport(
   _prev: ReportActionState,
   formData: FormData
 ): Promise<ReportActionState> {
-  await requireConsole();
+  await requireConsole("reports");
 
   const parsed = schema.safeParse({
     id: formData.get("id"),

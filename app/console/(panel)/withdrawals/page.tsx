@@ -1,6 +1,7 @@
 import { listWithdrawals } from "@/lib/console/data";
 import { naira, settlementId, shortDate } from "@/lib/console/format";
 import { Card } from "@/components/ui/card";
+import { requireConsole } from "@/lib/console/dal";
 
 export const metadata = { title: "Withdrawals — sydHustle Console" };
 
@@ -13,6 +14,8 @@ const STATUS_STYLES: Record<string, string> = {
 };
 
 export default async function WithdrawalsPage() {
+  await requireConsole("withdrawals");
+
   const rows = await listWithdrawals();
   const stuck = rows.filter((row) => row.queued_long);
 

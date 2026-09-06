@@ -1,11 +1,14 @@
 import { QuietHoursForm } from "@/components/console/QuietHoursForm";
 import { Card } from "@/components/ui/card";
 import { getQuietHours } from "@/lib/console/quiet-hours";
+import { requireConsole } from "@/lib/console/dal";
 
 export const metadata = { title: "Quiet hours — sydHustle Console" };
 export const dynamic = "force-dynamic";
 
 export default async function QuietHoursPage() {
+  await requireConsole("quiet-hours");
+
   const settings = await getQuietHours();
 
   return (

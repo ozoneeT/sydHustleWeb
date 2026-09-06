@@ -9,7 +9,7 @@ import { createServerSupabaseClient } from "@/lib/supabase/server";
 /**
  * Deciding a transaction report.
  *
- * `requireConsole()` first, always: a server action is a public endpoint,
+ * `requireConsole("transaction-reports")` first, always: a server action is a public endpoint,
  * and this one speaks for the platform about somebody's money.
  *
  * The app has no update policy on `transaction_reports` - a dispute is a
@@ -37,7 +37,7 @@ export async function decideTransactionReport(
   _prev: TransactionReportState,
   formData: FormData
 ): Promise<TransactionReportState> {
-  await requireConsole();
+  await requireConsole("transaction-reports");
 
   const parsed = decisionSchema.safeParse({
     id: formData.get("id"),

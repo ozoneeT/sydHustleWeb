@@ -1,5 +1,6 @@
 import { listModerationQueue } from "@/lib/console/data";
 import { shortDate } from "@/lib/console/format";
+import { requireConsole } from "@/lib/console/dal";
 
 export const metadata = { title: "Moderation — sydHustle Console" };
 
@@ -10,6 +11,8 @@ const OUTCOME_STYLES: Record<string, string> = {
 };
 
 export default async function ModerationPage() {
+  await requireConsole("moderation");
+
   const rows = await listModerationQueue();
 
   return (

@@ -1,5 +1,5 @@
 import { ReviewAppealDecision } from "@/components/console/ReviewAppealActions";
-import { StatCard } from "@/components/moderator/StatCard";
+import { StatCard } from "@/components/ui/stat-card";
 import {
   APPEAL_GROUND_LABELS,
   APPEAL_GROUND_TESTS,
@@ -8,6 +8,7 @@ import {
   type ReviewAppealRow,
 } from "@/lib/console/review-appeals";
 import { shortDate } from "@/lib/console/format";
+import { requireConsole } from "@/lib/console/dal";
 
 export const metadata = { title: "Review appeals — sydHustle Console" };
 
@@ -15,6 +16,8 @@ export const metadata = { title: "Review appeals — sydHustle Console" };
 export const dynamic = "force-dynamic";
 
 export default async function ReviewAppealsPage() {
+  await requireConsole("review-appeals");
+
   const appeals = await listReviewAppeals();
   const history = await reviewerAppealHistory([
     ...new Set(appeals.map((row) => row.reviewer_id).filter(Boolean)),

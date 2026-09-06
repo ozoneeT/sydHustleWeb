@@ -5,7 +5,7 @@ import Link from "next/link";
 import { AnimatePresence, motion } from "framer-motion";
 import { CheckCircle2 } from "lucide-react";
 import { submitSurvey, type ActionResult } from "@/lib/actions";
-import { verifyModeratorPin } from "@/lib/moderator/actions";
+import { verifyModeratorPin } from "@/lib/survey/pin-actions";
 import { sendEmailVerificationCode, verifyEmailCode } from "@/lib/email/actions";
 import { MarketingInterestPrompt } from "@/components/MarketingInterestPrompt";
 import { allHustlesRated, hustleTaskOptions, taskHelpOptions } from "@/lib/hustle-tasks";

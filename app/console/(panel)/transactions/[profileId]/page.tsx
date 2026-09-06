@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { Card } from "@/components/ui/card";
 import { naira, shortDate } from "@/lib/console/format";
 import { getUserTransactions, REASON_LABELS } from "@/lib/console/transactions";
+import { requireConsole } from "@/lib/console/dal";
 
 export const metadata = { title: "User ledger — sydHustle Console" };
 export const dynamic = "force-dynamic";
@@ -21,6 +22,8 @@ export default async function UserTransactionsPage({
 }: {
   params: Promise<{ profileId: string }>;
 }) {
+  await requireConsole("transactions");
+
   const { profileId } = await params;
   const { profile, entries } = await getUserTransactions(profileId);
   if (!profile) notFound();

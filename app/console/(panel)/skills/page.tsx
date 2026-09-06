@@ -1,5 +1,6 @@
 import { SkillCatalog } from "@/components/console/SkillCatalog";
 import { Card } from "@/components/ui/card";
+import { requireConsole } from "@/lib/console/dal";
 import {
   ICON_NAMES,
   listConsoleSkills,
@@ -12,6 +13,8 @@ export const metadata = { title: "Skills — sydHustle Console" };
 export const dynamic = "force-dynamic";
 
 export default async function SkillsPage() {
+  await requireConsole("skills");
+
   const [skills, rails] = await Promise.all([
     listConsoleSkills(),
     listUncategorizedRails(),

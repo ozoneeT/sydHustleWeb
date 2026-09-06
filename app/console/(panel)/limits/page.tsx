@@ -1,5 +1,6 @@
 import { MoneyLimitsForm } from "@/components/console/MoneyLimitsForm";
 import { Card } from "@/components/ui/card";
+import { requireConsole } from "@/lib/console/dal";
 import {
   getAmlSettings,
   getBvnCounts,
@@ -12,6 +13,8 @@ export const metadata = { title: "Limits — sydHustle Console" };
 export const dynamic = "force-dynamic";
 
 export default async function LimitsPage() {
+  await requireConsole("limits");
+
   const [limits, settings, counts] = await Promise.all([
     listMoneyTierLimits(),
     getAmlSettings(),

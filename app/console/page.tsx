@@ -1,7 +1,8 @@
 import { redirect } from "next/navigation";
 
 import { ConsoleLoginForm } from "@/components/console/ConsoleLoginForm";
-import { hasConsoleSession } from "@/lib/console/session";
+import { firstAllowedPath, getConsoleActor } from "@/lib/console/dal";
+import { deleteConsoleSession } from "@/lib/console/session";
 import { Card } from "@/components/ui/card";
 
 export const metadata = {
@@ -25,11 +26,19 @@ export default async function ConsoleLoginPage({
 }: {
   searchParams: Promise<{ error?: string }>;
 }) {
-  if (await hasConsoleSession()) {
-    redirect("/console/overview");
+  const actor = await getConsoleActor();
+  if (actor) {
+    // Somewhere they can actually open — sending a member of staff to
+    // /console/overview would bounce them off a tab they may not hold.
+    redirect(firstAllowedPath(actor));
   }
 
   const { error } = await searchParams;
+
+  // A token that still verifies but resolves to nobody — suspended, or a
+  // staff row that has been deleted. Clearing it here is what stops the
+  // login page and the panel layout redirecting to each other forever.
+  await deleteConsoleSession();
 
   return (
     <main className="flex min-h-screen items-center justify-center px-6">

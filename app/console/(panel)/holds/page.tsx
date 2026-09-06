@@ -1,5 +1,6 @@
 import { HeldFundsQueue } from "@/components/console/HeldFundsQueue";
 import { Card } from "@/components/ui/card";
+import { requireConsole } from "@/lib/console/dal";
 import {
   listDepositReviews,
   listReviewMessages,
@@ -30,6 +31,8 @@ export default async function HoldsPage({
 }: {
   searchParams: Promise<{ status?: string }>;
 }) {
+  await requireConsole("holds");
+
   const { status } = await searchParams;
   const active = parseStatus(status) ?? "flagged";
   const reviews = await listDepositReviews(active);

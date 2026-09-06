@@ -1,8 +1,9 @@
 import { CostForm } from "@/components/console/CostForm";
 import { CostRowActions } from "@/components/console/CostRowActions";
-import { StatCard } from "@/components/moderator/StatCard";
+import { StatCard } from "@/components/ui/stat-card";
 import { getCostSheet, type CostRow } from "@/lib/console/costs";
 import { naira } from "@/lib/console/format";
+import { requireConsole } from "@/lib/console/dal";
 
 export const metadata = { title: "Costs — sydHustle Console" };
 
@@ -19,6 +20,8 @@ export default async function CostsPage({
 }: {
   searchParams: Promise<{ edit?: string }>;
 }) {
+  await requireConsole("costs");
+
   const [{ rows, summary }, { edit }] = await Promise.all([
     getCostSheet(),
     searchParams,

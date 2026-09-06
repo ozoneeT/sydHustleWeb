@@ -23,7 +23,7 @@ export default async function UserDetailPage({
 }: {
   params: Promise<{ profileId: string }>;
 }) {
-  await requireConsole();
+  await requireConsole("users");
   const { profileId } = await params;
 
   const profile = await getConsoleUser(profileId);

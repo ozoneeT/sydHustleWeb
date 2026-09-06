@@ -59,7 +59,7 @@ export async function enforceReport(
   _prev: EnforcementState,
   formData: FormData
 ): Promise<EnforcementState> {
-  await requireConsole();
+  await requireConsole("reports");
 
   const parsed = schema.safeParse({
     reportId: formData.get("reportId"),
@@ -231,7 +231,7 @@ export async function refundHeldEscrow(
   _prev: EnforcementState,
   formData: FormData
 ): Promise<EnforcementState> {
-  await requireConsole();
+  await requireConsole("holds");
 
   const parsed = refundSchema.safeParse({
     kind: formData.get("kind"),

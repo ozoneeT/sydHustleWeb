@@ -1,6 +1,7 @@
 import Link from "next/link";
 
 import { Card } from "@/components/ui/card";
+import { requireConsole } from "@/lib/console/dal";
 import {
   getFinalPositions,
   getLiveSessions,
@@ -15,6 +16,8 @@ export const metadata = { title: "Location — sydHustle Console" };
  * positions of recently finished sessions.
  */
 export default async function LocationPage() {
+  await requireConsole("location");
+
   const [sessions, finals] = await Promise.all([
     getLiveSessions(),
     getFinalPositions(),

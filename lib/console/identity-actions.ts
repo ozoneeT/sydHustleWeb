@@ -44,7 +44,7 @@ export async function revealIdentityRecord(
   _prev: RevealState,
   formData: FormData
 ): Promise<RevealState> {
-  await requireConsole();
+  await requireConsole("identity");
 
   const parsed = revealSchema.safeParse({
     profileId: formData.get("profileId"),
@@ -149,7 +149,7 @@ export async function waiveVerificationAttempts(
   _prev: WaiveState,
   formData: FormData
 ): Promise<WaiveState> {
-  await requireConsole();
+  await requireConsole("identity");
 
   const parsed = waiveSchema.safeParse({
     profileId: formData.get("profileId"),

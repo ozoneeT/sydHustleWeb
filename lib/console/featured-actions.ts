@@ -29,7 +29,7 @@ export async function rerankBoost(
   _prev: BoostActionState,
   formData: FormData
 ): Promise<BoostActionState> {
-  await requireConsole();
+  await requireConsole("featured");
 
   const parsed = rerankSchema.safeParse({
     id: formData.get("id"),
@@ -61,7 +61,7 @@ export async function cancelBoost(
   _prev: BoostActionState,
   formData: FormData
 ): Promise<BoostActionState> {
-  await requireConsole();
+  await requireConsole("featured");
 
   const parsed = cancelSchema.safeParse({
     id: formData.get("id"),

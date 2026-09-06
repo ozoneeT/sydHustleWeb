@@ -89,7 +89,7 @@ export async function saveSkill(
   _prev: SkillFormState,
   formData: FormData
 ): Promise<SkillFormState> {
-  await requireConsole();
+  await requireConsole("skills");
 
   const parsed = skillSchema.safeParse({
     id: (formData.get("id") as string) || undefined,
@@ -134,7 +134,7 @@ export async function retireSkill(
   _prev: SkillFormState,
   formData: FormData
 ): Promise<SkillFormState> {
-  await requireConsole();
+  await requireConsole("skills");
   const id = String(formData.get("id") ?? "");
   const retired = formData.get("retired") === "true";
   if (!id) return { error: "Nothing to change.", saved: false };
@@ -161,7 +161,7 @@ export async function deleteSkill(
   _prev: SkillFormState,
   formData: FormData
 ): Promise<SkillFormState> {
-  await requireConsole();
+  await requireConsole("skills");
   const id = String(formData.get("id") ?? "");
   const typed = String(formData.get("confirm") ?? "").trim().toLowerCase();
   if (!id) return { error: "Nothing to delete.", saved: false };
@@ -199,7 +199,7 @@ export async function setFeaturedSkills(
   _prev: SkillFormState,
   formData: FormData
 ): Promise<SkillFormState> {
-  await requireConsole();
+  await requireConsole("skills");
 
   // Posted in shortlist order, one hidden input per chip, so reordering
   // in the browser needs no index bookkeeping here.
@@ -248,7 +248,7 @@ export async function moveListings(
   _prev: MoveState,
   formData: FormData
 ): Promise<MoveState> {
-  await requireConsole();
+  await requireConsole("skills");
 
   const rail = String(formData.get("rail_id") ?? "");
   // Empty means "send them back to their own typed rail", which is how a
@@ -271,7 +271,7 @@ export async function promoteRail(
   _prev: MoveState,
   formData: FormData
 ): Promise<MoveState> {
-  await requireConsole();
+  await requireConsole("skills");
 
   const rail = String(formData.get("rail_id") ?? "");
   const parsed = skillSchema.safeParse({

@@ -179,7 +179,7 @@ export async function savePromoBanner(
   _prev: PromoActionState,
   formData: FormData,
 ): Promise<PromoActionState> {
-  await requireConsole();
+  await requireConsole("promos");
 
   const parsed = parse(formData);
   if (!parsed.success) {
@@ -262,7 +262,7 @@ export async function deletePromoBanner(
   _prev: PromoActionState,
   formData: FormData,
 ): Promise<PromoActionState> {
-  await requireConsole();
+  await requireConsole("promos");
 
   const id = z.string().uuid().safeParse(formData.get("id"));
   if (!id.success) return { error: "That banner isn't valid.", done: false };
@@ -284,7 +284,7 @@ export async function togglePromoBanner(
   _prev: PromoActionState,
   formData: FormData,
 ): Promise<PromoActionState> {
-  await requireConsole();
+  await requireConsole("promos");
 
   const parsed = z
     .object({ id: z.string().uuid(), active: z.enum(["true", "false"]) })

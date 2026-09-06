@@ -3,6 +3,7 @@ import Link from "next/link";
 import { ListingCard } from "@/components/console/SkillListings";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { requireConsole } from "@/lib/console/dal";
 import {
   getListingCounts,
   listSkillListings,
@@ -44,6 +45,8 @@ export default async function ListingsPage({
 }: {
   searchParams: Promise<Search>;
 }) {
+  await requireConsole("listings");
+
   const { q, state: rawState, before, id } = await searchParams;
   const state: ListingState = isState(rawState) ? rawState : "all";
 

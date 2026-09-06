@@ -32,7 +32,7 @@ export type QuietHoursSettings = {
 export type QuietHoursState = { error: string | null; done: boolean };
 
 export async function getQuietHours(): Promise<QuietHoursSettings> {
-  await requireConsole();
+  await requireConsole("quiet-hours");
   const supabase = createServerSupabaseClient();
 
   const [settings, state] = await Promise.all([
@@ -65,7 +65,7 @@ export async function saveQuietHours(
   _prev: QuietHoursState,
   formData: FormData
 ): Promise<QuietHoursState> {
-  await requireConsole();
+  await requireConsole("quiet-hours");
 
   const parsed = schema.safeParse({
     enabled: formData.get("enabled") ?? "off",
