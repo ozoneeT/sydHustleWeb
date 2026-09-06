@@ -74,7 +74,9 @@ export function actorCan(actor: ConsoleActor, tab: ConsoleTab): boolean {
 export const requireConsole = cache(
   async (tab: ConsoleTab | "any"): Promise<ConsoleActor> => {
     const actor = await getConsoleActor();
-    if (!actor) redirect("/console");
+    // Not "/console": a cookie that still verifies but resolves to nobody
+    // has to be cleared, and only a route handler may do that.
+    if (!actor) redirect("/console/signed-out");
 
     if (tab !== "any" && !actorCan(actor, tab)) {
       redirect(`/console/denied?tab=${tab}`);

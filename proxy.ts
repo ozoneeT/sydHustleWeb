@@ -32,7 +32,11 @@ export async function proxy(request: NextRequest) {
   if (pathname.startsWith("/console/")) {
     // Login POST and the invitation flow stay public; everything else under
     // /console/* needs a session.
-    if (pathname === "/console/login" || pathname === "/console/accept") {
+    if (
+      pathname === "/console/login" ||
+      pathname === "/console/accept" ||
+      pathname === "/console/signed-out"
+    ) {
       return NextResponse.next();
     }
 

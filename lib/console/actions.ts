@@ -15,7 +15,10 @@ import { createServerSupabaseClient } from "@/lib/supabase/server";
 
 export async function consoleLogout() {
   await deleteConsoleSession();
-  redirect("/console");
+  // Says so on arrival. Landing on a bare sign-in form is indistinguishable
+  // from a session that dropped on its own, which is the moment people start
+  // trying passwords.
+  redirect("/console?signed_out=1");
 }
 
 /** Empty means "no cap", which is a different answer from zero — zero

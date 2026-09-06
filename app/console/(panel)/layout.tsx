@@ -42,7 +42,7 @@ export default async function ConsolePanelLayout({
   children: ReactNode;
 }) {
   const actor = await getConsoleActor();
-  if (!actor) redirect("/console");
+  if (!actor) redirect("/console/signed-out");
 
   return (
     <ConsoleNav
