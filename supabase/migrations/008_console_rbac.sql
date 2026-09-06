@@ -100,6 +100,6 @@ values
   (
     'Growth',
     'Skills, subscriptions, promotions and everything that goes out to users.',
-    array['overview','skills','featured','promos','broadcast','campaigns']
+    array['overview','skills','featured','promos','broadcast','campaigns','surveylist']
   )
 on conflict (name) do nothing;

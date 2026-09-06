@@ -8,7 +8,7 @@ export type VerifyPinResult = { valid: boolean; surveyorId?: string };
  * The only surveyor-facing check left. Field collection is over and the
  * surveyor/moderator dashboards are gone — every PIN in the table now does
  * one job: stamping a survey response with whoever collected it, so the
- * contact list at /surveylist can say where a contact came from.
+ * contact list at /console/surveylist can say where a contact came from.
  */
 export async function verifyModeratorPin(pin: string): Promise<VerifyPinResult> {
   const trimmed = pin.trim();

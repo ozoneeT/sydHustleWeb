@@ -31,6 +31,7 @@ export const CONSOLE_TABS = [
   // People
   { key: "users", label: "Users", group: "People", icon: "Users" },
   { key: "subscribers", label: "Subscribers", group: "People", icon: "Mail" },
+  { key: "surveylist", label: "Survey list", group: "People", icon: "ClipboardList" },
   { key: "identity", label: "Identity", group: "People", icon: "Fingerprint" },
   {
     key: "certifications",

@@ -53,8 +53,8 @@ Built with Next.js, Tailwind CSS, and Supabase.
 |-------|---------|
 | `/` | Landing page — waitlist signup, survey CTA |
 | `/survey` | Student side hustle validation questionnaire (requires a moderator PIN to start) |
-| `/surveylist` | The pre-launch contact list — every respondent and moderator, with copyable emails and phone numbers. Sign in with the admin details (`CONSOLE_EMAIL` / `CONSOLE_PASSWORD`) |
 | `/console` | Business console — operators. What each person sees depends on their role |
+| `/console/surveylist` | The pre-launch contact list — every respondent and moderator, with copyable emails and phone numbers |
 | `/admin` | Access control — roles and staff. The account owner only |
 | `/console/campaigns` | Email marketing dashboard — write, preview, test and send bulk campaigns |
 | `/unsubscribe` | Where a campaign's unsubscribe link lands |
@@ -72,13 +72,13 @@ Responses are stored in Supabase tables:
 - **`console_roles`** / **`console_staff`** / **`console_staff_roles`** — who works in the console and which tabs their roles open
 - **`console_invitations`** — one-time invitation tokens, stored only as hashes
 
-Review responses in the Supabase **Table Editor**, or via `/surveylist`.
+Review responses in the Supabase **Table Editor**, or via `/console/surveylist`.
 
 ### Moderators and the survey list
 
-Field collection is over, so there are no moderator accounts to log into any more — the surveyor dashboards (`/moderator`, `/moderator/signup`, `/dashboard`) and the old `/admin` page are gone, replaced by a single `/surveylist`:
+Field collection is over, so there are no moderator accounts to log into any more — the surveyor dashboards (`/moderator`, `/moderator/signup`, `/dashboard`) and the old `/admin` page are gone. What replaced them is the **Survey list** tab in the console (`/console/surveylist`):
 
-- **Login** uses the same admin details as the console (`CONSOLE_EMAIL` / `CONSOLE_PASSWORD`), posted to `/surveylist/login`. It mints its own cookie (`lib/surveylist/session.ts`), scoped to `/surveylist` — the same credentials open both doors, but neither session is the other, so a stolen list cookie can't open the books.
+- **It is a console tab**, so it uses the one console sign-in and can be granted by a role. Somebody running the campus push can hold Survey list and Email campaigns and nothing else — which was impossible while the list had its own address and the owner's own password. `/surveylist` still redirects there for old bookmarks.
 - **The list** is a contact sheet first (`lib/survey/contacts.ts` + `components/surveylist/ContactsTable.tsx`): name, email, phone, school, primary use and marketing interest, with search, filters, per-value copy, "copy every email", CSV export and paging. Under it sit the moderator table and the full expandable responses.
 - **Moderators are contacts too.** Where a moderator also filled the survey their own row is badged; the rest appear name-only, because the `surveyors` table never collected an email.
 - Every `/survey` respondent still enters a moderator PIN before question one — that's the only surveyor-facing check left (`lib/survey/pin-actions.ts`), and it's what links a response to whoever collected it (`survey_responses.surveyor_id`).
@@ -114,7 +114,7 @@ The argument to `requireConsole` is **not optional**, and that is the whole poin
 
 **The template** ([`lib/email/template.ts`](lib/email/template.ts)) is filled in by slots — subject, preview text, heading, body, button, optional banner, closing note — not by typing HTML. Every campaign therefore carries the same header, the same button, the same footer, the same unsubscribe line, and a plain-text alternative built from the same content. `{{first_name}}` and `{{name}}` work in any slot. The composer's live preview calls that exact function in an iframe, so what you approve is byte-for-byte what leaves the building.
 
-**The audience** ([`lib/email/audience.ts`](lib/email/audience.ts)) is the survey and waitlist tables, de-duplicated by address, optionally narrowed by school, minus everyone on the suppression list. App users in `profiles` are deliberately unreachable from here: an account is not a marketing opt-in, and the app promises no promotional messaging.
+**The audience** ([`lib/email/audience.ts`](lib/email/audience.ts)) is the same people as the Survey list tab — the survey and waitlist tables, de-duplicated by address, optionally narrowed by school, minus everyone on the suppression list. App users in `profiles` are deliberately unreachable from here: an account is not a marketing opt-in, and the app promises no promotional messaging.
 
 **The send** ([`lib/console/campaign-actions.ts`](lib/console/campaign-actions.ts)) resolves the audience once into `email_campaign_recipients`, then works through it 100 at a time using Resend's batch endpoint. The queue lives in Postgres, so:
 

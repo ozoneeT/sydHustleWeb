@@ -22,9 +22,8 @@ import { tabForPath } from "@/lib/console/tabs";
  * would allow but the token omits, because the token is written from the
  * same roles at login.
  *
- * /admin and /surveylist check their own sessions inside their pages (they
- * render a login form in place rather than redirecting), so they need
- * nothing here.
+ * /admin checks its own session inside its pages (it renders a login form
+ * in place rather than redirecting), so it needs nothing here.
  */
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;

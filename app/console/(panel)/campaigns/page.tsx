@@ -153,7 +153,7 @@ export default async function CampaignsPage() {
           </p>
         </div>
         <Button asChild variant="secondary" size="sm">
-          <Link href="/surveylist">
+          <Link href="/console/surveylist">
             <Send className="h-4 w-4" />
             Open the survey list
           </Link>

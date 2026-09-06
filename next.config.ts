@@ -15,6 +15,18 @@ const nextConfig: NextConfig = {
   async redirects() {
     return [
       { source: "/terms", destination: "/legal/terms", permanent: true },
+      // The survey list had its own address and its own password before it
+      // became a console tab. The bookmark is in use, so it still lands.
+      {
+        source: "/surveylist",
+        destination: "/console/surveylist",
+        permanent: true,
+      },
+      {
+        source: "/surveylist/:path*",
+        destination: "/console/surveylist",
+        permanent: true,
+      },
     ];
   },
   // Apex redirects to www; allow both so remaining Server Actions stay CSRF-safe.
