@@ -92,6 +92,8 @@ export function CampaignComposer({
     ctaUrl: defaults.ctaUrl ?? "",
     imageUrl: defaults.imageUrl ?? "",
     footerNote: defaults.footerNote ?? "",
+    logoSize: defaults.logoSize ?? null,
+    bannerSize: defaults.bannerSize ?? null,
   });
   const [audience, setAudience] = useState<EmailAudience>(defaults.audience);
   const [device, setDevice] = useState<"desktop" | "mobile">("desktop");
@@ -168,6 +170,8 @@ export function CampaignComposer({
       ctaUrl: preset.content.ctaUrl ?? "",
       imageUrl: preset.content.imageUrl ?? "",
       footerNote: preset.content.footerNote ?? "",
+      logoSize: preset.content.logoSize ?? null,
+      bannerSize: preset.content.bannerSize ?? null,
     });
   }
 
@@ -318,11 +322,10 @@ export function CampaignComposer({
               disabled={readOnly}
               value={content.body}
               onChange={(e) => set("body", e.target.value)}
-              placeholder={"Hi {{first_name}},\n\nLeave a blank line between paragraphs."}
+              placeholder={"Hi {{first_name}},\n\nLeave a blank line between paragraphs.\n\nUse [link text](https://...) for links.\n\n![Image description](https://...)\n\n[button:Click Here](https://...)"}
             />
             <p className="text-xs text-muted-foreground">
-              Plain text. Blank lines become paragraphs; the layout is applied
-              for you.
+              Plain text. Blank lines become paragraphs. You can use markdown for links <code>[text](url)</code>, images <code>![alt](url)</code> on their own line, and extra buttons <code>[button:Label](url)</code> on their own line.
             </p>
           </div>
 
@@ -352,16 +355,43 @@ export function CampaignComposer({
             </div>
           </div>
 
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="space-y-2">
+              <Label htmlFor="imageUrl">Banner image URL (optional)</Label>
+              <Input
+                id="imageUrl"
+                name="imageUrl"
+                type="url"
+                disabled={readOnly}
+                value={content.imageUrl ?? ""}
+                onChange={(e) => set("imageUrl", e.target.value)}
+                placeholder="https://sydhustle.com/banner.png"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="bannerSize">Banner Width (px)</Label>
+              <Input
+                id="bannerSize"
+                name="bannerSize"
+                type="number"
+                disabled={readOnly}
+                value={content.bannerSize ?? ""}
+                onChange={(e) => set("bannerSize", e.target.value ? Number(e.target.value) : null)}
+                placeholder="600"
+              />
+            </div>
+          </div>
+
           <div className="space-y-2">
-            <Label htmlFor="imageUrl">Banner image URL (optional)</Label>
+            <Label htmlFor="logoSize">Custom Logo Width (px)</Label>
             <Input
-              id="imageUrl"
-              name="imageUrl"
-              type="url"
+              id="logoSize"
+              name="logoSize"
+              type="number"
               disabled={readOnly}
-              value={content.imageUrl ?? ""}
-              onChange={(e) => set("imageUrl", e.target.value)}
-              placeholder="https://sydhustle.com/sydhustle-logo-light.png"
+              value={content.logoSize ?? ""}
+              onChange={(e) => set("logoSize", e.target.value ? Number(e.target.value) : null)}
+              placeholder="150"
             />
           </div>
 
@@ -478,6 +508,8 @@ export function CampaignComposer({
             <input type="hidden" name="ctaUrl" value={content.ctaUrl ?? ""} />
             <input type="hidden" name="imageUrl" value={content.imageUrl ?? ""} />
             <input type="hidden" name="footerNote" value={content.footerNote ?? ""} />
+            <input type="hidden" name="logoSize" value={content.logoSize ?? ""} />
+            <input type="hidden" name="bannerSize" value={content.bannerSize ?? ""} />
             <input type="hidden" name="testName" value="Adebimpe Obaleye" />
 
             <div className="flex gap-2">

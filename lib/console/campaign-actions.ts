@@ -45,6 +45,8 @@ const contentSchema = z.object({
   ctaUrl: z.string().trim().url("The button link must be a full URL.").optional().or(z.literal("")),
   imageUrl: z.string().trim().url("The image link must be a full URL.").optional().or(z.literal("")),
   footerNote: z.string().trim().max(500).optional().or(z.literal("")),
+  logoSize: z.coerce.number().min(10).max(1000).optional().or(z.literal("")),
+  bannerSize: z.coerce.number().min(100).max(1200).optional().or(z.literal("")),
 });
 
 const campaignSchema = contentSchema.extend({
@@ -69,6 +71,8 @@ function readForm(formData: FormData) {
     ctaUrl: String(formData.get("ctaUrl") ?? ""),
     imageUrl: String(formData.get("imageUrl") ?? ""),
     footerNote: String(formData.get("footerNote") ?? ""),
+    logoSize: formData.get("logoSize") ? Number(formData.get("logoSize")) : undefined,
+    bannerSize: formData.get("bannerSize") ? Number(formData.get("bannerSize")) : undefined,
     source: String(formData.get("source") ?? "all"),
     school: String(formData.get("school") ?? ""),
   };
@@ -85,6 +89,8 @@ function toRow(parsed: z.infer<typeof campaignSchema>) {
     cta_url: parsed.ctaUrl || null,
     image_url: parsed.imageUrl || null,
     footer_note: parsed.footerNote || null,
+    logo_size: parsed.logoSize || null,
+    banner_size: parsed.bannerSize || null,
     audience: { source: parsed.source, school: parsed.school || "" },
     updated_at: new Date().toISOString(),
   };
@@ -100,6 +106,8 @@ function contentOf(campaign: {
   cta_url: string | null;
   image_url: string | null;
   footer_note: string | null;
+  logo_size?: number | null;
+  banner_size?: number | null;
 }): CampaignContent {
   return {
     subject: campaign.subject,
@@ -110,6 +118,8 @@ function contentOf(campaign: {
     ctaUrl: campaign.cta_url,
     imageUrl: campaign.image_url,
     footerNote: campaign.footer_note,
+    logoSize: campaign.logo_size,
+    bannerSize: campaign.banner_size,
   };
 }
 
@@ -239,6 +249,8 @@ export async function sendTestEmail(
     ctaUrl: parsed.data.ctaUrl || null,
     imageUrl: parsed.data.imageUrl || null,
     footerNote: parsed.data.footerNote || null,
+    logoSize: typeof parsed.data.logoSize === "number" ? parsed.data.logoSize : null,
+    bannerSize: typeof parsed.data.bannerSize === "number" ? parsed.data.bannerSize : null,
   };
 
   const options = {

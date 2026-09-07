@@ -16,6 +16,8 @@ export interface Campaign {
   cta_url: string | null;
   image_url: string | null;
   footer_note: string | null;
+  logo_size: number | null;
+  banner_size: number | null;
   audience: EmailAudience;
   status: CampaignStatus;
   total_recipients: number;
@@ -28,6 +30,7 @@ export interface Campaign {
 const CAMPAIGN_COLUMNS = `
   id, name, subject, preheader, heading, body,
   cta_label, cta_url, image_url, footer_note,
+  logo_size, banner_size,
   audience, status, total_recipients,
   created_at, updated_at, started_at, completed_at
 `;

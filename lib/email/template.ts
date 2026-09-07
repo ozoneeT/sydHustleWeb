@@ -31,10 +31,13 @@ export interface CampaignContent {
   body: string;
   ctaLabel?: string | null;
   ctaUrl?: string | null;
-  /** Full URL of a banner image shown above the heading. */
   imageUrl?: string | null;
   /** A small closing note under the body — signature, PS, housekeeping. */
   footerNote?: string | null;
+  /** Custom logo width in pixels. Default is 150. */
+  logoSize?: number | null;
+  /** Custom banner image width in pixels. Default is 600. */
+  bannerSize?: number | null;
 }
 
 export interface RenderOptions extends CampaignContent {
@@ -103,12 +106,29 @@ function paragraphs(body: string): string {
     .split(/\n{2,}/)
     .map((block) => block.trim())
     .filter(Boolean)
-    .map(
-      (block) =>
-        `<p style="margin:0 0 16px;font-family:${FONT};font-size:16px;line-height:26px;color:${BRAND.text};">${escapeHtml(
-          block
-        ).replace(/\n/g, "<br />")}</p>`
-    )
+    .map((block) => {
+      // Standalone image: ![alt](url)
+      const imgMatch = block.match(/^!\[([^\]]*)\]\(([^)]+)\)$/);
+      if (imgMatch) {
+        return `<img src="${escapeHtml(imgMatch[2])}" alt="${escapeHtml(imgMatch[1])}" style="display:block;width:100%;max-width:600px;height:auto;border:0;margin:24px 0;border-radius:12px;" />`;
+      }
+      
+      // Standalone button: [button:Label](url)
+      const btnMatch = block.match(/^\[button:\s*([^\]]+)\]\(([^)]+)\)$/i);
+      if (btnMatch) {
+        return button(btnMatch[1], btnMatch[2]);
+      }
+      
+      // Regular text block
+      let html = escapeHtml(block).replace(/\n/g, "<br />");
+      
+      // Inline links: [text](url)
+      html = html.replace(/(?<!!)\[([^\]]+)\]\(([^)]+)\)/g, (match, text, url) => {
+        return `<a href="${url}" style="color:${BRAND.accentDark};text-decoration:underline;">${text}</a>`;
+      });
+      
+      return `<p style="margin:0 0 16px;font-family:${FONT};font-size:16px;line-height:26px;color:${BRAND.text};">${html}</p>`;
+    })
     .join("");
 }
 
@@ -149,10 +169,13 @@ export function renderCampaignHtml(options: RenderOptions): string {
   const footerNote = options.footerNote ? fillTokens(options.footerNote, name) : "";
   const unsubscribeUrl = options.unsubscribeUrl ?? `${SITE_URL}/unsubscribe`;
 
+  const logoWidth = options.logoSize ?? 150;
+  const bannerWidth = options.bannerSize ?? 600;
+
   const hero = options.imageUrl
     ? `<tr><td style="padding:0;">
-         <img src="${escapeHtml(options.imageUrl)}" alt="" width="600"
-              style="display:block;width:100%;max-width:600px;height:auto;border:0;" />
+         <img src="${escapeHtml(options.imageUrl)}" alt="" width="${bannerWidth}"
+              style="display:block;width:100%;max-width:${bannerWidth}px;height:auto;border:0;" />
        </td></tr>`
     : "";
 
@@ -189,8 +212,8 @@ ${preheader ? preheaderBlock(preheader) : ""}
           <td align="left" bgcolor="${BRAND.ink}" style="background-color:${BRAND.ink};padding:24px 32px;">
             <a href="${SITE_URL}" style="text-decoration:none;">
               <img src="${SITE_URL}/sydhustle-logo-dark.png" alt="sydHustle"
-                   width="150" height="52"
-                   style="display:block;width:150px;height:auto;border:0;" />
+                   width="${logoWidth}"
+                   style="display:block;width:${logoWidth}px;height:auto;border:0;" />
             </a>
           </td>
         </tr>
@@ -249,7 +272,14 @@ export function renderCampaignText(options: RenderOptions): string {
   const lines: string[] = [];
 
   if (options.heading) lines.push(fillTokens(options.heading, name), "");
-  lines.push(fillTokens(options.body, name).trim(), "");
+  
+  const rawBody = fillTokens(options.body, name).trim();
+  const textBody = rawBody
+    .replace(/^!\[([^\]]*)\]\(([^)]+)\)$/gm, '[Image: $1] $2')
+    .replace(/^\[button:\s*([^\]]+)\]\(([^)]+)\)$/gmi, '$1: $2')
+    .replace(/(?<!!)\[([^\]]+)\]\(([^)]+)\)/g, '$1 ($2)');
+
+  lines.push(textBody, "");
 
   if (options.ctaLabel && options.ctaUrl) {
     lines.push(`${fillTokens(options.ctaLabel, name)}: ${options.ctaUrl}`, "");
@@ -298,6 +328,8 @@ Takes about a minute. No payment, nothing to install yet — just your name on t
       ctaUrl: "https://sydhustle.com",
       footerNote: "Questions? Just reply to this email — it reaches a real person.",
       imageUrl: null,
+      logoSize: null,
+      bannerSize: null,
     },
   },
   {
@@ -318,6 +350,8 @@ You told us what would make this worth using. This is it.`,
       ctaUrl: "https://sydhustle.com",
       footerNote: null,
       imageUrl: null,
+      logoSize: null,
+      bannerSize: null,
     },
   },
   {
@@ -340,6 +374,8 @@ Reply to this email and we'll add you to the group.`,
       ctaUrl: "https://sydhustle.com",
       footerNote: null,
       imageUrl: null,
+      logoSize: null,
+      bannerSize: null,
     },
   },
   {
@@ -356,6 +392,8 @@ Reply to this email and we'll add you to the group.`,
       ctaUrl: "",
       footerNote: "",
       imageUrl: null,
+      logoSize: null,
+      bannerSize: null,
     },
   },
 ];
