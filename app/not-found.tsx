@@ -28,7 +28,7 @@ const DESTINATIONS = [
   {
     href: "/",
     title: "Home",
-    blurb: "What sydHustle is, and how to get on the waitlist.",
+    blurb: "What sydHustle is, and where to download it.",
   },
   {
     href: "/policies_center",
@@ -36,9 +36,9 @@ const DESTINATIONS = [
     blurb: "The rules, your data, and what isn't allowed.",
   },
   {
-    href: "/survey",
-    title: "Take the survey",
-    blurb: "Two minutes, and it shapes what we build next.",
+    href: "/support",
+    title: "Support",
+    blurb: "Get help with a Hustle, a payment or your account.",
   },
 ];
 
@@ -49,7 +49,7 @@ export default function NotFound() {
       <main className="flex-1 px-6 pb-24 pt-28 md:pt-32">
         <div className="mx-auto max-w-3xl">
           <p className="text-xs font-bold uppercase tracking-[0.2em] text-accent">
-            404 — page not found
+            404: page not found
           </p>
           <h1 className="mt-3 text-4xl font-extrabold tracking-tight text-foreground md:text-5xl">
             This one&apos;s not on the list.

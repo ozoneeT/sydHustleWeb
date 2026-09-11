@@ -41,17 +41,11 @@ export function Footer() {
             Privacy
           </Link>
           <Link
-            href="/survey"
+            href="/#get-the-app"
             className="transition-colors hover:text-foreground"
           >
-            Take the survey
+            Get the app
           </Link>
-          <a
-            href="#waitlist"
-            className="transition-colors hover:text-foreground"
-          >
-            Join waitlist
-          </a>
         </div>
       </div>
     </footer>

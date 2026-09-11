@@ -9,6 +9,20 @@ export const metadata: Metadata = {
   description:
     "Help shape sydHustle. Tell us whether you'd hustle, need a hustle, or both.",
   alternates: { canonical: "/survey" },
+  /*
+   * Deliberately out of the index.
+   *
+   * The app has shipped, so a search result reading "Survey | sydHustle"
+   * describes a product that no longer exists. The page stays reachable
+   * because moderators still share the link directly; it just stops
+   * being something Google can rank or show.
+   *
+   * Note this is a meta tag and NOT a robots.txt Disallow. Blocking the
+   * crawler would leave the existing result in place, because Google has
+   * to fetch the page to discover the noindex. It gets removed only if
+   * it can still be crawled.
+   */
+  robots: { index: false, follow: false },
   openGraph: {
     title: "Survey | sydHustle",
     description:

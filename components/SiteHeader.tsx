@@ -46,18 +46,11 @@ export function SiteHeader() {
         </Link>
         <nav className="flex items-center gap-6 text-sm">
           <Link
-            href="/survey"
-            className="group relative text-muted-foreground transition-colors hover:text-foreground"
-          >
-            Survey
-            <span className="absolute -bottom-1 left-0 h-px w-0 bg-accent transition-all duration-300 group-hover:w-full" />
-          </Link>
-          <a
-            href="#waitlist"
+            href="/#get-the-app"
             className="rounded-full bg-accent px-4 py-2 text-sm font-semibold text-accent-foreground shadow-md shadow-accent/25 transition-all hover:scale-[1.03] hover:bg-accent/90 hover:shadow-accent/40 active:scale-[0.98]"
           >
-            Join waitlist
-          </a>
+            Get the app
+          </Link>
         </nav>
       </div>
     </motion.header>

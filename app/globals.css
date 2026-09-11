@@ -165,3 +165,363 @@ html {
     max-width: none !important;
   }
 }
+
+/* ================================================================== */
+/* Marketing surface                                                   */
+/* ================================================================== */
+/*
+ * The console is a working tool and keeps the navy palette above. The
+ * public pages are a product launch, so they get their own ground: near
+ * black, brand teal, and a fluid type scale.
+ *
+ * Everything here is scoped to `.marketing` rather than `:root` on
+ * purpose — the console and the survey share this stylesheet, and a
+ * launch page should not be able to repaint an operator's dashboard.
+ */
+.marketing {
+  --background: #050506;
+  --foreground: #ffffff;
+  --muted-foreground: #a3a3a3;
+
+  /* Brand teal, and the two lighter steps used for glows and tints.
+     Same three-stop structure the palette already uses in the app. */
+  --accent: #14b8a6;
+  --accent-bright: #2dd4bf;
+  --accent-tint: #99f6e4;
+  --accent-foreground: #04211d;
+
+  /* Surfaces stacked on the black ground. */
+  --surface: #0c0c0e;
+  --surface-raised: #141417;
+  --hairline: rgba(255, 255, 255, 0.09);
+
+  /* Fluid type. The reference scales everything off the viewport width;
+     clamp() gets the same behaviour without hijacking the root font
+     size, which the console also depends on. */
+  /* The reference sets its display word at 8.3rem of its root unit
+     — 94px on a phone, 133px at 2000. A vw clamp got this badly
+     wrong at both ends. */
+  --fs-display: calc(var(--u) * 8.3);
+  --fs-h1: clamp(2.75rem, 6.5vw, 6.75rem);
+  --fs-h2: clamp(2.25rem, 5vw, 4.75rem);
+  --fs-h3: clamp(1.875rem, 4.2vw, 3.75rem);
+  --fs-h4: clamp(1.5rem, 2.6vw, 2.25rem);
+  --fs-lead: clamp(1.125rem, 1.9vw, 1.75rem);
+  --fs-body: clamp(0.9375rem, 1.05vw, 1.0625rem);
+  --fs-eyebrow: clamp(0.75rem, 1vw, 0.95rem);
+
+  /*
+   * The hero's two measuring sticks, both taken off the reference.
+   *
+   * `--phone-w` is the device's resting width: 22.5vw, with a floor so
+   * it stays usable on a phone. This is the smallest the device ever
+   * gets — it zooms down to this and holds for the whole sequence.
+   *
+   * `--u` is the reference's own unit: it sets its root font size to
+   * 1vw and steps it to 0.8vw above 1920px, so the whole layout stops
+   * growing on a large display. Everything printed on the screen is a
+   * multiple of it, exactly as the reference sizes its own type. It is
+   * expressed against `--phone-w` rather than the window so the copy
+   * stays in proportion to the device once the floor kicks in.
+   */
+  --phone-w: max(210px, 22.5vw);
+  --u: calc(var(--phone-w) * 0.0444);
+
+  /*
+   * The reference's literal root font size — 1vw, stepping to 0.8vw
+   * above 1920px. `--u` is re-based against the device so the type
+   * stays legible on a phone, which makes it wrong for anything the
+   * reference measures in raw root units. The hero's bottom mask is one
+   * of those: 20 root units, which is 75px at 375 and 320px at 2000.
+   */
+  --ru: 1vw;
+
+  --r-lg: 2rem;
+  --r-md: 1.5rem;
+  --r-sm: 0.875rem;
+
+  background: var(--background);
+  color: var(--foreground);
+}
+
+/* The reference's step: root 1vw → 0.8vw. */
+@media (min-width: 1920px) {
+  .marketing {
+    --u: calc(var(--phone-w) * 0.0356);
+    --ru: 0.8vw;
+  }
+}
+
+/*
+ * On a phone the reference abandons the zoom entirely: the copy sits on
+ * black at the top, the device rises into frame from below, and the beat
+ * word lands underneath it. Its device is 68vw there, and its type is
+ * set in absolute sizes rather than off the root unit — 36px headline,
+ * 15.75px standfirst — because 1vw would be unreadable at this width.
+ */
+@media (max-width: 767px) {
+  .marketing {
+    --phone-w: 68vw;
+    /* Measured on the reference at 375: its beat word is 72px there,
+       a breakpoint override rather than its usual root multiple. */
+    --fs-display: 19.2vw;
+  }
+}
+
+.marketing ::selection {
+  background: color-mix(in srgb, var(--accent) 40%, transparent);
+  color: #ffffff;
+}
+
+/* Type scale ------------------------------------------------------- */
+
+.t-display {
+  font-size: var(--fs-display);
+  line-height: 0.95;
+  font-weight: 500;
+  letter-spacing: -0.03em;
+}
+.t-h1 {
+  font-size: var(--fs-h1);
+  line-height: 1.04;
+  font-weight: 500;
+  letter-spacing: -0.028em;
+}
+.t-h2 {
+  font-size: var(--fs-h2);
+  line-height: 1.06;
+  font-weight: 500;
+  letter-spacing: -0.026em;
+}
+.t-h3 {
+  font-size: var(--fs-h3);
+  line-height: 1.1;
+  font-weight: 500;
+  letter-spacing: -0.022em;
+}
+.t-h4 {
+  font-size: var(--fs-h4);
+  line-height: 1.18;
+  font-weight: 600;
+  letter-spacing: -0.018em;
+}
+.t-lead {
+  font-size: var(--fs-lead);
+  line-height: 1.45;
+  color: var(--muted-foreground);
+}
+.t-body {
+  font-size: var(--fs-body);
+  line-height: 1.5;
+  color: var(--muted-foreground);
+}
+.t-eyebrow {
+  font-size: var(--fs-eyebrow);
+  line-height: 1.2;
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+/*
+ * The header sits on the hero's light with no bar behind it. A scrim
+ * would fix the contrast but has to end somewhere, and that edge reads
+ * as a seam across the glow — so the type carries its own contrast. The
+ * shadow is wide and soft enough to have no visible shape of its own.
+ */
+.header-legible {
+  text-shadow:
+    0 1px 2px rgba(0, 0, 0, 0.55),
+    0 2px 14px rgba(0, 0, 0, 0.75);
+}
+.header-legible .magic-btn {
+  text-shadow: none;
+}
+
+/* The accent word inside a headline. */
+.t-accent {
+  color: var(--accent-bright);
+}
+
+/*
+ * Headline silver.
+ *
+ * The reference sets every display headline in a top-to-bottom gradient
+ * from white to its mid grey rather than in flat white — the type reads
+ * as lit from above, which is what keeps it from looking like a flat
+ * slab of UI text. Its own rule is
+ *   linear-gradient(180deg, var(--base--white), var(--neutral--300))
+ * and #a3a3a3 is exactly our --muted-foreground.
+ */
+.t-silver {
+  background-image: linear-gradient(180deg, #ffffff, var(--muted-foreground));
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  color: transparent;
+  /* A descender sitting on the gradient's last stop gets clipped by the
+     background box, so the reference pads the box out. */
+  padding-bottom: 0.25rem;
+}
+
+/*
+ * The same idea with a highlight rolled through the middle, which the
+ * reference uses on its standalone statement lines:
+ *   linear-gradient(#fff, #b8b8b8 40%, #fff 50% 60%, #b8b8b8)
+ */
+.t-sheen {
+  background-image: linear-gradient(#ffffff, #b8b8b8 40%, #ffffff 50%, #ffffff 60%, #b8b8b8);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  color: transparent;
+  padding-bottom: 0.4rem;
+}
+
+/* Headline words that sit behind the phone in the hero and the
+   showcase — light grey, so the device stays the brightest thing. */
+.t-ghost {
+  color: #cfcfd2;
+}
+
+/* Buttons ---------------------------------------------------------- */
+/*
+ * The reference's "magic button": a hairline capsule whose glow and
+ * padding both grow on hover, so the button appears to inflate towards
+ * the cursor rather than just changing colour.
+ */
+.magic-btn {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.2rem;
+  border-radius: 999px;
+  isolation: isolate;
+  transition: padding 0.8s cubic-bezier(0.19, 1, 0.22, 1);
+}
+
+.magic-btn::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  border: 1px solid color-mix(in srgb, var(--accent) 45%, transparent);
+  transition: box-shadow 0.25s linear;
+}
+
+.magic-btn:hover::before {
+  box-shadow:
+    0 -0.1rem 0.35rem 0 var(--accent),
+    0 -0.1rem 0.7rem 0 var(--accent-bright);
+}
+
+.magic-btn__label {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  border-radius: 999px;
+  background: var(--accent);
+  color: var(--accent-foreground);
+  font-weight: 600;
+  padding: 0.7rem 1.4rem;
+  transition: padding 0.8s cubic-bezier(0.19, 1, 0.22, 1);
+}
+
+.magic-btn:hover .magic-btn__label {
+  padding: 0.8rem 1.7rem;
+  box-shadow: inset 0 0.2rem 0.4rem 0 rgba(255, 255, 255, 0.28);
+}
+
+.magic-btn--ghost .magic-btn__label {
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--foreground);
+  backdrop-filter: blur(8px);
+}
+
+/* Surfaces --------------------------------------------------------- */
+
+.glass-card {
+  position: relative;
+  overflow: hidden;
+  border-radius: var(--r-md);
+  border: 1px solid var(--hairline);
+  background:
+    linear-gradient(
+      160deg,
+      rgba(255, 255, 255, 0.07) 0%,
+      rgba(255, 255, 255, 0.02) 45%,
+      rgba(255, 255, 255, 0) 100%
+    ),
+    var(--surface);
+}
+
+/* The teal wash a card picks up on hover — the reference does the same
+   with a second background image swapped in behind the content. */
+.glass-card__wash {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  transition: opacity 0.35s linear;
+  background: radial-gradient(
+    120% 90% at 50% 0%,
+    color-mix(in srgb, var(--accent) 30%, transparent) 0%,
+    transparent 65%
+  );
+}
+
+.glass-card:hover .glass-card__wash {
+  opacity: 1;
+}
+
+/* Motion ----------------------------------------------------------- */
+
+@keyframes levitate-a {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-0.55rem);
+  }
+}
+
+@keyframes levitate-b {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(0.55rem);
+  }
+}
+
+.levitate-a {
+  animation: levitate-a 6s ease-in-out infinite;
+}
+.levitate-b {
+  animation: levitate-b 5s ease-in-out infinite;
+}
+
+/* The marquee of skill chips, running edge to edge. */
+@keyframes marquee {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-50%);
+  }
+}
+
+.animate-marquee {
+  animation: marquee 38s linear infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .levitate-a,
+  .levitate-b,
+  .animate-marquee {
+    animation: none;
+  }
+}

@@ -9,6 +9,11 @@ const deploymentId =
 
 const nextConfig: NextConfig = {
   ...(deploymentId ? { deploymentId } : {}),
+  images: {
+    // Next 16 only serves the qualities listed here. The app screenshots
+    // are fine detail on a small device screen and visibly mush at 75.
+    qualities: [75, 88],
+  },
   // The Terms shipped at /terms before the policies center existed, so
   // that URL is in the wild. Permanent, so crawlers consolidate on the
   // new address.

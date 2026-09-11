@@ -19,7 +19,7 @@ const plusJakarta = Plus_Jakarta_Sans({
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
   title: {
-    default: `${SITE_NAME} — Your side hustle, sorted.`,
+    default: `${SITE_NAME}: Get it done by someone nearby`,
     template: `%s | ${SITE_NAME}`,
   },
   description: SITE_DESCRIPTION,
@@ -32,6 +32,10 @@ export const metadata: Metadata = {
     "campus tasks",
     "earn as a student",
     "student marketplace",
+    "hustle app",
+    "errands app Nigeria",
+    "book a skill",
+    "escrow payments app",
   ],
   authors: [{ name: SITE_NAME, url: SITE_URL }],
   creator: SITE_NAME,
@@ -66,7 +70,7 @@ export const metadata: Metadata = {
     locale: "en_AU",
     url: SITE_URL,
     siteName: SITE_NAME,
-    title: `${SITE_NAME} — Your side hustle, sorted.`,
+    title: `${SITE_NAME}: Get it done by someone nearby`,
     description: SITE_DESCRIPTION,
     images: [
       {
@@ -91,7 +95,7 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: `${SITE_NAME} — Your side hustle, sorted.`,
+    title: `${SITE_NAME}: Get it done by someone nearby`,
     description: SITE_DESCRIPTION,
     images: [BRAND_ASSETS.logo.path],
   },
