@@ -291,8 +291,8 @@ export function Hero() {
           style={{ opacity: introOpacity, y: introY }}
           className="absolute inset-x-0 top-[13vh] mx-auto flex max-w-[86vw] flex-col items-center px-5 text-center md:top-[calc(var(--u)*23.2)] md:max-w-[calc(var(--u)*58)]"
         >
-          <p className="text-[4.2vw] leading-[1.35] text-[color:var(--muted-foreground)] md:text-[calc(var(--u)*1.386)] md:leading-[1.2]">
-            Escrow-protected payments, from people nearby.
+          <p className="text-balance text-[4.2vw] leading-[1.35] text-[color:var(--muted-foreground)] md:text-[calc(var(--u)*1.386)] md:leading-[1.2]">
+            Work when you want to earn. Post when you need help.
           </p>
           <h1 className="t-silver mt-[3.2vw] text-balance text-[9.6vw] font-medium leading-[1.13] tracking-[-0.028em] md:mt-[calc(var(--u)*1.14)] md:text-[calc(var(--u)*4.72)]">
             Get it done by someone nearby.
