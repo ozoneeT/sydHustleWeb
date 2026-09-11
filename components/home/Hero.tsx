@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { motion, useTransform } from "framer-motion";
+import { motion, useReducedMotion, useTransform } from "framer-motion";
 import { MapPin, ShieldCheck, Star } from "lucide-react";
 import { AppSimulator } from "@/components/home/AppSimulator";
 import { PhoneOverlays } from "@/components/home/PhoneOverlays";
@@ -116,6 +116,39 @@ export function Hero() {
     return () => window.removeEventListener("resize", measure);
   }, []);
 
+  /*
+   * The opening.
+   *
+   * Every moving part of this stage is already bound to a scroll
+   * MotionValue through `style`, and framer resolves `style` over
+   * `animate`, so the entrance cannot live on those elements. It lives
+   * on wrappers around them instead, where its transform composes with
+   * the scroll transform underneath rather than fighting it.
+   *
+   * The order is the reading order: the device arrives first and is
+   * what the eye lands on, then the line above it, the headline, the
+   * badges, and last the things at the edges.
+   */
+  const reduce = useReducedMotion();
+  const enter = (delay: number, distance = 22) =>
+    reduce
+      ? {
+          "data-enter": "",
+          initial: { opacity: 0 },
+          animate: { opacity: 1 },
+          transition: { duration: 0.35, delay: delay * 0.3 },
+        }
+      : {
+          "data-enter": "",
+          initial: { opacity: 0, y: distance },
+          animate: { opacity: 1, y: 0 },
+          transition: {
+            duration: 0.9,
+            delay,
+            ease: [0.16, 1, 0.3, 1] as [number, number, number, number],
+          },
+        };
+
   /* The zoom out. */
   const phoneScale = useTransform(p, [0, 0.28], [geom.zoom, 1]);
   const phoneY = useTransform(p, [0, 0.28], [geom.top, geom.rest]);
@@ -160,6 +193,19 @@ export function Hero() {
           the reference's 1920px step can apply to it. Measured off the
           reference: the device opens 3.68× its resting width with its
           top edge at 13.2vh, settling to 7.5vh. */}
+      {/*
+        The entrance hides these elements to begin with, and `initial`
+        is server-rendered as an inline `opacity: 0`. That is fine right
+        up until hydration does not happen — a failed chunk, a blocked
+        script — and then the whole hero, the headline and both store
+        badges included, is permanently invisible on the one page whose
+        job is to convert. A stylesheet rule beats a non-important
+        inline style, so this puts everything back without JS.
+      */}
+      <noscript>
+        <style>{`[data-enter]{opacity:1!important;transform:none!important}`}</style>
+      </noscript>
+
       <div className="sticky top-0 flex h-[100svh] items-center justify-center overflow-hidden">
         {/* The halo. Sized and placed against the device's top edge. */}
         <motion.div
@@ -168,11 +214,22 @@ export function Hero() {
           className="pointer-events-none absolute left-1/2 top-[-30vh] h-[54vh] w-[86vw] -translate-x-1/2 rounded-[50%] bg-[radial-gradient(closest-side,rgba(94,234,212,0.13),rgba(20,184,166,0.05)_40%,transparent_72%)]"
         />
 
-        {/* The floating tokens, outside the device on both sides. */}
+        {/* The floating tokens, outside the device on both sides. They
+            arrive last. The wrapper fades and nothing more: each token
+            runs a CSS `levitate` animation on its own transform, and a
+            framer transform on the same element would fight it. */}
+        <motion.div
+          aria-hidden
+          data-enter=""
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 1.1, delay: reduce ? 0.2 : 0.72 }}
+          className="pointer-events-none absolute inset-0"
+        >
         <motion.div
           aria-hidden
           style={{ opacity: orbOpacity }}
-          className="pointer-events-none absolute inset-0"
+          className="absolute inset-0"
         >
           {ORBS.map((orb, i) => (
             <span
@@ -212,6 +269,7 @@ export function Hero() {
             </span>
           ))}
         </motion.div>
+        </motion.div>
 
         {/* The three beats. */}
         <motion.p
@@ -239,7 +297,13 @@ export function Hero() {
           {BEATS[3]}
         </motion.p>
 
-        {/* The device, painted over the beats. */}
+        {/* The device, painted over the beats. The outer element owns
+            the entrance and nothing else, so `phoneRef` still measures
+            the device's own box. */}
+        <motion.div
+          {...enter(0.05, 70)}
+          className="absolute top-0 w-[var(--phone-w)]"
+        >
         <motion.div
           ref={phoneRef}
           style={{
@@ -247,7 +311,7 @@ export function Hero() {
             y: phoneY,
             transformOrigin: "top center",
           }}
-          className="absolute top-0 w-[var(--phone-w)] will-change-transform"
+          className="w-full will-change-transform"
         >
           <PhoneGlow settle={settle} />
           <PhoneFrame overlay={<PhoneOverlays p={p} />}>
@@ -262,6 +326,7 @@ export function Hero() {
               <div className="absolute inset-0 bg-[radial-gradient(120%_46%_at_50%_-12%,rgba(94,234,212,0.20),rgba(20,184,166,0.08)_34%,rgba(5,16,15,0)_66%)]" />
             </motion.div>
           </PhoneFrame>
+        </motion.div>
         </motion.div>
 
         {/* The reference's `hero-down-mask`: a constant strip along the
@@ -291,26 +356,36 @@ export function Hero() {
           style={{ opacity: introOpacity, y: introY }}
           className="absolute inset-x-0 top-[13vh] mx-auto flex max-w-[86vw] flex-col items-center px-5 text-center md:top-[calc(var(--u)*23.2)] md:max-w-[calc(var(--u)*58)]"
         >
-          <p className="text-balance text-[4.2vw] leading-[1.35] text-[color:var(--muted-foreground)] md:text-[calc(var(--u)*1.386)] md:leading-[1.2]">
+          <motion.p {...enter(0.34)} className="text-balance text-[4.2vw] leading-[1.35] text-[color:var(--muted-foreground)] md:text-[calc(var(--u)*1.386)] md:leading-[1.2]">
             Work when you want to earn. Post when you need help.
-          </p>
-          <h1 className="t-silver mt-[3.2vw] text-balance text-[9.6vw] font-medium leading-[1.13] tracking-[-0.028em] md:mt-[calc(var(--u)*1.14)] md:text-[calc(var(--u)*4.72)]">
+          </motion.p>
+          <motion.h1 {...enter(0.44)} className="t-silver mt-[3.2vw] text-balance text-[9.6vw] font-medium leading-[1.13] tracking-[-0.028em] md:mt-[calc(var(--u)*1.14)] md:text-[calc(var(--u)*4.72)]">
             Get it done by someone nearby.
-          </h1>
+          </motion.h1>
+          <motion.div {...enter(0.56)} className="flex w-full justify-center">
           <StoreBadges
             size="fluid"
             className="mt-[8vw] flex-col gap-[2.8vw] text-[12.5vw] md:mt-[calc(var(--u)*2.8)] md:flex-row md:gap-[calc(var(--u)*1.26)] md:text-[calc(var(--u)*4)]"
           />
+          </motion.div>
         </motion.div>
 
         <motion.div
           aria-hidden
-          style={{ opacity: hintOpacity }}
+          data-enter=""
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 0.8, delay: reduce ? 0.3 : 1.15 }}
           className="absolute bottom-6 left-1/2 hidden -translate-x-1/2 md:block"
+        >
+        <motion.div
+          aria-hidden
+          style={{ opacity: hintOpacity }}
         >
           <div className="flex h-9 w-[1.4rem] items-start justify-center rounded-full border border-white/25 p-1.5">
             <span className="h-1.5 w-1 animate-bounce rounded-full bg-white/70" />
           </div>
+        </motion.div>
         </motion.div>
       </div>
     </section>
