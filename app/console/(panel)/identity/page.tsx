@@ -71,12 +71,24 @@ export default async function IdentityPage({
             give is written onto the attempt permanently.
           </p>
         </div>
-        {blocks.length === 0 ? (
+        {!blocks.available ? (
+          // Not "nobody is stuck". A moderator who reads that closes the
+          // tab; this has to say the desk is blind.
+          <p className="rounded-xl border border-amber-500/40 bg-amber-500/5 px-4 py-6 text-sm text-amber-200">
+            The attempts queue is unavailable, so this list is not proof
+            that nobody is locked out. The{" "}
+            <code className="font-mono text-xs">
+              verification_attempt_blocks
+            </code>{" "}
+            view is missing from the database. Everything else on this page
+            is unaffected.
+          </p>
+        ) : blocks.rows.length === 0 ? (
           <p className="rounded-xl border border-white/10 px-4 py-6 text-sm text-muted-foreground">
             Nobody has a failed verification attempt in the last 24 hours.
           </p>
         ) : (
-          blocks.map((block) => (
+          blocks.rows.map((block) => (
             <div
               className="rounded-xl border border-white/10 p-4"
               key={`${block.profile_id}-${block.kind}`}

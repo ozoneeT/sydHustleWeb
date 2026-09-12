@@ -126,7 +126,23 @@ export type VerificationBlockRow = {
   display_name: string | null;
 };
 
-export async function listVerificationBlocks(): Promise<VerificationBlockRow[]> {
+/**
+ * Either the queue, or the reason there isn't one.
+ *
+ * `unavailable` is not the same answer as an empty list and must never
+ * render as one. An empty queue tells a moderator nobody is stuck; a
+ * missing relation tells them nothing at all, and showing the cheerful
+ * version of that would have somebody close the tab believing the desk
+ * was clear.
+ */
+export type VerificationBlocks =
+  | { available: true; rows: VerificationBlockRow[] }
+  | { available: false; reason: string };
+
+/** PostgREST's code for "that relation is not in the schema cache". */
+const RELATION_MISSING = "PGRST205";
+
+export async function listVerificationBlocks(): Promise<VerificationBlocks> {
   const supabase = createServerSupabaseClient();
   const { data, error } = await supabase
     .from("verification_attempt_blocks")
@@ -139,8 +155,24 @@ export async function listVerificationBlocks(): Promise<VerificationBlockRow[]> 
     .order("blocked", { ascending: false })
     .order("last_attempt_at", { ascending: false })
     .limit(100);
-  if (error) throw new Error(error.message);
-  return (data ?? []) as VerificationBlockRow[];
+
+  if (error) {
+    // This view is derived from identity_verifications and is the only
+    // part of this page that depends on it. Losing it should cost the
+    // attempts queue and nothing else: the retained records and the
+    // disclosure log are what make this page a legal obligation, and
+    // they were going down with it.
+    if (error.code === RELATION_MISSING) {
+      console.error(
+        "verification_attempt_blocks is missing; the attempts queue is degraded:",
+        error.message
+      );
+      return { available: false, reason: error.message };
+    }
+    throw new Error(error.message);
+  }
+
+  return { available: true, rows: (data ?? []) as VerificationBlockRow[] };
 }
 
 export type DisclosureRow = {
