@@ -66,8 +66,7 @@ export function TeamSignupForm() {
           required
         />
         <p className="text-xs text-muted-foreground">
-          The name you want to be addressed by. Nobody has filled it in for
-          you, and it goes on every contribution you post — so spell it the
+          The name you want to be addressed by. It goes on every contribution you post, so spell it the
           way you want it to appear.
         </p>
       </div>
