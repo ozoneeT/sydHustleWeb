@@ -1,7 +1,7 @@
 "use client";
 
 import { useActionState, useState } from "react";
-import { Check, X } from "lucide-react";
+import { Check, Loader2, X } from "lucide-react";
 
 import { signUpMember, type SignupState } from "@/lib/team/signup-actions";
 import { TEAM_MIN_PASSWORD_LENGTH } from "@/lib/team/password-rules";
@@ -29,12 +29,16 @@ function Rule({ met, children }: { met: boolean; children: React.ReactNode }) {
 }
 
 export function TeamSignupForm() {
+  // This one IS driven by React, so `pending` is real — unlike the sign-in
+  // form next door, which posts natively and has to track it by hand.
+  // Signup hashes a password with scrypt, which is ~100ms of deliberate
+  // work on top of the round trip, so the spinner earns its place.
   const [state, action, pending] = useActionState(signUpMember, initial);
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
 
   return (
-    <form action={action} className="space-y-5">
+    <form action={action} aria-busy={pending} className="space-y-5">
       <div className="space-y-2">
         <Label htmlFor="phone">Your phone number</Label>
         <Input
@@ -53,18 +57,18 @@ export function TeamSignupForm() {
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="name">Your name</Label>
+        <Label htmlFor="name">Display name</Label>
         <Input
           autoComplete="name"
           id="name"
           maxLength={80}
           name="name"
-          placeholder="Your full name"
           required
         />
         <p className="text-xs text-muted-foreground">
-          Nobody has filled this in for you — spell it the way you want to be
-          credited. It goes on every contribution you post.
+          The name you want to be addressed by. Nobody has filled it in for
+          you, and it goes on every contribution you post — so spell it the
+          way you want it to appear.
         </p>
       </div>
 
@@ -106,6 +110,7 @@ export function TeamSignupForm() {
       {state.error ? <p className="text-sm text-red-400">{state.error}</p> : null}
 
       <Button className="w-full" disabled={pending} type="submit">
+        {pending && <Loader2 className="h-4 w-4 animate-spin" />}
         {pending ? "Setting it up…" : "Create my account"}
       </Button>
     </form>

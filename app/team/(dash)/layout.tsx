@@ -1,8 +1,8 @@
 import type { ReactNode } from "react";
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { LogOut } from "lucide-react";
 
+import { TeamLogoutButton } from "@/components/team/TeamLogoutButton";
 import { getTeamActor } from "@/lib/team/dal";
 import { memberLabel } from "@/lib/team/format";
 
@@ -50,15 +50,7 @@ export default async function TeamLayout({
             <span className="hidden text-sm text-muted-foreground sm:inline">
               {memberLabel(member)}
             </span>
-            <form action="/team/logout" method="post">
-              <button
-                className="flex items-center gap-2 rounded-lg px-2.5 py-2 text-sm text-muted-foreground transition-colors hover:bg-white/5 hover:text-foreground"
-                type="submit"
-              >
-                <LogOut className="h-4 w-4" strokeWidth={1.75} />
-                <span className="hidden sm:inline">Log out</span>
-              </button>
-            </form>
+            <TeamLogoutButton />
           </div>
         </div>
       </header>

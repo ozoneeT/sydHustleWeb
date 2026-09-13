@@ -1,23 +1,33 @@
 "use client";
 
-import { useFormStatus } from "react-dom";
+import { useState } from "react";
+import { Loader2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
-function SubmitButton() {
-  const { pending } = useFormStatus();
-  return (
-    <Button className="w-full" disabled={pending} type="submit">
-      {pending ? "Signing in…" : "Sign in"}
-    </Button>
-  );
-}
-
+/**
+ * The pending state is tracked by hand rather than with `useFormStatus`.
+ *
+ * That hook reports on forms React is driving; this one posts natively to
+ * a route handler, so React never sees the submission and `pending` was
+ * permanently false — the button said "Sign in" through the entire round
+ * trip, scrypt included. Not disabling the inputs is deliberate too: a
+ * disabled field is left out of the submitted data, and racing the
+ * browser's serialisation would fail as a random wrong-password.
+ */
 export function ConsoleLoginForm({ error }: { error?: string | null }) {
+  const [submitting, setSubmitting] = useState(false);
+
   return (
-    <form action="/console/login" className="space-y-5" method="post">
+    <form
+      action="/console/login"
+      aria-busy={submitting}
+      className="space-y-5"
+      method="post"
+      onSubmit={() => setSubmitting(true)}
+    >
       <div className="space-y-2">
         <Label htmlFor="email">Email</Label>
         <Input
@@ -42,7 +52,10 @@ export function ConsoleLoginForm({ error }: { error?: string | null }) {
 
       {error ? <p className="text-sm text-red-400">{error}</p> : null}
 
-      <SubmitButton />
+      <Button className="w-full" disabled={submitting} type="submit">
+        {submitting && <Loader2 className="h-4 w-4 animate-spin" />}
+        {submitting ? "Signing in…" : "Sign in"}
+      </Button>
     </form>
   );
 }

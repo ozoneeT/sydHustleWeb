@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { CheckCircle2, Lock, ShieldCheck } from "lucide-react";
 
 import { TeamLoginForm } from "@/components/team/TeamLoginForm";
+import { PendingLink } from "@/components/team/PendingLink";
 import { getTeamActor } from "@/lib/team/dal";
 import { SITE_NAME } from "@/lib/site";
 
@@ -80,12 +81,12 @@ export default async function TeamLoginPage({
 
             <p className="mt-6 border-t border-white/10 pt-5 text-xs text-muted-foreground">
               First time here?{" "}
-              <Link
+              <PendingLink
                 className="font-medium text-accent underline-offset-4 hover:underline"
                 href="/team/join"
               >
                 Set up your account
-              </Link>
+              </PendingLink>
             </p>
           </div>
 

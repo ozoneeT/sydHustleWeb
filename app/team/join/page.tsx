@@ -1,7 +1,7 @@
-import Link from "next/link";
 import { redirect } from "next/navigation";
 
 import { TeamSignupForm } from "@/components/team/TeamSignupForm";
+import { PendingLink } from "@/components/team/PendingLink";
 import { getTeamActor } from "@/lib/team/dal";
 
 export const dynamic = "force-dynamic";
@@ -54,12 +54,12 @@ export default async function TeamJoinPage() {
 
             <p className="mt-6 border-t border-white/10 pt-5 text-xs text-muted-foreground">
               Already set up?{" "}
-              <Link
+              <PendingLink
                 className="font-medium text-accent underline-offset-4 hover:underline"
                 href="/team"
               >
                 Sign in
-              </Link>
+              </PendingLink>
             </p>
           </div>
         </div>
