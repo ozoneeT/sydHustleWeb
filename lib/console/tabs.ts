@@ -57,6 +57,15 @@ export const CONSOLE_TABS = [
   { key: "quiet-hours", label: "Quiet hours", group: "Risk", icon: "Moon" },
   { key: "location", label: "Location", group: "Risk", icon: "MapPin" },
 
+  // Team — the people building sydHustle, not the people using it.
+  { key: "team", label: "Members", group: "Team", icon: "HeartHandshake" },
+  {
+    key: "contributions",
+    label: "Contributions",
+    group: "Team",
+    icon: "ClipboardCheck",
+  },
+
   // Ops
   { key: "skills", label: "Skills", group: "Ops", icon: "Wrench" },
   { key: "featured", label: "Subscriptions", group: "Ops", icon: "Star" },
@@ -72,6 +81,7 @@ export type ConsoleTabGroup = (typeof CONSOLE_TABS)[number]["group"];
 export const CONSOLE_TAB_GROUPS: ConsoleTabGroup[] = [
   "Books",
   "People",
+  "Team",
   "Risk",
   "Ops",
 ];

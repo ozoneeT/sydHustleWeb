@@ -112,7 +112,7 @@ function InviteForm({ roles }: { roles: ConsoleRole[] }) {
       <div className="grid gap-4 sm:grid-cols-2">
         <div className="space-y-2">
           <Label htmlFor="invite-name">Their name</Label>
-          <Input id="invite-name" name="name" required placeholder="Emmanuel Praise" />
+          <Input id="invite-name" name="name" required placeholder="Their full name" />
         </div>
         <div className="space-y-2">
           <Label htmlFor="invite-email">Their email</Label>
@@ -121,7 +121,7 @@ function InviteForm({ roles }: { roles: ConsoleRole[] }) {
             name="email"
             type="email"
             required
-            placeholder="emmanuel@sydhustle.com"
+            placeholder="name@sydhustle.com"
           />
         </div>
       </div>

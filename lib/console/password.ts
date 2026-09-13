@@ -91,15 +91,30 @@ export async function verifyPassword(
 }
 
 /**
- * What a staff password has to clear.
+ * What a password has to clear.
  *
- * Length over character classes: a 12-character passphrase beats
- * "Passw0rd!" and people actually remember it. These accounts open the
- * books and the panic desk, so 12 is the floor rather than the usual 8.
+ * Length over character classes: a long passphrase beats "Passw0rd!" and
+ * people actually remember it.
+ *
+ * The floor is the caller's to set, because not every account is worth the
+ * same. Console staff open the books and the panic desk, so they get 12
+ * rather than the usual 8. The team ledger is a write-up of somebody's own
+ * work, and the worst a stolen password there can do is post a claim a
+ * reviewer then has to approve — a lower floor is the right trade when the
+ * alternative is people not bothering to sign up at all.
+ *
+ * The default is the STRICT one on purpose: a new caller that forgets to
+ * think about this gets the safe answer, and anything weaker has to be
+ * asked for in writing at the call site.
  */
-export function checkPasswordStrength(password: string): string | null {
-  if (password.length < 12) {
-    return "Use at least 12 characters — a short phrase is fine and easier to remember.";
+export const STAFF_MIN_PASSWORD_LENGTH = 12;
+
+export function checkPasswordStrength(
+  password: string,
+  minLength: number = STAFF_MIN_PASSWORD_LENGTH
+): string | null {
+  if (password.length < minLength) {
+    return `Use at least ${minLength} characters — a phrase you'll remember beats a scramble you'll write down.`;
   }
   if (password.length > 200) {
     return "That password is too long.";

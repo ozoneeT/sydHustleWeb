@@ -3,6 +3,7 @@ import type { NextRequest } from "next/server";
 
 import { CONSOLE_COOKIE, readConsoleToken } from "@/lib/console/session";
 import { tabForPath } from "@/lib/console/tabs";
+import { TEAM_COOKIE, readTeamToken } from "@/lib/team/session";
 
 /**
  * Console routes are gated here so the panel layout can stay sync and
@@ -24,6 +25,11 @@ import { tabForPath } from "@/lib/console/tabs";
  *
  * /admin checks its own session inside its pages (it renders a login form
  * in place rather than redirecting), so it needs nothing here.
+ *
+ * /team is gated the same way but has no permissions to weigh: a team
+ * member can do one thing, so the only question here is whether the
+ * cookie verifies. Whether the account behind it is still active is the
+ * DAL's to answer on every request.
  */
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
@@ -55,9 +61,31 @@ export async function proxy(request: NextRequest) {
     }
   }
 
+  if (pathname.startsWith("/team/")) {
+    // Sign-in, sign-up and the sign-out route stay public. So does the
+    // upload endpoint, which answers with a 401 of its own — redirecting a
+    // fetch() for a signed upload URL to an HTML login page would surface
+    // as an unreadable JSON parse error rather than "you're signed out".
+    if (
+      pathname === "/team/login" ||
+      pathname === "/team/join" ||
+      pathname === "/team/signed-out" ||
+      pathname.startsWith("/team/api/")
+    ) {
+      return NextResponse.next();
+    }
+
+    const claims = await readTeamToken(
+      request.cookies.get(TEAM_COOKIE)?.value
+    );
+    if (!claims) {
+      return NextResponse.redirect(new URL("/team", request.url));
+    }
+  }
+
   return NextResponse.next();
 }
 
 export const config = {
-  matcher: ["/console/:path*"],
+  matcher: ["/console/:path*", "/team/:path*"],
 };

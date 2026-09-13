@@ -15,7 +15,7 @@ Built with Next.js, Tailwind CSS, and Supabase.
 2. **Set up Supabase**
 
    - Create a project at [supabase.com](https://supabase.com)
-   - Open the SQL Editor and run the migrations in order: [`001_initial.sql`](supabase/migrations/001_initial.sql), [`002_survey_redesign.sql`](supabase/migrations/002_survey_redesign.sql), [`003_marketing_team_and_waitlist_fields.sql`](supabase/migrations/003_marketing_team_and_waitlist_fields.sql), [`004_surveyors.sql`](supabase/migrations/004_surveyors.sql), [`005_email_verifications.sql`](supabase/migrations/005_email_verifications.sql), [`006_join_waitlist_question.sql`](supabase/migrations/006_join_waitlist_question.sql), [`007_email_campaigns.sql`](supabase/migrations/007_email_campaigns.sql), then [`008_console_rbac.sql`](supabase/migrations/008_console_rbac.sql)
+   - Open the SQL Editor and run the migrations in order: [`001_initial.sql`](supabase/migrations/001_initial.sql), [`002_survey_redesign.sql`](supabase/migrations/002_survey_redesign.sql), [`003_marketing_team_and_waitlist_fields.sql`](supabase/migrations/003_marketing_team_and_waitlist_fields.sql), [`004_surveyors.sql`](supabase/migrations/004_surveyors.sql), [`005_email_verifications.sql`](supabase/migrations/005_email_verifications.sql), [`006_join_waitlist_question.sql`](supabase/migrations/006_join_waitlist_question.sql), [`007_email_campaigns.sql`](supabase/migrations/007_email_campaigns.sql), [`008_console_rbac.sql`](supabase/migrations/008_console_rbac.sql), [`009_verification_attempt_blocks.sql`](supabase/migrations/009_verification_attempt_blocks.sql), [`010_volunteers.sql`](supabase/migrations/010_volunteers.sql), [`011_team_rename.sql`](supabase/migrations/011_team_rename.sql), then [`012_team_member_name_optional.sql`](supabase/migrations/012_team_member_name_optional.sql), then [`013_contribution_body_optional.sql`](supabase/migrations/013_contribution_body_optional.sql)
    - Copy your project URL, anon key, and service role key from **Project Settings → API**
    - **Seed a moderator PIN** — `/survey` won't start without one. Run this in the SQL editor with a name and a PIN you choose (the survey list itself is opened with `CONSOLE_EMAIL` / `CONSOLE_PASSWORD`, not a PIN):
      ```sql
@@ -57,6 +57,9 @@ Built with Next.js, Tailwind CSS, and Supabase.
 | `/console/surveylist` | The pre-launch contact list — every respondent and moderator, with copyable emails and phone numbers |
 | `/admin` | Access control — roles and staff. The account owner only |
 | `/console/campaigns` | Email marketing dashboard — write, preview, test and send bulk campaigns |
+| `/console/team` | The team roster — adding a phone number here is what lets someone sign up |
+| `/console/contributions` | The review queue — nothing a team member posts counts until it's approved here |
+| `/team` | Team sign-in, and `/team/dashboard` where they write up what they've built |
 | `/unsubscribe` | Where a campaign's unsubscribe link lands |
 
 ## Data
@@ -71,6 +74,9 @@ Responses are stored in Supabase tables:
 - **`email_unsubscribes`** — the suppression list, checked before every batch and never overridden by anything
 - **`console_roles`** / **`console_staff`** / **`console_staff_roles`** — who works in the console and which tabs their roles open
 - **`console_invitations`** — one-time invitation tokens, stored only as hashes
+- **`team_members`** — the people building sydHustle unpaid: phone number, plus the name and password they set themselves at signup (`name` is null until then). The table doubles as the allowlist — a number that isn't here can't become an account
+- **`team_contributions`** — one row per piece of work claimed, with the reviewer's decision and credited hours alongside the claim
+- **`team_contribution_media`** — screenshots, recordings and files attached to a claim. The bytes live in Cloudflare R2 under `team/`; `storage_path` is the object key
 
 Review responses in the Supabase **Table Editor**, or via `/console/surveylist`.
 
@@ -107,6 +113,47 @@ The argument to `requireConsole` is **not optional**, and that is the whole poin
 **`/admin` has its own sign-in**, using the same owner credentials but a separate two-hour cookie scoped to `/admin`. A console session left open all day can't be walked up to and used to grant somebody the panic desk. Staff can never reach it: it is gated on a password that lives in the environment and cannot be granted by any role.
 
 **Suspend rather than delete** when someone leaves — it is reversible, and it ends their open session immediately.
+
+## The team ledger
+
+sydHustle is being built by people working unpaid against a promise of a share once it earns. That promise is only worth something if there is a record of who did what, agreed at the time rather than reconstructed from memory two years later. `/team` is that record, and the **Members** and **Contributions** tabs in the console are the other half of it.
+
+**Nobody signs themselves up.** Someone in the console adds a phone number at `/console/team` — a number and nothing else — and only then can the person behind it create an account at `/team/join` with that number and a password of their own. The roster *is* the allowlist — there is no second table to keep in step, and a number that was never added has nothing to attach a password to. Numbers are normalised to E.164 before they are written or looked up ([`lib/team/phone.ts`](lib/team/phone.ts)), so `0803…` typed by the admin and `+234 803…` typed by the member land on the same row.
+
+**Members name themselves.** Whoever adds a number usually has it from a chat and no agreed spelling of the name behind it, so the roster doesn't ask for one — `name` is null until the member types it at signup, where it is theirs and correct. Until then the console identifies the row by its number, with an optional private note for recognising it. Because signup demands a name before it will create an account, every posted contribution has a real one on it. [`memberLabel`](lib/team/format.ts) is the single place that answers "and if there isn't one yet?", so no screen renders a blank.
+
+**Team sessions are a third cookie** (`sh_team`, scoped to `/team`), sharing nothing with the console or survey ones but the signing secret. It carries the member's id and nothing else: status is re-read on every request, so suspending someone takes effect on their next click.
+
+**Their dashboard is one screen.** `/team/dashboard` shows what they've posted, what has been counted, and the form for adding to it — because the people using it are writing up an evening's work on a phone, and a dashboard that makes them navigate to find the box they came to type in stops getting used.
+
+**A title is the only required field.** Everything else — the result it produced, the hours, the evidence — is optional and marked as recommended, because an entry that exists beats a paragraph nobody had the energy to write at eleven at night. The form says plainly that a write-up and a screenshot are what get a claim approved fastest, which is a reason to add them rather than a rule that blocks posting without them.
+
+**A contribution is a claim, not a fact.** It is posted as `pending` and counts towards nothing until someone with the Contributions tab approves it. The member's own `hours` and the reviewer's `credited_hours` are separate columns, so crediting four hours against a claim of six leaves both numbers on the record instead of silently resolving the disagreement. Turning something down requires a note, which the member sees. Decisions can be revisited.
+
+**Evidence goes straight to Cloudflare R2.** Photos, video, audio and PDFs (up to 6 files, 25MB each) are PUT from the browser to R2 using one-time presigned URLs from [`app/team/api/uploads/route.ts`](app/team/api/uploads/route.ts) — the files never pass through the app, which is what keeps a screen recording from hitting the 1MB Server Action body limit or Vercel's request cap. Every key is issued under the member's own id and that prefix is checked again when the file is attached, so nobody can staple someone else's evidence to their own claim.
+
+**It reuses the promo artwork bucket** — `R2_BUCKET`, under a `team/` prefix alongside `promo/` — so there is no extra bucket, token or environment variable to set up. **That bucket is public at `R2_PUBLIC_BASE_URL`, so an attachment is readable by anyone holding its URL.** Keys are random UUIDs, which makes a URL unguessable but not private: it can be forwarded and it never expires. That is an accepted trade for a ledger expected to run months rather than years, and the way back — a private bucket with presigned reads — is written down in [`lib/team/r2.ts`](lib/team/r2.ts). Don't attach anything here you wouldn't hand to a stranger who found the link.
+
+**R2 needs a CORS rule**, or the browser blocks the upload before it is ever sent. In the Cloudflare dashboard, R2 → `sydhustle-media` → Settings → CORS policy:
+
+```json
+[
+  {
+    "AllowedOrigins": ["https://www.sydhustle.com", "https://sydhustle.com", "http://localhost:3000"],
+    "AllowedMethods": ["PUT"],
+    "AllowedHeaders": ["content-type"],
+    "MaxAgeSeconds": 3600
+  }
+]
+```
+
+Reads need no CORS rule: a public URL in an `<img>` or `<video>` is an ordinary cross-origin load.
+
+**Forgotten passwords are reset by hand.** There is no email address on a member and no SMS sender wired up, so a reset link has nowhere to go. `Reset password` in the console puts the account back to being a roster entry and they sign up again with the same number.
+
+**Suspend rather than remove.** Suspending ends access and leaves everything they contributed exactly where it is. Removal is only offered for someone who has posted nothing — a wrong number, a person who never started — because deleting the row would take the ledger with it.
+
+**These tables were first shipped as `volunteers`** and renamed by [`011_team_rename.sql`](supabase/migrations/011_team_rename.sql). "Volunteer" framed the work as charity rather than as a stake in something, which is the opposite of what the ledger is for. `010_volunteers.sql` is left exactly as it was applied — a migration that has already run records what happened, rather than describing the schema. One manual step goes with it: Supabase won't let SQL delete a storage bucket (`storage.protect_delete`), so the emptied `volunteer-contributions` bucket is removed by hand in Storage → Buckets.
 
 ## Email marketing
 

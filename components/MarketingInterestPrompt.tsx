@@ -77,7 +77,7 @@ export function MarketingInterestPrompt({ responseId }: { responseId: string }) 
                 <Input
                   id="marketing-whatsapp"
                   type="tel"
-                  placeholder="e.g. +234 801 234 5678"
+                  placeholder="e.g. +234 80X XXX XXXX"
                   value={whatsapp}
                   onChange={(e) => setWhatsapp(e.target.value)}
                 />
