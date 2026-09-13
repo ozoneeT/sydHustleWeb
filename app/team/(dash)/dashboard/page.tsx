@@ -1,9 +1,11 @@
 import { ContributionComposer } from "@/components/team/ContributionComposer";
+import { SettlementButton } from "@/components/team/SettlementButton";
 import { MediaGrid } from "@/components/team/MediaGrid";
 import { StatusPill } from "@/components/team/StatusPill";
 import { WithdrawButton } from "@/components/team/WithdrawButton";
 import { StatCard } from "@/components/ui/stat-card";
 import { requireMember } from "@/lib/team/dal";
+import { isSettlementOpen } from "@/lib/team/settings";
 import {
   listContributionsFor,
   summarizeContributions,
@@ -29,7 +31,10 @@ export const metadata = { title: "Your contributions — sydHustle" };
  */
 export default async function TeamDashboardPage() {
   const member = await requireMember();
-  const contributions = await listContributionsFor(member.id);
+  const [contributions, settlementOpen] = await Promise.all([
+    listContributionsFor(member.id),
+    isSettlementOpen(),
+  ]);
   const totals = summarizeContributions(contributions);
 
   const today = ledgerToday();
@@ -63,6 +68,13 @@ export default async function TeamDashboardPage() {
           value={formatHours(totals.creditedHours)}
         />
       </div>
+
+      {/* Under the totals and above the form: the numbers are the reason
+          the button exists, and the form is what people came to use. */}
+      <SettlementButton
+        open={settlementOpen}
+        requestedAt={member.settlement_requested_at}
+      />
 
       <ContributionComposer today={today} />
 

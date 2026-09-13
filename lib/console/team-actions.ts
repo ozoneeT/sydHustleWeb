@@ -7,6 +7,7 @@ import { requireConsole, type ConsoleActor } from "@/lib/console/dal";
 import { formatPhone, normalizePhone } from "@/lib/team/phone";
 import { memberLabel } from "@/lib/team/format";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
+import { describeSupabaseError } from "@/lib/supabase/errors";
 
 /**
  * The console half of the team ledger: who is allowed in, and which
@@ -84,7 +85,7 @@ export async function addTeamMember(
     if (error.code === "23505") {
       return { ...EMPTY, error: "That number is already on the list." };
     }
-    console.error("failed to add a member:", error);
+    console.error("failed to add a member:", describeSupabaseError(error));
     return { ...EMPTY, error: "Couldn't add that number. Try again." };
   }
 
@@ -131,7 +132,7 @@ export async function setMemberStatus(
     .select("name, phone");
 
   if (error) {
-    console.error("failed to change a member's status:", error);
+    console.error("failed to change a member's status:", describeSupabaseError(error));
     return { ...EMPTY, error: "Couldn't change that. Try again." };
   }
   if (!data || data.length === 0) {
@@ -183,7 +184,7 @@ export async function resetMemberPassword(
     .select("name, phone");
 
   if (error || !data || data.length === 0) {
-    console.error("failed to reset a member password:", error);
+    console.error("failed to reset a member password:", describeSupabaseError(error));
     return { ...EMPTY, error: "Couldn't reset that. Try again." };
   }
 
@@ -231,12 +232,94 @@ export async function removeMember(
     .select("name, phone");
 
   if (error || !data || data.length === 0) {
-    console.error("failed to remove a member:", error);
+    console.error("failed to remove a member:", describeSupabaseError(error));
     return { ...EMPTY, error: "Couldn't remove that. Try again." };
   }
 
   refreshTeamScreens();
   return { error: null, done: `${memberLabel(data[0])} is off the list.` };
+}
+
+const settlementSchema = z.object({ open: z.enum(["true", "false"]) });
+
+/**
+ * Opening or closing settlement, for everyone at once.
+ *
+ * One switch rather than a per-member permission, because the condition it
+ * waits on — sydHustle earning something — is a fact about the company.
+ * Closing it again does not erase requests already made; those stay on the
+ * roster until they are dealt with.
+ */
+export async function setSettlementOpen(
+  _prev: TeamAdminState,
+  formData: FormData
+): Promise<TeamAdminState> {
+  const actor = await requireConsole("team");
+
+  const parsed = settlementSchema.safeParse({ open: formData.get("open") });
+  if (!parsed.success) return { ...EMPTY, error: "Couldn't change that." };
+
+  const open = parsed.data.open === "true";
+  const supabase = createServerSupabaseClient();
+  const { error } = await supabase
+    .from("team_settings")
+    .update({
+      settlement_open: open,
+      updated_at: new Date().toISOString(),
+      updated_by: reviewerLabel(actor),
+    })
+    .eq("id", true);
+
+  if (error) {
+    console.error("failed to change the settlement switch:", describeSupabaseError(error));
+    return { ...EMPTY, error: "Couldn't change that. Try again." };
+  }
+
+  refreshTeamScreens();
+  revalidatePath("/team/dashboard");
+  return {
+    error: null,
+    done: open
+      ? "Settlement is open — everyone can ask to be paid."
+      : "Settlement is closed again.",
+  };
+}
+
+/**
+ * Marking a request as dealt with.
+ *
+ * Clearing the timestamp is what keeps the roster badge meaning
+ * "outstanding" rather than "ever asked". It records nothing about whether
+ * they were actually paid — that conversation happens somewhere this
+ * screen can't see, and pretending otherwise would make the badge a
+ * payment record it isn't.
+ */
+export async function clearSettlementRequest(
+  _prev: TeamAdminState,
+  formData: FormData
+): Promise<TeamAdminState> {
+  await requireConsole("team");
+
+  const parsed = idSchema.safeParse({ memberId: formData.get("memberId") });
+  if (!parsed.success) return { ...EMPTY, error: "Couldn't find that member." };
+
+  const supabase = createServerSupabaseClient();
+  const { data, error } = await supabase
+    .from("team_members")
+    .update({ settlement_requested_at: null })
+    .eq("id", parsed.data.memberId)
+    .select("name, phone");
+
+  if (error || !data || data.length === 0) {
+    console.error("failed to clear a settlement request:", describeSupabaseError(error));
+    return { ...EMPTY, error: "Couldn't clear that. Try again." };
+  }
+
+  refreshTeamScreens();
+  return {
+    error: null,
+    done: `Cleared ${memberLabel(data[0])}'s request.`,
+  };
 }
 
 const reviewSchema = z
@@ -303,7 +386,7 @@ export async function reviewContribution(
     .select("title");
 
   if (error || !data || data.length === 0) {
-    console.error("failed to review a contribution:", error);
+    console.error("failed to review a contribution:", describeSupabaseError(error));
     return { ...EMPTY, error: "Couldn't record that. Try again." };
   }
 

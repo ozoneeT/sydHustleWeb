@@ -9,6 +9,7 @@ import { createTeamSession } from "@/lib/team/session";
 import { findMemberByPhone } from "@/lib/team/data";
 import { normalizePhone } from "@/lib/team/phone";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
+import { describeSupabaseError } from "@/lib/supabase/errors";
 
 /**
  * Signing up as a member.
@@ -113,7 +114,7 @@ export async function signUpMember(
     .select("id");
 
   if (error) {
-    console.error("failed to sign up a member:", error);
+    console.error("failed to sign up a member:", describeSupabaseError(error));
     return { error: "Something went wrong. Please try again." };
   }
 

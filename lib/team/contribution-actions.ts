@@ -12,6 +12,7 @@ import {
 import { r2Config, deleteObjects, TEAM_PREFIX } from "@/lib/team/r2";
 import { ledgerToday } from "@/lib/team/format";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
+import { describeSupabaseError } from "@/lib/supabase/errors";
 
 /**
  * What a member can do to their own ledger: add to it, and withdraw
@@ -132,7 +133,7 @@ export async function postContribution(
     .single();
 
   if (error || !created) {
-    console.error("failed to post a contribution:", error);
+    console.error("failed to post a contribution:", describeSupabaseError(error));
     return { error: "Couldn't save that. Please try again.", posted: false };
   }
 
@@ -151,7 +152,7 @@ export async function postContribution(
     // The write-up is the part that matters and it is already saved, so a
     // failure here is reported without throwing the text away.
     if (mediaError) {
-      console.error("failed to attach contribution media:", mediaError);
+      console.error("failed to attach contribution media:", describeSupabaseError(mediaError));
       return {
         error:
           "Saved your write-up, but the attachments didn't stick. Add them to a new entry.",
@@ -200,7 +201,7 @@ export async function withdrawContribution(
     .select("id");
 
   if (error) {
-    console.error("failed to withdraw a contribution:", error);
+    console.error("failed to withdraw a contribution:", describeSupabaseError(error));
     return { error: "Couldn't remove that. Please try again." };
   }
   if (!data || data.length === 0) {

@@ -15,7 +15,7 @@ Built with Next.js, Tailwind CSS, and Supabase.
 2. **Set up Supabase**
 
    - Create a project at [supabase.com](https://supabase.com)
-   - Open the SQL Editor and run the migrations in order: [`001_initial.sql`](supabase/migrations/001_initial.sql), [`002_survey_redesign.sql`](supabase/migrations/002_survey_redesign.sql), [`003_marketing_team_and_waitlist_fields.sql`](supabase/migrations/003_marketing_team_and_waitlist_fields.sql), [`004_surveyors.sql`](supabase/migrations/004_surveyors.sql), [`005_email_verifications.sql`](supabase/migrations/005_email_verifications.sql), [`006_join_waitlist_question.sql`](supabase/migrations/006_join_waitlist_question.sql), [`007_email_campaigns.sql`](supabase/migrations/007_email_campaigns.sql), [`008_console_rbac.sql`](supabase/migrations/008_console_rbac.sql), [`009_verification_attempt_blocks.sql`](supabase/migrations/009_verification_attempt_blocks.sql), [`010_volunteers.sql`](supabase/migrations/010_volunteers.sql), [`011_team_rename.sql`](supabase/migrations/011_team_rename.sql), then [`012_team_member_name_optional.sql`](supabase/migrations/012_team_member_name_optional.sql), then [`013_contribution_body_optional.sql`](supabase/migrations/013_contribution_body_optional.sql)
+   - Open the SQL Editor and run the migrations in order: [`001_initial.sql`](supabase/migrations/001_initial.sql), [`002_survey_redesign.sql`](supabase/migrations/002_survey_redesign.sql), [`003_marketing_team_and_waitlist_fields.sql`](supabase/migrations/003_marketing_team_and_waitlist_fields.sql), [`004_surveyors.sql`](supabase/migrations/004_surveyors.sql), [`005_email_verifications.sql`](supabase/migrations/005_email_verifications.sql), [`006_join_waitlist_question.sql`](supabase/migrations/006_join_waitlist_question.sql), [`007_email_campaigns.sql`](supabase/migrations/007_email_campaigns.sql), [`008_console_rbac.sql`](supabase/migrations/008_console_rbac.sql), [`009_verification_attempt_blocks.sql`](supabase/migrations/009_verification_attempt_blocks.sql), [`010_volunteers.sql`](supabase/migrations/010_volunteers.sql), [`011_team_rename.sql`](supabase/migrations/011_team_rename.sql), then [`012_team_member_name_optional.sql`](supabase/migrations/012_team_member_name_optional.sql), [`013_contribution_body_optional.sql`](supabase/migrations/013_contribution_body_optional.sql), then [`014_team_settlement.sql`](supabase/migrations/014_team_settlement.sql)
    - Copy your project URL, anon key, and service role key from **Project Settings → API**
    - **Seed a moderator PIN** — `/survey` won't start without one. Run this in the SQL editor with a name and a PIN you choose (the survey list itself is opened with `CONSOLE_EMAIL` / `CONSOLE_PASSWORD`, not a PIN):
      ```sql
@@ -76,6 +76,7 @@ Responses are stored in Supabase tables:
 - **`console_invitations`** — one-time invitation tokens, stored only as hashes
 - **`team_members`** — the people building sydHustle unpaid: phone number, plus the name and password they set themselves at signup (`name` is null until then). The table doubles as the allowlist — a number that isn't here can't become an account
 - **`team_contributions`** — one row per piece of work claimed, with the reviewer's decision and credited hours alongside the claim
+- **`team_settings`** — a single row holding the settlement switch. One row enforced by the primary key, because settlement opening is a fact about the company rather than about any one person
 - **`team_contribution_media`** — screenshots, recordings and files attached to a claim. The bytes live in Cloudflare R2 under `team/`; `storage_path` is the object key
 
 Review responses in the Supabase **Table Editor**, or via `/console/surveylist`.
@@ -148,6 +149,8 @@ sydHustle is being built by people working unpaid against a promise of a share o
 ```
 
 Reads need no CORS rule: a public URL in an `<img>` or `<video>` is an ordinary cross-origin load.
+
+**Settlement is a switch in the console.** Every dashboard carries a *Request settlement* button from day one; until someone opens settlement at `/console/team` it answers "Settlement will be available when sydHustle starts making revenue" — on hover for a mouse, and pinned under the button on tap, because most of these people are on a phone where there is no hover at all. It is deliberately not a `disabled` button: a disabled button fires no events, so it can neither be asked why nor answer. Once settlement is open, a request stamps `team_members.settlement_requested_at` and the roster badges that row until someone marks it handled. [`requestSettlement`](lib/team/settlement-actions.ts) re-reads the switch before recording anything — the button's state is courtesy, not a permission — and a failed read of the switch keeps settlement shut rather than open.
 
 **Forgotten passwords are reset by hand.** There is no email address on a member and no SMS sender wired up, so a reset link has nowhere to go. `Reset password` in the console puts the account back to being a roster entry and they sign up again with the same number.
 

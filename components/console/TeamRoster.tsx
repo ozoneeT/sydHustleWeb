@@ -2,7 +2,10 @@
 
 import { useActionState } from "react";
 import {
+  Check,
+  HandCoins,
   KeyRound,
+  Lock,
   Trash2,
   UserCheck,
   UserPlus,
@@ -11,9 +14,11 @@ import {
 
 import {
   addTeamMember,
+  clearSettlementRequest,
   removeMember,
   resetMemberPassword,
   setMemberStatus,
+  setSettlementOpen,
   type TeamAdminState,
 } from "@/lib/console/team-actions";
 import type { TeamMember, MemberTotals } from "@/lib/team/data";
@@ -48,6 +53,60 @@ const STATUS_LABEL: Record<string, string> = {
  * what it is doing rather than assuming whoever is looking at it already
  * knows.
  */
+/**
+ * The settlement switch.
+ *
+ * Sits at the top of the roster rather than on a settings screen of its
+ * own, because this is the one thing about the team ledger that the whole
+ * team is waiting on, and burying it would make it easy to forget it is
+ * still off.
+ *
+ * Turning it on is a promise being kept, so it says out loud what will
+ * happen rather than being a bare toggle.
+ */
+function SettlementSwitch({ open }: { open: boolean }) {
+  const [state, action, pending] = useActionState(setSettlementOpen, initial);
+
+  return (
+    <form
+      action={action}
+      className="flex flex-wrap items-start gap-4 rounded-2xl border border-white/10 bg-white/[0.03] p-5"
+    >
+      <input name="open" type="hidden" value={open ? "false" : "true"} />
+
+      <div className="min-w-0 flex-1">
+        <h2 className="flex items-center gap-2 text-sm font-semibold">
+          {open ? (
+            <HandCoins className="h-4 w-4 text-accent" />
+          ) : (
+            <Lock className="h-4 w-4 text-muted-foreground" />
+          )}
+          Settlement is {open ? "open" : "closed"}
+        </h2>
+        <p className="mt-0.5 text-xs text-muted-foreground">
+          {open
+            ? "Everyone on the team can ask to be paid from their dashboard. Requests show up on their row below."
+            : "Their dashboards show a Request settlement button that explains it'll be available when sydHustle starts making revenue. Open it when that's true."}
+        </p>
+        {state.error ? (
+          <p className="mt-2 text-sm text-red-400">{state.error}</p>
+        ) : null}
+        {state.done ? (
+          <p className="mt-2 text-sm text-accent">{state.done}</p>
+        ) : null}
+      </div>
+
+      <Button
+        disabled={pending}
+        type="submit"
+        variant={open ? "secondary" : "default"}
+      >
+        {pending ? "Working…" : open ? "Close settlement" : "Open settlement"}
+      </Button>
+    </form>
+  );
+}
+
 function AddForm() {
   const [state, action, pending] = useActionState(addTeamMember, initial);
 
@@ -147,9 +206,16 @@ function RowAction({
   );
 }
 
-export function TeamRoster({ members }: { members: Row[] }) {
+export function TeamRoster({
+  members,
+  settlementOpen,
+}: {
+  members: Row[];
+  settlementOpen: boolean;
+}) {
   return (
     <div className="space-y-8">
+      <SettlementSwitch open={settlementOpen} />
       <AddForm />
 
       <section className="space-y-3">
@@ -189,6 +255,12 @@ export function TeamRoster({ members }: { members: Row[] }) {
                       >
                         {STATUS_LABEL[member.status]}
                       </span>
+                      {member.settlement_requested_at && (
+                        <span className="inline-flex items-center gap-1 rounded-full bg-amber-400/15 px-2 py-0.5 text-xs font-medium text-amber-300">
+                          <HandCoins className="h-3 w-3" />
+                          Asked to be settled
+                        </span>
+                      )}
                     </div>
                     <p className="mt-0.5 text-xs text-muted-foreground">
                       {member.name ? (
@@ -249,6 +321,18 @@ export function TeamRoster({ members }: { members: Row[] }) {
                     <KeyRound className="h-3.5 w-3.5" />
                     Reset password
                   </RowAction>
+
+                  {member.settlement_requested_at && (
+                    <RowAction
+                      action={clearSettlementRequest}
+                      className="text-accent"
+                      fields={{ memberId: member.id }}
+                      pendingLabel="Clearing…"
+                    >
+                      <Check className="h-3.5 w-3.5" />
+                      Mark request handled
+                    </RowAction>
+                  )}
 
                   <RowAction
                     className="text-red-300 hover:bg-red-500/15"

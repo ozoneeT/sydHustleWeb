@@ -1,6 +1,7 @@
 import { TeamRoster } from "@/components/console/TeamRoster";
 import { requireConsole } from "@/lib/console/dal";
 import { listTeam } from "@/lib/team/data";
+import { isSettlementOpen } from "@/lib/team/settings";
 
 export const metadata = { title: "Team members — sydHustle Console" };
 
@@ -15,7 +16,10 @@ export const metadata = { title: "Team members — sydHustle Console" };
  */
 export default async function TeamPage() {
   await requireConsole("team");
-  const members = await listTeam();
+  const [members, settlementOpen] = await Promise.all([
+    listTeam(),
+    isSettlementOpen(),
+  ]);
 
   return (
     <div className="space-y-8">
@@ -27,7 +31,7 @@ export default async function TeamPage() {
         </p>
       </div>
 
-      <TeamRoster members={members} />
+      <TeamRoster members={members} settlementOpen={settlementOpen} />
     </div>
   );
 }

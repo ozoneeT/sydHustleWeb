@@ -3,6 +3,7 @@ import "server-only";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { r2Config, publicUrl } from "@/lib/team/r2";
 import { verifyPassword } from "@/lib/console/password";
+import { describeSupabaseError } from "@/lib/supabase/errors";
 
 /**
  * Reads for the team ledger — the roster, the claims, and the
@@ -29,6 +30,9 @@ export interface TeamMember {
   note: string | null;
   created_at: string;
   last_login_at: string | null;
+  /** When they last asked to be settled, or null. Cleared from the console
+   * once it's been dealt with, so a value here means "still waiting". */
+  settlement_requested_at: string | null;
 }
 
 export interface ContributionMedia {
@@ -74,7 +78,7 @@ export interface MemberTotals {
 }
 
 const MEMBER_COLUMNS =
-  "id, phone, name, status, note, created_at, last_login_at";
+  "id, phone, name, status, note, created_at, last_login_at, settlement_requested_at";
 
 const CONTRIBUTION_COLUMNS = `
   id, member_id, title, body, category, occurred_on, hours, status,
@@ -163,7 +167,7 @@ export async function getTeamMember(id: string): Promise<TeamMember | null> {
     .maybeSingle();
 
   if (error) {
-    console.error("failed to load a member:", error);
+    console.error("failed to load a member:", describeSupabaseError(error));
     return null;
   }
   return (data as TeamMember) ?? null;
@@ -187,7 +191,7 @@ export async function findMemberByPhone(
     .maybeSingle();
 
   if (error) {
-    console.error("failed to look up a member by phone:", error);
+    console.error("failed to look up a member by phone:", describeSupabaseError(error));
     return null;
   }
   if (!data) return null;
@@ -215,7 +219,7 @@ export async function authenticateMember(
     .maybeSingle();
 
   if (error) {
-    console.error("member login lookup failed:", error);
+    console.error("member login lookup failed:", describeSupabaseError(error));
     return null;
   }
   if (!data || data.status !== "active") return null;
@@ -245,7 +249,7 @@ export async function listTeam(): Promise<
   ]);
 
   if (error) {
-    console.error("failed to list members:", error);
+    console.error("failed to list members:", describeSupabaseError(error));
     return [];
   }
 
@@ -292,7 +296,7 @@ export async function listContributionsFor(
     .order("created_at", { ascending: false });
 
   if (error) {
-    console.error("failed to list a member's contributions:", error);
+    console.error("failed to list a member's contributions:", describeSupabaseError(error));
     return [];
   }
 
@@ -340,7 +344,7 @@ export async function listContributionsForReview(
     .order("created_at", { ascending: status === "pending" });
 
   if (error) {
-    console.error("failed to list contributions for review:", error);
+    console.error("failed to list contributions for review:", describeSupabaseError(error));
     return [];
   }
 
@@ -372,7 +376,7 @@ export async function contributionCounts(): Promise<
     rejected: 0,
   };
   if (error) {
-    console.error("failed to count contributions:", error);
+    console.error("failed to count contributions:", describeSupabaseError(error));
     return counts;
   }
   for (const row of data ?? []) {
