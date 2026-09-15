@@ -2,6 +2,8 @@
 
 import { useEffect, useRef, useState } from "react";
 
+import { PLAY_STORE_URL } from "@/lib/site";
+
 /**
  * The two store badges.
  *
@@ -16,11 +18,16 @@ import { useEffect, useRef, useState } from "react";
  * the badge's own height, so one number scales the whole lock-up and the
  * hero pair can be genuinely large without redrawing anything.
  *
- * THEY DO NOT LINK ANYWHERE YET. sydHustle isn't in either store, and a
- * badge that sends somebody to a 404 is worse than one that tells them the
- * truth — it reads as a broken site rather than an unreleased app. So they
- * are buttons that answer "coming soon", and they go back to being links
- * on the day the listings are live: restore `href` and drop the tooltip.
+ * THE TWO ARE IN DIFFERENT STATES, and that is the point of the split
+ * below. Google Play is live, so that badge is an ordinary link. The App
+ * Store listing is not, so that one is a button that answers "coming
+ * soon" — a badge that sends somebody to a 404 is worse than one that
+ * tells them the truth, because it reads as a broken site rather than an
+ * unreleased app.
+ *
+ * When the iOS listing goes live, `AppStoreBadge` becomes the same shape
+ * as `GooglePlayBadge`: an `<a href={APP_STORE_URL}>` with no tooltip, and
+ * the reveal state in `StoreBadges` goes with it.
  *
  * The tooltip is revealed by hover AND by tap, because almost everybody
  * arriving here is on a phone, where hover does not exist and a badge that
@@ -103,22 +110,14 @@ function AppStoreBadge({
   );
 }
 
-function GooglePlayBadge({
-  onReveal,
-  shown,
-  size,
-}: {
-  onReveal: () => void;
-  shown: boolean;
-  size: Size;
-}) {
+function GooglePlayBadge({ size }: { size: Size }) {
   return (
-    <button
-      aria-disabled
-      aria-label="sydHustle on Google Play — coming soon"
+    <a
+      aria-label="Get sydHustle on Google Play"
       className={`${SIZES[size]} ${SHELL}`}
-      onClick={onReveal}
-      type="button"
+      href={PLAY_STORE_URL}
+      rel="noopener"
+      target="_blank"
     >
       <svg
         viewBox="0 0 512 512"
@@ -150,8 +149,7 @@ function GooglePlayBadge({
           Google Play
         </span>
       </span>
-      <ComingSoon shown={shown} />
-    </button>
+    </a>
   );
 }
 
@@ -165,15 +163,15 @@ export function StoreBadges({
   /** Used with size "fluid" to set the font size the lock-up scales off. */
   style?: React.CSSProperties;
 }) {
-  const [tapped, setTapped] = useState<"apple" | "play" | null>(null);
+  const [tapped, setTapped] = useState(false);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   /** Clears itself after a few seconds, because there is nothing to tap to
    * dismiss it and a tooltip pinned over the hero forever is litter. */
-  function reveal(which: "apple" | "play") {
+  function reveal() {
     if (timer.current) clearTimeout(timer.current);
-    setTapped(which);
-    timer.current = setTimeout(() => setTapped(null), 3000);
+    setTapped(true);
+    timer.current = setTimeout(() => setTapped(false), 3000);
   }
 
   useEffect(() => {
@@ -184,16 +182,8 @@ export function StoreBadges({
 
   return (
     <div style={style} className={`flex items-center ${className}`}>
-      <AppStoreBadge
-        onReveal={() => reveal("apple")}
-        shown={tapped === "apple"}
-        size={size}
-      />
-      <GooglePlayBadge
-        onReveal={() => reveal("play")}
-        shown={tapped === "play"}
-        size={size}
-      />
+      <AppStoreBadge onReveal={reveal} shown={tapped} size={size} />
+      <GooglePlayBadge size={size} />
     </div>
   );
 }
