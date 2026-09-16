@@ -17,12 +17,22 @@ export const metadata = { title: "Identity — sydHustle Console" };
 /** Never cache a page whose whole job is controlled access. */
 export const dynamic = "force-dynamic";
 
-/** Field order as the operator reads them out to someone on the phone. */
+/**
+ * Field order as the operator reads them out to someone on the phone,
+ * and whether the field can actually refuse a verification.
+ *
+ * State of origin is asked for and recorded but NOT enforced: NIMC
+ * frequently holds no state of origin at all, only a residential one,
+ * so someone from Ondo living in Lagos has no winnable answer. It is
+ * shown here because it is real information, and never as a failure,
+ * because telling that person to correct their state is sending them
+ * to fix the only field incapable of being wrong.
+ */
 const MATCH_FIELDS = [
-  ["firstname", "First name"],
-  ["lastname", "Surname"],
-  ["dateofbirth", "Date of birth"],
-  ["state", "State of origin"],
+  ["firstname", "First name", true],
+  ["lastname", "Surname", true],
+  ["dateofbirth", "Date of birth", true],
+  ["state", "State of origin", false],
 ] as const;
 
 /**
@@ -60,28 +70,39 @@ function MatchBreakdown({
 
   return (
     <div className="mt-2 flex flex-wrap items-center gap-1.5">
-      {present.map(([key, label]) => {
+      {present.map(([key, label, enforced]) => {
         const value = summary[key];
+        // A red chip means "tell them to re-read this". An unenforced
+        // field must never wear one however badly it compared, or the
+        // desk sends people to correct something that cannot refuse
+        // them -- which is the bug this whole column exists to expose.
         const tone =
           value === true
             ? "bg-emerald-500/15 text-emerald-300"
-            : value === false
+            : value === false && enforced
               ? "bg-red-500/15 text-red-300"
-              : "bg-white/5 text-muted-foreground";
+              : value === false
+                ? "bg-amber-500/10 text-amber-200/80"
+                : "bg-white/5 text-muted-foreground";
         const mark = value === true ? "✓" : value === false ? "✗" : "–";
         return (
           <span
             className={`rounded px-2 py-0.5 text-[11px] ${tone}`}
             key={key}
             title={
-              value === true
-                ? "Matched the provider record"
-                : value === false
-                  ? "Did not match the provider record"
-                  : "Not compared — the rail cannot check this, or the record carries no value for it"
+              !enforced
+                ? "Recorded, never enforced. NIMC often holds only a residential state, so this cannot refuse a verification and is not something to ask them to correct."
+                : value === true
+                  ? "Matched the provider record"
+                  : value === false
+                    ? "Did not match the provider record"
+                    : "Not compared — the rail cannot check this, or the record carries no value for it"
             }
           >
             {mark} {label}
+            {enforced ? null : (
+              <span className="ml-1 opacity-60">· advisory</span>
+            )}
           </span>
         );
       })}
