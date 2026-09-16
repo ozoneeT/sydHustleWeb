@@ -9,12 +9,85 @@ import {
   listIdentityDisclosures,
   listRetainedIdentityRecords,
   listVerificationBlocks,
+  type VerificationMatchSummary,
 } from "@/lib/console/identity";
 
 export const metadata = { title: "Identity — sydHustle Console" };
 
 /** Never cache a page whose whole job is controlled access. */
 export const dynamic = "force-dynamic";
+
+/** Field order as the operator reads them out to someone on the phone. */
+const MATCH_FIELDS = [
+  ["firstname", "First name"],
+  ["lastname", "Surname"],
+  ["dateofbirth", "Date of birth"],
+  ["state", "State of origin"],
+] as const;
+
+/**
+ * What the provider agreed with on the latest failed attempt.
+ *
+ * The whole point is the difference between a red chip and a grey one.
+ * Red is "they got this wrong, tell them to re-read it". Grey is "this
+ * was never compared" -- the rail cannot check states, or NIMC holds
+ * none for that NIN -- and telling somebody to correct a field that was
+ * never checked sends them to fix the one thing that cannot be wrong.
+ * That mistake is exactly why the app-side check was rewritten; it would
+ * be a shame to reintroduce it here, in the tool for diagnosing it.
+ */
+function MatchBreakdown({
+  summary,
+}: {
+  summary: VerificationMatchSummary | null;
+}) {
+  if (!summary) {
+    return (
+      <p className="mt-1 text-xs text-muted-foreground/70">
+        No per-field result recorded — this attempt predates 16 Sep 2026.
+      </p>
+    );
+  }
+
+  const present = MATCH_FIELDS.filter(([key]) => key in summary);
+  if (present.length === 0) {
+    return (
+      <p className="mt-1 text-xs text-muted-foreground/70">
+        No per-field result recorded for this attempt.
+      </p>
+    );
+  }
+
+  return (
+    <div className="mt-2 flex flex-wrap items-center gap-1.5">
+      {present.map(([key, label]) => {
+        const value = summary[key];
+        const tone =
+          value === true
+            ? "bg-emerald-500/15 text-emerald-300"
+            : value === false
+              ? "bg-red-500/15 text-red-300"
+              : "bg-white/5 text-muted-foreground";
+        const mark = value === true ? "✓" : value === false ? "✗" : "–";
+        return (
+          <span
+            className={`rounded px-2 py-0.5 text-[11px] ${tone}`}
+            key={key}
+            title={
+              value === true
+                ? "Matched the provider record"
+                : value === false
+                  ? "Did not match the provider record"
+                  : "Not compared — the rail cannot check this, or the record carries no value for it"
+            }
+          >
+            {mark} {label}
+          </span>
+        );
+      })}
+    </div>
+  );
+}
 
 export default async function IdentityPage({
   searchParams,
@@ -113,6 +186,7 @@ export default async function IdentityPage({
                     {block.strikes} of {block.cap} strikes · last tried{" "}
                     {shortDate(block.last_attempt_at)}
                   </p>
+                  <MatchBreakdown summary={block.last_match_summary} />
                 </div>
                 <div className="flex flex-wrap items-center justify-end gap-3">
                   <WaiveAttempts

@@ -116,6 +116,23 @@ export async function listRetainedIdentityRecords(
  * uuid" needs the uuid to arrive by email first. So the queue comes to
  * the desk instead.
  */
+/**
+ * Which factors the provider agreed with on the latest failed attempt.
+ *
+ * Three values per field, and collapsing any two of them loses the thing
+ * this is for:
+ *   true   matched
+ *   false  compared, and wrong -- the holder mistyped, or is not them
+ *   null   NOT compared. The rail cannot check states at all, or this
+ *          NIMC record carries none. Nobody is at fault and there is
+ *          nothing for the holder to correct.
+ *
+ * Partial because a rail that checks fewer factors simply omits keys.
+ */
+export type VerificationMatchSummary = Partial<
+  Record<"firstname" | "lastname" | "dateofbirth" | "state", boolean | null>
+>;
+
 export type VerificationBlockRow = {
   profile_id: string;
   kind: "nin" | "bvn";
@@ -124,6 +141,12 @@ export type VerificationBlockRow = {
   blocked: boolean;
   last_attempt_at: string;
   display_name: string | null;
+  /**
+   * Null means "not recorded", which is NOT the same as "nothing
+   * matched": failed attempts did not store a summary until 2026-09-16,
+   * so every attempt before that is permanently blank.
+   */
+  last_match_summary: VerificationMatchSummary | null;
 };
 
 /**
@@ -147,7 +170,7 @@ export async function listVerificationBlocks(): Promise<VerificationBlocks> {
   const { data, error } = await supabase
     .from("verification_attempt_blocks")
     .select(
-      "profile_id, kind, strikes, cap, blocked, last_attempt_at, display_name"
+      "profile_id, kind, strikes, cap, blocked, last_attempt_at, display_name, last_match_summary"
     )
     // Refusals first, then whoever tried most recently. Someone at two of
     // three is worth seeing before someone at one of five, and someone

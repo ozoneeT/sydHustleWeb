@@ -1,26 +1,18 @@
 "use server";
 
-import {
-  createAndSendVerificationCode,
-  verifyCode,
-  type SendCodeResult,
-  type VerifyCodeResult,
-} from "@/lib/email/verification";
 import { emailFromToken } from "@/lib/email/unsubscribe";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 
-export async function sendEmailVerificationCode(
-  email: string
-): Promise<SendCodeResult> {
-  return createAndSendVerificationCode(email);
-}
-
-export async function verifyEmailCode(
-  email: string,
-  code: string
-): Promise<VerifyCodeResult> {
-  return verifyCode(email, code);
-}
+/**
+ * The 6-digit email verification actions used to sit here, wrapping
+ * lib/email/verification.ts for the survey's email step. The survey is
+ * gone, so the wrappers are too — an exported server action is a live
+ * POST endpoint, and one that sends mail to any address handed to it
+ * should not outlive the form it was written for.
+ *
+ * The library underneath is untouched and still used: `isEmailVerified`
+ * gates the waitlist signup.
+ */
 
 export type SubscriptionResult = { ok: true } | { ok: false; error: string };
 

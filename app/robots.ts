@@ -7,12 +7,14 @@ export default function robots(): MetadataRoute.Robots {
       {
         userAgent: "*",
         allow: "/",
-        disallow: ["/admin", "/console"],
+        // /team is the contributors' ledger — signed-in, private, and of
+        // no use to a searcher. It shipped after this list was written.
+        disallow: ["/admin", "/console", "/team"],
       },
       {
         userAgent: "Googlebot",
         allow: ["/", "/sydhustle-icon.webp", "/sydhustle-logo.webp", "/sydhustle-logo-light.png"],
-        disallow: ["/admin", "/console"],
+        disallow: ["/admin", "/console", "/team"],
       },
       {
         userAgent: "Googlebot-Image",

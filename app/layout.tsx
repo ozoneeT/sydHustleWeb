@@ -5,9 +5,11 @@ import { StaleDeploymentReloader } from "@/components/StaleDeploymentReloader";
 import {
   absoluteUrl,
   BRAND_ASSETS,
+  PLAY_STORE_URL,
   SITE_DESCRIPTION,
   SITE_NAME,
   SITE_URL,
+  SUPPORT_EMAIL,
 } from "@/lib/site";
 
 const plusJakarta = Plus_Jakarta_Sans({
@@ -88,10 +90,29 @@ export const metadata: Metadata = {
   category: "business",
 };
 
+/**
+ * Who sydHustle is, in the form Google reads.
+ *
+ * This is deliberately specific, because searching "sydhustle" was
+ * returning an AI summary of *sydehussle.com* — an unrelated affiliate
+ * scheme with a near-identical name and years more of a footprint. Google
+ * had almost nothing to tell the two apart with: a name, a logo, and an
+ * empty `sameAs`.
+ *
+ * So every field here is one that only one of the two can claim. A
+ * Nigerian company number is a matter of public record. A Play Store
+ * listing is an identity Google already holds and can cross-reference. A
+ * country and a support address ground it somewhere specific. None of it
+ * is a guarantee — an AI Overview is not something markup commands — but
+ * it is the difference between "no signal" and "a different company".
+ */
 const organizationJsonLd = {
   "@context": "https://schema.org",
   "@type": "Organization",
   name: SITE_NAME,
+  // Exactly as registered, and as it appears in the privacy policy.
+  legalName: "SydHustle Limited",
+  alternateName: "syd hustle",
   url: SITE_URL,
   logo: {
     "@type": "ImageObject",
@@ -106,7 +127,41 @@ const organizationJsonLd = {
     absoluteUrl(BRAND_ASSETS.icon.path),
   ],
   description: SITE_DESCRIPTION,
-  sameAs: [],
+
+  // The Nigerian corporate registration. Public record, unique, and
+  // impossible for a similarly-named business to share.
+  identifier: {
+    "@type": "PropertyValue",
+    name: "RC number",
+    value: "RC 9677465",
+  },
+  foundingLocation: {
+    "@type": "Country",
+    name: "Nigeria",
+  },
+  areaServed: {
+    "@type": "Country",
+    name: "Nigeria",
+  },
+  contactPoint: {
+    "@type": "ContactPoint",
+    contactType: "customer support",
+    email: SUPPORT_EMAIL,
+    areaServed: "NG",
+    availableLanguage: "English",
+  },
+
+  /**
+   * The profiles that prove this is the same entity elsewhere, and the
+   * field that was empty while Google was guessing.
+   *
+   * Only the Play Store listing so far, because it is the one that is
+   * verified and live. ADD THE SOCIAL PROFILES HERE as they exist —
+   * LinkedIn, X, Instagram, Facebook — and the App Store listing when it
+   * ships. Each one is another place Google can confirm the name, and
+   * each is worth more than anything else on this page.
+   */
+  sameAs: [PLAY_STORE_URL],
 };
 
 const websiteJsonLd = {

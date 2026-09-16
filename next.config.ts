@@ -20,6 +20,12 @@ const nextConfig: NextConfig = {
   async redirects() {
     return [
       { source: "/terms", destination: "/legal/terms", permanent: true },
+      // The student survey is over and its page is gone, but Google has
+      // the URL indexed and shows it as a sitelink. A 301 to the landing
+      // page retires it properly: a 404 would sit in Search Console as an
+      // error for months, and anyone following the old result would hit a
+      // dead end instead of the thing they were looking for.
+      { source: "/survey", destination: "/", permanent: true },
       // The survey list had its own address and its own password before it
       // became a console tab. The bookmark is in use, so it still lands.
       {
