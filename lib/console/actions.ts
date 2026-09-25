@@ -535,6 +535,11 @@ export async function sendBroadcast(
     p_filters: filters,
     p_exclude: exclude,
     p_note: parsed.data.note ?? null,
+    // Only ever the literal 'modal' or null. The function checks for that
+    // exact string too, so a stray value cannot become an interruption by
+    // being merely truthy.
+    p_present: formData.get("present_modal") === "on" ? "modal" : null,
+    p_cta_label: String(formData.get("cta_label") ?? "").trim() || null,
   });
   if (error) {
     return { error: `Nothing was sent: ${error.message}`, sent: null };

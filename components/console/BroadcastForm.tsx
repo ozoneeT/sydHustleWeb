@@ -267,6 +267,41 @@ export function BroadcastForm({ totalUsers }: { totalUsers: number }) {
             placeholder="Why this went out. Only ever seen here."
           />
         </div>
+
+        {/* Deliberately last, and deliberately not a tick-box styled like
+            an option among equals. Everything above decides what a notice
+            says; this decides whether it stops somebody mid-task. */}
+        <div className="space-y-3 rounded-xl border border-amber-500/30 bg-amber-500/5 p-4">
+          <label className="flex items-start gap-3 text-sm text-amber-100/90">
+            <input className="mt-1" name="present_modal" type="checkbox" />
+            <span>
+              <strong className="text-white">Interrupt with a pop-up</strong> —
+              raise this as a dialog the next time each person opens the app,
+              on top of landing in their notifications.
+            </span>
+          </label>
+          <p className="text-xs text-amber-100/60">
+            For notices that are worse to miss than to interrupt: a security
+            warning, a payment rail that is down, a change to what someone is
+            agreeing to. Everything else should stay a notification — a pop-up
+            people learn to dismiss unread is one that fails on the day it
+            matters. Shown once, on one device or five, and it still sits in
+            the notification centre afterwards.
+          </p>
+          <div className="space-y-2">
+            <Label htmlFor="cta_label">Button label (optional)</Label>
+            <Input
+              id="cta_label"
+              maxLength={24}
+              name="cta_label"
+              placeholder="Read more"
+            />
+            <p className="text-xs text-muted-foreground/70">
+              Opens the screen chosen above. Left blank, the dialog is just
+              something to read and close.
+            </p>
+          </div>
+        </div>
       </section>
 
       {/* ---------------- Send ---------------- */}
