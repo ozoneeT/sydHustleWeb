@@ -288,6 +288,22 @@ export function BroadcastForm({ totalUsers }: { totalUsers: number }) {
             matters. Shown once, on one device or five, and it still sits in
             the notification centre afterwards.
           </p>
+          <label className="flex items-start gap-3 text-sm text-amber-100/90">
+            <input className="mt-1" name="no_push" type="checkbox" />
+            <span>
+              <strong className="text-white">Don&apos;t also send a push</strong>{" "}
+              — no lock screen, no sound. They meet it when they next open
+              the app.
+            </span>
+          </label>
+          <p className="text-xs text-amber-100/60">
+            For something worth saying and not worth waking 35 phones for. The
+            trade is reach: a push finds somebody who hasn&apos;t opened
+            sydHustle in a week, and this does not — so a warning that cannot
+            wait should keep its push. Only available with the pop-up ticked,
+            because a broadcast with neither is a whisper.
+          </p>
+
           <div className="space-y-2">
             <Label htmlFor="cta_label">Button label (optional)</Label>
             <Input

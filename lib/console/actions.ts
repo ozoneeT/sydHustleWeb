@@ -540,6 +540,10 @@ export async function sendBroadcast(
     // being merely truthy.
     p_present: formData.get("present_modal") === "on" ? "modal" : null,
     p_cta_label: String(formData.get("cta_label") ?? "").trim() || null,
+    // Declining the push is only offered alongside the pop-up, and the
+    // function refuses the combination anyway — a broadcast with neither
+    // reaches nobody who isn't already looking.
+    p_push: formData.get("no_push") !== "on",
   });
   if (error) {
     return { error: `Nothing was sent: ${error.message}`, sent: null };
