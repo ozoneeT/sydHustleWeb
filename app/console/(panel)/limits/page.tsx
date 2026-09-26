@@ -1,10 +1,12 @@
 import { MoneyLimitsForm } from "@/components/console/MoneyLimitsForm";
+import { SkillLimitsForm } from "@/components/console/SkillLimitsForm";
 import { Card } from "@/components/ui/card";
 import { requireConsole } from "@/lib/console/dal";
 import {
   getAmlSettings,
   getBvnCounts,
   listMoneyTierLimits,
+  listSkillTierLimits,
 } from "@/lib/console/limits";
 
 export const metadata = { title: "Limits — sydHustle Console" };
@@ -15,18 +17,20 @@ export const dynamic = "force-dynamic";
 export default async function LimitsPage() {
   await requireConsole("limits");
 
-  const [limits, settings, counts] = await Promise.all([
+  const [limits, settings, counts, skillLimits] = await Promise.all([
     listMoneyTierLimits(),
     getAmlSettings(),
     getBvnCounts(),
+    listSkillTierLimits(),
   ]);
 
   return (
     <div className="space-y-8">
       <div>
-        <h1 className="text-2xl font-bold tracking-tight">Money limits</h1>
+        <h1 className="text-2xl font-bold tracking-tight">Limits</h1>
         <p className="max-w-3xl text-sm text-muted-foreground">
-          What a rung is allowed to move. Withdrawal limits come off the
+          Configure live thresholds for money movement and how many Skills each
+          Hustler tier may offer. Withdrawal limits come off the
           Hustler ladder — what someone has earned here decides how fast
           money may leave — and deposit thresholds off the Provider ladder.
           A rung is slow to reach and cannot be bought, which makes it a
@@ -34,6 +38,8 @@ export default async function LimitsPage() {
           document.
         </p>
       </div>
+
+      <SkillLimitsForm limits={skillLimits} />
 
       <MoneyLimitsForm
         bvnRequiredForAll={settings.bvn_required_for_all}

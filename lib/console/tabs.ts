@@ -52,7 +52,7 @@ export const CONSOLE_TABS = [
   { key: "moderation", label: "Moderation", group: "Risk", icon: "ShieldAlert" },
   { key: "listings", label: "Listings", group: "Risk", icon: "LayoutList" },
   { key: "holds", label: "Held funds", group: "Risk", icon: "Lock" },
-  { key: "limits", label: "Money limits", group: "Risk", icon: "Gauge" },
+  { key: "limits", label: "Limits", group: "Risk", icon: "Gauge" },
   { key: "panic", label: "Panic", group: "Risk", icon: "Siren" },
   { key: "quiet-hours", label: "Quiet hours", group: "Risk", icon: "Moon" },
   { key: "location", label: "Location", group: "Risk", icon: "MapPin" },

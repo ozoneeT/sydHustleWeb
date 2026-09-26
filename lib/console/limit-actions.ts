@@ -145,3 +145,48 @@ export async function updateBvnMode(
   revalidatePath("/console/limits");
   return { error: null, saved: true };
 }
+
+
+export type SkillLimitsState = { error: string | null; saved: boolean };
+
+export async function updateSkillLimits(
+  _prev: SkillLimitsState,
+  formData: FormData
+): Promise<SkillLimitsState> {
+  await requireConsole("limits");
+
+  const rows: { rung: number; max_skills: number }[] = [];
+  for (let rung = 0; rung < 5; rung += 1) {
+    const raw = formData.get(`skill.${rung}.max_skills`);
+    const parsed = z.coerce.number().int().min(rung === 0 ? 1 : 0).max(20).safeParse(raw);
+    if (!parsed.success) {
+      return {
+        error: rung === 0
+          ? "Newbie must have at least one Skill slot; every limit must be a whole number up to 20."
+          : "Each Skill limit must be a whole number between 0 and 20.",
+        saved: false,
+      };
+    }
+    rows.push({ rung, max_skills: parsed.data });
+  }
+
+  if (!rows.every((row, index) => index === 0 || row.max_skills >= rows[index - 1]!.max_skills)) {
+    return {
+      error: "Skill limits must stay level or increase at each higher tier.",
+      saved: false,
+    };
+  }
+
+  const supabase = createServerSupabaseClient();
+  const updatedAt = new Date().toISOString();
+  for (const row of rows) {
+    const { error } = await supabase
+      .from("skill_tier_limits")
+      .update({ max_skills: row.max_skills, updated_at: updatedAt })
+      .eq("rung", row.rung);
+    if (error) return { error: error.message, saved: false };
+  }
+
+  revalidatePath("/console/limits");
+  return { error: null, saved: true };
+}

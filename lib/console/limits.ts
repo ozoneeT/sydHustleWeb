@@ -87,3 +87,27 @@ export async function getBvnCounts(): Promise<{
     openRequests: requests.count ?? 0,
   };
 }
+
+
+export type SkillTierLimit = {
+  rung: number;
+  tier_id: string;
+  label: string;
+  max_skills: number;
+};
+
+export async function listSkillTierLimits(): Promise<SkillTierLimit[]> {
+  const supabase = createServerSupabaseClient();
+  const { data, error } = await supabase
+    .from("skill_tier_limits")
+    .select("rung, tier_id, label, max_skills")
+    .order("rung", { ascending: true });
+  if (error) throw new Error(error.message);
+
+  return (data ?? []).map((row) => ({
+    rung: Number(row.rung),
+    tier_id: String(row.tier_id),
+    label: String(row.label),
+    max_skills: Number(row.max_skills),
+  }));
+}
