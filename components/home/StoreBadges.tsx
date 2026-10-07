@@ -1,8 +1,4 @@
-"use client";
-
-import { useEffect, useRef, useState } from "react";
-
-import { PLAY_STORE_URL } from "@/lib/site";
+import { APP_STORE_URL, PLAY_STORE_URL } from "@/lib/site";
 
 /**
  * The two store badges.
@@ -18,20 +14,8 @@ import { PLAY_STORE_URL } from "@/lib/site";
  * the badge's own height, so one number scales the whole lock-up and the
  * hero pair can be genuinely large without redrawing anything.
  *
- * THE TWO ARE IN DIFFERENT STATES, and that is the point of the split
- * below. Google Play is live, so that badge is an ordinary link. The App
- * Store listing is not, so that one is a button that answers "coming
- * soon" — a badge that sends somebody to a 404 is worse than one that
- * tells them the truth, because it reads as a broken site rather than an
- * unreleased app.
- *
- * When the iOS listing goes live, `AppStoreBadge` becomes the same shape
- * as `GooglePlayBadge`: an `<a href={APP_STORE_URL}>` with no tooltip, and
- * the reveal state in `StoreBadges` goes with it.
- *
- * The tooltip is revealed by hover AND by tap, because almost everybody
- * arriving here is on a phone, where hover does not exist and a badge that
- * only answers a mouse answers nobody.
+ * Both store listings are live, so both badges are ordinary links. Keep
+ * the destinations in lib/site.ts as the single source of truth.
  */
 
 type Size = "sm" | "md" | "lg" | "fluid";
@@ -52,43 +36,14 @@ const SIZES: Record<Size, string> = {
 const SHELL =
   "group relative inline-flex w-[3.49em] shrink-0 cursor-pointer items-center gap-[0.18em] rounded-[0.21em] border border-white/15 bg-black px-[0.24em] leading-none transition-transform duration-300 hover:scale-[1.04] active:scale-[0.98]";
 
-/**
- * Sits inside the badge so it can be positioned against it, but sized in
- * rem rather than em — the badge's own font size is its height, and a
- * tooltip scaled off that would be enormous in the hero.
- */
-function ComingSoon({ shown }: { shown: boolean }) {
+function AppStoreBadge({ size }: { size: Size }) {
   return (
-    <span
-      aria-hidden
-      className={`pointer-events-none absolute bottom-full left-1/2 z-20 mb-2 w-max -translate-x-1/2 rounded-lg border border-white/15 bg-[#0b1120] px-2.5 py-1.5 text-[0.75rem] font-medium leading-none text-white shadow-xl shadow-black/40 ${
-        shown ? "block" : "hidden group-hover:block"
-      }`}
-      role="tooltip"
-    >
-      Coming soon
-    </span>
-  );
-}
-
-function AppStoreBadge({
-  onReveal,
-  shown,
-  size,
-}: {
-  onReveal: () => void;
-  shown: boolean;
-  size: Size;
-}) {
-  return (
-    <button
-      // The label carries the same fact as the tooltip, so somebody on a
-      // screen reader doesn't have to trigger a hover state to learn it.
-      aria-disabled
-      aria-label="sydHustle on the App Store — coming soon"
+    <a
+      aria-label="Download sydHustle on the App Store"
       className={`${SIZES[size]} ${SHELL}`}
-      onClick={onReveal}
-      type="button"
+      href={APP_STORE_URL}
+      rel="noopener"
+      target="_blank"
     >
       <svg
         viewBox="0 0 384 512"
@@ -105,8 +60,7 @@ function AppStoreBadge({
           App Store
         </span>
       </span>
-      <ComingSoon shown={shown} />
-    </button>
+    </a>
   );
 }
 
@@ -163,26 +117,9 @@ export function StoreBadges({
   /** Used with size "fluid" to set the font size the lock-up scales off. */
   style?: React.CSSProperties;
 }) {
-  const [tapped, setTapped] = useState(false);
-  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  /** Clears itself after a few seconds, because there is nothing to tap to
-   * dismiss it and a tooltip pinned over the hero forever is litter. */
-  function reveal() {
-    if (timer.current) clearTimeout(timer.current);
-    setTapped(true);
-    timer.current = setTimeout(() => setTapped(false), 3000);
-  }
-
-  useEffect(() => {
-    return () => {
-      if (timer.current) clearTimeout(timer.current);
-    };
-  }, []);
-
   return (
     <div style={style} className={`flex items-center ${className}`}>
-      <AppStoreBadge onReveal={reveal} shown={tapped} size={size} />
+      <AppStoreBadge size={size} />
       <GooglePlayBadge size={size} />
     </div>
   );

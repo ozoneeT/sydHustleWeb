@@ -4,6 +4,7 @@ import "./globals.css";
 import { StaleDeploymentReloader } from "@/components/StaleDeploymentReloader";
 import {
   absoluteUrl,
+  APP_STORE_URL,
   BRAND_ASSETS,
   PLAY_STORE_URL,
   SITE_DESCRIPTION,
@@ -155,13 +156,10 @@ const organizationJsonLd = {
    * The profiles that prove this is the same entity elsewhere, and the
    * field that was empty while Google was guessing.
    *
-   * Only the Play Store listing so far, because it is the one that is
-   * verified and live. ADD THE SOCIAL PROFILES HERE as they exist —
-   * LinkedIn, X, Instagram, Facebook — and the App Store listing when it
-   * ships. Each one is another place Google can confirm the name, and
-   * each is worth more than anything else on this page.
+   * The official app listings confirm this identity on Apple's and
+   * Google's platforms. Add social profiles here as they are published.
    */
-  sameAs: [PLAY_STORE_URL],
+  sameAs: [APP_STORE_URL, PLAY_STORE_URL],
 };
 
 const websiteJsonLd = {
