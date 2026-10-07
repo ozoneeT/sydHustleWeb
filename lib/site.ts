@@ -12,7 +12,10 @@ export const SITE_DESCRIPTION =
  * step with it, since the store listings and the universal links in
  * `associatedDomains` are the same two identities.
  */
-export const APP_STORE_URL = "https://apps.apple.com/app/id6799896230";
+// Pin the App Store link to Nigeria. Without a storefront in the URL,
+// Apple's desktop site defaults to the US store, where this Nigeria-first
+// listing isn't available and the page reports that it can't be found.
+export const APP_STORE_URL = "https://apps.apple.com/ng/app/id6799896230";
 export const PLAY_STORE_URL =
   "https://play.google.com/store/apps/details?id=com.sydhustle.app";
 export const SUPPORT_EMAIL = "support@sydhustle.com";

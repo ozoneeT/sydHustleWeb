@@ -101,9 +101,10 @@ export const metadata: Metadata = {
  * empty `sameAs`.
  *
  * So every field here is one that only one of the two can claim. A
- * Nigerian company number is a matter of public record. A Play Store
- * listing is an identity Google already holds and can cross-reference. A
- * country and a support address ground it somewhere specific. None of it
+ * Nigerian company number is a matter of public record. The App Store
+ * and Play Store listings are identities Apple and Google can
+ * cross-reference. The country and support address ground it somewhere
+ * specific. None of it
  * is a guarantee — an AI Overview is not something markup commands — but
  * it is the difference between "no signal" and "a different company".
  */
