@@ -1,7 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { notFound } from "next/navigation";
 import { APP_STORE_URL, PLAY_STORE_URL, SITE_URL } from "@/lib/site";
-import { getSharedSkill, safeSkillPhoto, sharedSkillTitle } from "@/lib/skill-share";
+import { getSharedSkill, safeSkillPhoto, sharedSkillTitle, skillPrice } from "@/lib/skill-share";
 import { StoreFallback } from "./StoreFallback";
 
 type Props = { params: Promise<{ id: string }> };
