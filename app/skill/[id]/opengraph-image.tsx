@@ -104,7 +104,6 @@ export default async function OpenGraphImage({ params }: Props) {
               lineHeight: 1.05,
               fontWeight: 800,
               letterSpacing: -2,
-              overflow: "hidden",
             }}
           >
             {title.length > 42 ? `${title.slice(0, 40)}…` : title}
