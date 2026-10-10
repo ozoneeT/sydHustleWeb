@@ -22,6 +22,7 @@ function openSkillOrStore(
 
   event.preventDefault();
   const storeUrl = isIOS ? appStoreUrl : playStoreUrl;
+  const deepLink = `sydhustle:///skill/${encodeURIComponent(skillId)}`;
   let appTookOver = false;
   const markAppTookOver = () => {
     appTookOver = true;
@@ -36,7 +37,28 @@ function openSkillOrStore(
 
   window.addEventListener("pagehide", markAppTookOver);
   document.addEventListener("visibilitychange", onVisibilityChange);
-  window.location.href = `sydhustle:///skill/${encodeURIComponent(skillId)}`;
+
+  if (isAndroid) {
+    // Android's intent URL supplies a native browser fallback, so a missing
+    // app never leaves the user on an invalid custom-scheme address.
+    const fallback = encodeURIComponent(storeUrl);
+    window.location.href =
+      `intent:///skill/${encodeURIComponent(skillId)}` +
+      `#Intent;scheme=sydhustle;package=com.sydhustle.app;` +
+      `S.browser_fallback_url=${fallback};end`;
+    return;
+  }
+
+  // Navigating the top-level page to an unregistered scheme makes iOS show
+  // an "invalid address" alert, which blocks our store fallback timer. A
+  // hidden frame attempts the app link silently; if it is not installed,
+  // the page stays visible and the timer sends the user to the App Store.
+  const frame = document.createElement("iframe");
+  frame.hidden = true;
+  frame.setAttribute("aria-hidden", "true");
+  frame.src = deepLink;
+  document.body.appendChild(frame);
+  window.setTimeout(() => frame.remove(), 1000);
 
   window.setTimeout(() => {
     cleanup();
@@ -51,7 +73,7 @@ export function StoreFallback({ skillId, appStoreUrl, playStoreUrl }: Props) {
     <div className="mt-8 flex flex-col gap-3 sm:flex-row">
       <a
         className="inline-flex min-h-16 w-full items-center justify-center gap-3 rounded-full bg-[#14b8a6] px-7 py-4 text-lg font-bold text-[#06201e] shadow-lg shadow-teal-950/30 transition hover:bg-teal-300 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-teal-300 sm:w-auto sm:min-w-80"
-        href={`sydhustle:///skill/${encodeURIComponent(skillId)}`}
+        href={`https://www.sydhustle.com/skill/${encodeURIComponent(skillId)}`}
         onClick={(event) =>
           openSkillOrStore(event, skillId, appStoreUrl, playStoreUrl)
         }
