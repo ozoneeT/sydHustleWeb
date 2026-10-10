@@ -77,11 +77,9 @@ export function safeSkillPhoto(photo: string | null) {
 export function skillPrice(skill: SharedSkill) {
   const amount = skill.price_amount ?? skill.min_price;
   if (amount == null) return null;
-  const formatted = new Intl.NumberFormat("en-NG", {
-    style: "currency",
-    currency: "NGN",
+  const formatted = `₦${new Intl.NumberFormat("en-NG", {
     maximumFractionDigits: 0,
-  }).format(amount);
+  }).format(amount)}`;
   return skill.pricing_type === "hourly" ? `${formatted} / hour` : `From ${formatted}`;
 }
 

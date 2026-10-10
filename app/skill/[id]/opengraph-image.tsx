@@ -1,12 +1,9 @@
 import { ImageResponse } from "next/og";
 import { getSharedSkill, safeSkillPhoto, skillPrice } from "@/lib/skill-share";
-import { absoluteUrl, BRAND_ASSETS } from "@/lib/site";
 
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 export const dynamic = "force-dynamic";
-
-const LOGO_URL = absoluteUrl(BRAND_ASSETS.logo.path);
 
 type Props = { params: Promise<{ id: string }> };
 
@@ -17,6 +14,8 @@ export default async function OpenGraphImage({ params }: Props) {
   const category = skill?.skill_name ?? "Skilled Hustlers nearby";
   const price = skill ? skillPrice(skill) : null;
   const photo = safeSkillPhoto(skill?.cover_photo ?? null);
+  const bio = skill?.bio?.trim();
+  const bioPreview = bio ? (bio.length > 132 ? `${bio.slice(0, 129).trimEnd()}…` : bio) : null;
   const titleSize = title.length > 25 ? 48 : title.length > 17 ? 56 : 66;
 
   return new ImageResponse(
@@ -77,32 +76,6 @@ export default async function OpenGraphImage({ params }: Props) {
             padding: "52px 0 48px 64px",
           }}
         >
-          <img
-            src={LOGO_URL}
-            width="270"
-            height="57"
-            style={{ objectFit: "contain", objectPosition: "left center" }}
-          />
-
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              alignSelf: "flex-start",
-              marginTop: 50,
-              padding: "9px 16px",
-              borderRadius: 999,
-              background: "rgba(20,184,166,.15)",
-              border: "1px solid rgba(94,234,212,.38)",
-              color: "#75e6d8",
-              fontSize: 17,
-              fontWeight: 700,
-              letterSpacing: 2,
-              textTransform: "uppercase",
-            }}
-          >
-            {category.length > 30 ? `${category.slice(0, 28)}…` : category}
-          </div>
 
           <div
             style={{
@@ -119,17 +92,45 @@ export default async function OpenGraphImage({ params }: Props) {
             {title.length > 42 ? `${title.slice(0, 40)}…` : title}
           </div>
 
+          <div
+            style={{
+              display: "flex",
+              marginTop: 12,
+              color: "rgba(255,255,255,.72)",
+              fontSize: 27,
+              fontWeight: 500,
+            }}
+          >
+            {category}
+          </div>
+
           {price ? (
             <div
               style={{
                 display: "flex",
-                marginTop: 20,
+                marginTop: 18,
                 color: "#8ce9dd",
-                fontSize: 25,
+                fontSize: 29,
                 fontWeight: 700,
               }}
             >
               {price}
+            </div>
+          ) : null}
+
+          {bioPreview ? (
+            <div
+              style={{
+                display: "flex",
+                maxWidth: 620,
+                marginTop: 22,
+                color: "rgba(255,255,255,.72)",
+                fontSize: 21,
+                lineHeight: 1.38,
+                fontWeight: 400,
+              }}
+            >
+              {bioPreview}
             </div>
           ) : null}
 
