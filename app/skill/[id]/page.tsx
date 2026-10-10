@@ -1,5 +1,4 @@
 import type { Metadata, Viewport } from "next";
-import Image from "next/image";
 import { notFound } from "next/navigation";
 import { APP_STORE_URL, PLAY_STORE_URL, SITE_URL } from "@/lib/site";
 import { getSharedSkill, safeSkillPhoto, sharedSkillTitle, skillPrice } from "@/lib/skill-share";
@@ -56,7 +55,7 @@ export default async function SharedSkillPage({ params }: Props) {
   const photo = safeSkillPhoto(skill.cover_photo);
 
   return (
-    <main className="min-h-screen bg-[#061c1a] px-5 py-12 text-white sm:py-20">
+    <main className="skill-share-page min-h-screen bg-[#061c1a] px-5 py-12 text-white sm:py-20">
       <div className="mx-auto grid max-w-5xl items-center gap-10 md:grid-cols-[1.1fr_0.9fr]">
         <div className="overflow-hidden rounded-[2rem] border border-white/10 bg-white/[0.04] shadow-2xl shadow-black/30">
           <div
@@ -66,8 +65,7 @@ export default async function SharedSkillPage({ params }: Props) {
             aria-label={`${skill.skill_name} work by ${skill.display_name}`}
           />
           <div className="p-6 sm:p-8">
-            <p className="text-xs font-bold uppercase tracking-[0.2em] text-teal-300">Skill by a local Hustler</p>
-            <h1 className="mt-2 text-3xl font-extrabold tracking-tight sm:text-4xl">{skill.display_name}</h1>
+            <h1 className="text-3xl font-extrabold tracking-tight sm:text-4xl">{skill.display_name}</h1>
             <p className="mt-2 text-lg text-white/70">{skill.skill_name}</p>
             {price ? <p className="mt-4 text-base font-semibold text-teal-200">{price}</p> : null}
             {skill.bio ? <p className="mt-5 whitespace-pre-line text-sm leading-6 text-white/70">{skill.bio}</p> : null}
@@ -75,15 +73,7 @@ export default async function SharedSkillPage({ params }: Props) {
         </div>
 
         <section className="max-w-lg">
-          <Image
-            src="/sydhustle-logo.webp"
-            alt="sydHustle"
-            width={237}
-            height={50}
-            priority
-            className="h-auto w-48 sm:w-52"
-          />
-          <h2 className="mt-4 text-4xl font-extrabold tracking-tight sm:text-5xl">Book this Skill.</h2>
+          <h2 className="text-4xl font-extrabold tracking-tight sm:text-5xl">Book this Skill.</h2>
           <p className="mt-5 text-base leading-7 text-white/70">Open this Skill in sydHustle to see the full details and send a booking request.</p>
           <StoreFallback skillId={id} appStoreUrl={APP_STORE_URL} playStoreUrl={PLAY_STORE_URL} />
           <p className="mt-5 text-xs leading-5 text-white/45">The Skill’s public page shows only information its Hustler chose to share. Booking and payments stay in the sydHustle app.</p>

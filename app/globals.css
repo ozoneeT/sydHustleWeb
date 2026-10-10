@@ -27,6 +27,13 @@ html {
   scroll-behavior: smooth;
 }
 
+/* Keep Safari rubber-band overscroll on shared Skill pages on-brand. */
+html:has(.skill-share-page),
+body:has(.skill-share-page) {
+  background: #061c1a;
+  overscroll-behavior-y: none;
+}
+
 ::selection {
   background: color-mix(in srgb, var(--accent) 35%, transparent);
   color: var(--foreground);
