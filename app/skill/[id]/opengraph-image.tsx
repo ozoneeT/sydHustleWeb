@@ -1,5 +1,5 @@
 import { ImageResponse } from "next/og";
-import { getSharedSkill, safeSkillPhoto, skillPrice } from "@/lib/skill-share";
+import { getSharedSkill, safeSkillPhoto } from "@/lib/skill-share";
 
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
@@ -12,11 +12,15 @@ export default async function OpenGraphImage({ params }: Props) {
   const skill = await getSharedSkill(id);
   const title = skill?.display_name ?? "Find your next Skill";
   const category = skill?.skill_name ?? "Skilled Hustlers nearby";
-  const price = skill ? skillPrice(skill) : null;
+  const amount = skill?.price_amount ?? skill?.min_price ?? null;
+  const formattedAmount = amount == null
+    ? null
+    : new Intl.NumberFormat("en-NG", { maximumFractionDigits: 0 }).format(amount);
+  const hourly = skill?.pricing_type === "hourly";
   const photo = safeSkillPhoto(skill?.cover_photo ?? null);
   const bio = skill?.bio?.trim();
   const bioPreview = bio ? (bio.length > 132 ? `${bio.slice(0, 129).trimEnd()}…` : bio) : null;
-  const titleSize = title.length > 25 ? 48 : title.length > 17 ? 56 : 66;
+  const titleSize = title.length > 25 ? 58 : title.length > 17 ? 66 : 76;
 
   return new ImageResponse(
     (
@@ -73,15 +77,14 @@ export default async function OpenGraphImage({ params }: Props) {
             display: "flex",
             flexDirection: "column",
             position: "relative",
-            padding: "52px 0 48px 64px",
+            padding: "48px 0 48px 64px",
+            justifyContent: "center",
           }}
         >
-
           <div
             style={{
               display: "flex",
               maxWidth: 600,
-              marginTop: 20,
               fontSize: titleSize,
               lineHeight: 1.05,
               fontWeight: 800,
@@ -97,24 +100,44 @@ export default async function OpenGraphImage({ params }: Props) {
               display: "flex",
               marginTop: 12,
               color: "rgba(255,255,255,.72)",
-              fontSize: 27,
+              fontSize: 34,
               fontWeight: 500,
             }}
           >
             {category}
           </div>
 
-          {price ? (
+          {formattedAmount ? (
             <div
               style={{
                 display: "flex",
-                marginTop: 18,
+                alignItems: "center",
+                marginTop: 22,
                 color: "#8ce9dd",
-                fontSize: 29,
+                fontSize: 38,
                 fontWeight: 700,
               }}
             >
-              {price}
+              {!hourly ? <span style={{ marginRight: 10 }}>From</span> : null}
+              <span
+                style={{
+                  display: "flex",
+                  position: "relative",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  width: 34,
+                  height: 44,
+                  marginRight: 2,
+                  fontSize: 39,
+                  fontWeight: 700,
+                }}
+              >
+                N
+                <span style={{ position: "absolute", left: 4, top: 17, width: 25, height: 2, background: "#8ce9dd" }} />
+                <span style={{ position: "absolute", left: 4, top: 25, width: 25, height: 2, background: "#8ce9dd" }} />
+              </span>
+              {formattedAmount}
+              {hourly ? <span style={{ marginLeft: 8, fontSize: 24, fontWeight: 500 }}>/ hour</span> : null}
             </div>
           ) : null}
 
@@ -125,8 +148,8 @@ export default async function OpenGraphImage({ params }: Props) {
                 maxWidth: 620,
                 marginTop: 22,
                 color: "rgba(255,255,255,.72)",
-                fontSize: 21,
-                lineHeight: 1.38,
+                fontSize: 26,
+                lineHeight: 1.42,
                 fontWeight: 400,
               }}
             >
@@ -139,9 +162,9 @@ export default async function OpenGraphImage({ params }: Props) {
               display: "flex",
               alignItems: "center",
               gap: 12,
-              marginTop: "auto",
-              color: "rgba(255,255,255,.78)",
-              fontSize: 19,
+              marginTop: 34,
+              color: "rgba(255,255,255,.82)",
+              fontSize: 23,
               fontWeight: 600,
             }}
           >
@@ -150,9 +173,9 @@ export default async function OpenGraphImage({ params }: Props) {
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
-                width: 34,
-                height: 34,
-                borderRadius: 17,
+                width: 40,
+                height: 40,
+                borderRadius: 20,
                 background: "#14b8a6",
                 color: "#06201e",
                 fontSize: 22,
