@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState, type MouseEvent } from "react";
+import { useEffect, useRef, useState, type MouseEvent } from "react";
 
 type Props = { skillId: string; appStoreUrl: string; playStoreUrl: string };
 
@@ -68,6 +68,23 @@ function openSkillOrStore(
 export function StoreFallback({ skillId, appStoreUrl, playStoreUrl }: Props) {
   const [opening, setOpening] = useState(false);
   const openingRef = useRef(false);
+
+  useEffect(() => {
+    const resetOpening = () => {
+      if (document.visibilityState !== "visible") return;
+      openingRef.current = false;
+      setOpening(false);
+    };
+
+    document.addEventListener("visibilitychange", resetOpening);
+    window.addEventListener("pageshow", resetOpening);
+    window.addEventListener("focus", resetOpening);
+    return () => {
+      document.removeEventListener("visibilitychange", resetOpening);
+      window.removeEventListener("pageshow", resetOpening);
+      window.removeEventListener("focus", resetOpening);
+    };
+  }, []);
 
   function handleBookClick(event: MouseEvent<HTMLAnchorElement>) {
     const agent = navigator.userAgent;

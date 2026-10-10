@@ -84,14 +84,46 @@ export function skillPrice(skill: SharedSkill) {
 }
 
 export function sharedSkillTitle(skill: SharedSkill) {
-  const name = skill.skill_name.trim().toLocaleLowerCase();
-  const original = skill.skill_name.trim();
-  const article = /^(mc\b|m\.c\.)/i.test(original)
-    ? "an"
-    : /^(ui\/ux|ux\b)/i.test(original)
-      ? "a"
-      : /^[aeiou]/i.test(name)
-        ? "an"
-        : "a";
-  return `${skill.display_name} is ${article} ${name} on sydHustle`;
+  const category = skill.skill_name
+    .trim()
+    .replace(/\b\p{L}/gu, (letter) => letter.toLocaleUpperCase())
+    .replace(/\bUi\/Ux\b/i, "UI/UX")
+    .replace(/\bMc\b/i, "MC");
+  return `${skill.display_name} · ${category} on sydHustle`;
+}
+
+export function sharedSkillDescription(skill: SharedSkill) {
+  const category = skill.skill_name.trim().toLocaleLowerCase();
+  const serviceBySkill: Record<string, string> = {
+    "makeup artist": "makeup services",
+    hairstylist: "hair styling",
+    "hair stylist": "hair styling",
+    barber: "barbering",
+    "content creator": "content creation",
+    "graphics designer": "graphic design",
+    "graphic designer": "graphic design",
+    "private chef": "private chef services",
+    chef: "chef services",
+    caterer: "catering",
+    mechanic: "mechanic services",
+    "generator repairer": "generator repair",
+    "generator repair": "generator repair",
+    laundry: "laundry",
+    "laundry service": "laundry",
+    "laptop repairer": "laptop repair",
+    "laptop repair": "laptop repair",
+    "mc&host": "event hosting",
+    "mc & host": "event hosting",
+    "nail technician": "nail services",
+    painter: "painting",
+    "phone repairer": "phone repair",
+    carpenter: "carpentry",
+    "tailor/fashion designer": "tailoring and fashion design",
+    "web developer": "web development",
+    "ui/ux designer": "UI/UX design",
+    "house agent": "real estate",
+    printer: "printing",
+  };
+  const service = serviceBySkill[category] ?? `${category} services`;
+  return `Book ${skill.display_name} for ${service} on sydHustle.`;
 }

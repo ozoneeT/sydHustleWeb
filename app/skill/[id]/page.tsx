@@ -1,7 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { notFound } from "next/navigation";
 import { APP_STORE_URL, PLAY_STORE_URL, SITE_URL } from "@/lib/site";
-import { getSharedSkill, safeSkillPhoto, sharedSkillTitle, skillPrice } from "@/lib/skill-share";
+import { getSharedSkill, safeSkillPhoto, sharedSkillDescription, sharedSkillTitle, skillPrice } from "@/lib/skill-share";
 import { StoreFallback } from "./StoreFallback";
 
 type Props = { params: Promise<{ id: string }> };
@@ -18,7 +18,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   if (!skill) return { title: "Skill unavailable", robots: { index: false } };
 
   const title = sharedSkillTitle(skill);
-  const description = "Check out this Skill and send a booking request in the sydHustle app.";
+  const description = sharedSkillDescription(skill);
   const url = `${SITE_URL}/skill/${id}`;
   const image = `${url}/opengraph-image`;
 
