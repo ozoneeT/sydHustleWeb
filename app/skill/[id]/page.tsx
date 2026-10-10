@@ -1,21 +1,26 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
+import Image from "next/image";
 import { notFound } from "next/navigation";
 import { APP_STORE_URL, PLAY_STORE_URL, SITE_URL } from "@/lib/site";
-import { getSharedSkill, safeSkillPhoto, skillPrice } from "@/lib/skill-share";
+import { getSharedSkill, safeSkillPhoto, sharedSkillTitle, skillPrice } from "@/lib/skill-share";
 import { StoreFallback } from "./StoreFallback";
 
 type Props = { params: Promise<{ id: string }> };
 
 export const dynamic = "force-dynamic";
 
+export const viewport: Viewport = {
+  themeColor: "#061c1a",
+};
+
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { id } = await params;
   const skill = await getSharedSkill(id);
   if (!skill) return { title: "Skill unavailable", robots: { index: false } };
 
-  const title = `${skill.display_name} · ${skill.skill_name}`;
+  const title = sharedSkillTitle(skill);
   const description = [
-    `${skill.display_name} offers ${skill.skill_name} on sydHustle.`,
+    `${title}.`,
     skillPrice(skill),
     "Open the Skill or book the Hustler in sydHustle.",
   ].filter(Boolean).join(" ");
@@ -23,7 +28,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const image = `${url}/opengraph-image`;
 
   return {
-    title,
+    title: { absolute: title },
     description,
     alternates: { canonical: url },
     openGraph: {
@@ -70,7 +75,14 @@ export default async function SharedSkillPage({ params }: Props) {
         </div>
 
         <section className="max-w-lg">
-          <p className="text-sm font-bold uppercase tracking-[0.18em] text-teal-300">sydHustle</p>
+          <Image
+            src="/sydhustle-logo.webp"
+            alt="sydHustle"
+            width={237}
+            height={50}
+            priority
+            className="h-auto w-48 sm:w-52"
+          />
           <h2 className="mt-4 text-4xl font-extrabold tracking-tight sm:text-5xl">Book this Skill.</h2>
           <p className="mt-5 text-base leading-7 text-white/70">Open this Skill in sydHustle to see the full details and send a booking request.</p>
           <StoreFallback skillId={id} appStoreUrl={APP_STORE_URL} playStoreUrl={PLAY_STORE_URL} />

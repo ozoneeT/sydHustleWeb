@@ -84,3 +84,16 @@ export function skillPrice(skill: SharedSkill) {
   }).format(amount);
   return skill.pricing_type === "hourly" ? `${formatted} / hour` : `From ${formatted}`;
 }
+
+export function sharedSkillTitle(skill: SharedSkill) {
+  const name = skill.skill_name.trim().toLocaleLowerCase();
+  const original = skill.skill_name.trim();
+  const article = /^(mc\b|m\.c\.)/i.test(original)
+    ? "an"
+    : /^(ui\/ux|ux\b)/i.test(original)
+      ? "a"
+      : /^[aeiou]/i.test(name)
+        ? "an"
+        : "a";
+  return `${skill.display_name} is ${article} ${name} on sydHustle`;
+}
