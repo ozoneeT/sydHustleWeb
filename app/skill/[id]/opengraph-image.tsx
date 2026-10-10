@@ -18,7 +18,16 @@ export default async function OpenGraphImage({ params }: Props) {
     : new Intl.NumberFormat("en-NG", { maximumFractionDigits: 0 }).format(amount);
   const hourly = skill?.pricing_type === "hourly";
   const photo = safeSkillPhoto(skill?.cover_photo ?? null);
-  const bio = skill?.bio?.trim();
+  const rawBio = skill?.bio?.trim();
+  const escapedCategory = category.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const repeatedRoleIntro = new RegExp(
+    `^\\s*(?:i am|i['’]m)\\s+(?:(?:a|an)\\s+)?(?:(?:professional|experienced|certified|qualified|skilled|licensed)\\s+)?${escapedCategory}\\b[,.!?;:\\s—-]*`,
+    "i",
+  );
+  const bioWithoutRepeatedRole = rawBio?.replace(repeatedRoleIntro, "").trim();
+  const bio = bioWithoutRepeatedRole
+    ? bioWithoutRepeatedRole[0].toLocaleUpperCase() + bioWithoutRepeatedRole.slice(1)
+    : rawBio;
   const bioPreview = bio ? (bio.length > 132 ? `${bio.slice(0, 129).trimEnd()}…` : bio) : null;
   const titleSize = title.length > 25 ? 58 : title.length > 17 ? 66 : 76;
 
@@ -54,7 +63,9 @@ export default async function OpenGraphImage({ params }: Props) {
               right: 0,
               top: 0,
               width: 530,
+              maxWidth: "44.2%",
               height: 630,
+              maxHeight: 630,
               objectFit: "cover",
             }}
           />
@@ -72,19 +83,23 @@ export default async function OpenGraphImage({ params }: Props) {
 
         <div
           style={{
-            width: 760,
+            width: 670,
+            maxWidth: 670,
             height: "100%",
             display: "flex",
             flexDirection: "column",
             position: "relative",
-            padding: "48px 0 48px 64px",
+            boxSizing: "border-box",
+            padding: "48px 48px 48px 64px",
             justifyContent: "center",
           }}
         >
           <div
             style={{
               display: "flex",
-              maxWidth: 600,
+              width: "100%",
+              maxWidth: 558,
+              overflow: "hidden",
               fontSize: titleSize,
               lineHeight: 1.05,
               fontWeight: 800,
@@ -98,6 +113,8 @@ export default async function OpenGraphImage({ params }: Props) {
           <div
             style={{
               display: "flex",
+              maxWidth: 558,
+              overflow: "hidden",
               marginTop: 12,
               color: "rgba(255,255,255,.72)",
               fontSize: 34,
@@ -112,6 +129,8 @@ export default async function OpenGraphImage({ params }: Props) {
               style={{
                 display: "flex",
                 alignItems: "center",
+                maxWidth: 558,
+                overflow: "hidden",
                 marginTop: 22,
                 color: "#8ce9dd",
                 fontSize: 38,
@@ -145,7 +164,8 @@ export default async function OpenGraphImage({ params }: Props) {
             <div
               style={{
                 display: "flex",
-                maxWidth: 620,
+                maxWidth: 558,
+                overflow: "hidden",
                 marginTop: 22,
                 color: "rgba(255,255,255,.72)",
                 fontSize: 26,
@@ -162,6 +182,8 @@ export default async function OpenGraphImage({ params }: Props) {
               display: "flex",
               alignItems: "center",
               gap: 12,
+              maxWidth: 558,
+              overflow: "hidden",
               marginTop: 34,
               color: "rgba(255,255,255,.82)",
               fontSize: 23,
