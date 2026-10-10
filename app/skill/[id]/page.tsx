@@ -69,9 +69,15 @@ export default async function SharedSkillPage({ params }: Props) {
         </div>
 
         <section className="max-w-lg">
-          <h2 className="text-4xl font-extrabold tracking-tight sm:text-5xl">Book this Skill.</h2>
-          <p className="mt-5 text-base leading-7 text-white/70">Open this Skill in sydHustle to see the full details and send a booking request.</p>
-          <StoreFallback skillId={id} appStoreUrl={APP_STORE_URL} playStoreUrl={PLAY_STORE_URL} />
+          <a
+            className="mt-5 inline-flex min-h-16 w-full items-center justify-center gap-3 rounded-full bg-[#14b8a6] px-7 py-4 text-lg font-bold text-[#06201e] shadow-lg shadow-teal-950/30 transition hover:bg-teal-300 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-teal-300 sm:w-auto sm:min-w-80"
+            href={`sydhustle:///skill/${encodeURIComponent(id)}`}
+          >
+            Book this Skill
+            <span aria-hidden="true" className="text-2xl leading-none">→</span>
+          </a>
+          <p className="mt-4 text-base leading-7 text-white/70">Open the Skill in sydHustle to see the full details and send a booking request.</p>
+          <StoreFallback appStoreUrl={APP_STORE_URL} playStoreUrl={PLAY_STORE_URL} />
           <p className="mt-5 text-xs leading-5 text-white/45">The Skill’s public page shows only information its Hustler chose to share. Booking and payments stay in the sydHustle app.</p>
         </section>
       </div>
