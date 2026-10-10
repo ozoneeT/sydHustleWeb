@@ -1,4 +1,4 @@
-export const SITE_URL = "https://sydhustle.com";
+export const SITE_URL = "https://www.sydhustle.com";
 export const SITE_NAME = "sydHustle";
 
 export const SITE_DESCRIPTION =
