@@ -18,17 +18,7 @@ export default async function OpenGraphImage({ params }: Props) {
     : new Intl.NumberFormat("en-NG", { maximumFractionDigits: 0 }).format(amount);
   const hourly = skill?.pricing_type === "hourly";
   const photo = safeSkillPhoto(skill?.cover_photo ?? null);
-  const rawBio = skill?.bio?.trim();
-  const escapedCategory = category.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-  const repeatedRoleIntro = new RegExp(
-    `^\\s*(?:i am|i['’]m)\\s+(?:(?:a|an)\\s+)?(?:(?:professional|experienced|certified|qualified|skilled|licensed)\\s+)?${escapedCategory}\\b[,.!?;:\\s—-]*`,
-    "i",
-  );
-  const bioWithoutRepeatedRole = rawBio?.replace(repeatedRoleIntro, "").trim();
-  const bio = bioWithoutRepeatedRole
-    ? bioWithoutRepeatedRole[0].toLocaleUpperCase() + bioWithoutRepeatedRole.slice(1)
-    : rawBio;
-  const bioPreview = bio ? (bio.length > 132 ? `${bio.slice(0, 129).trimEnd()}…` : bio) : null;
+  const bioPreview = skill?.bio?.trim() || null;
   const titleSize = title.length > 25 ? 58 : title.length > 17 ? 66 : 76;
 
   return new ImageResponse(
@@ -164,6 +154,7 @@ export default async function OpenGraphImage({ params }: Props) {
               style={{
                 display: "flex",
                 maxWidth: 558,
+                maxHeight: 111,
                 overflow: "hidden",
                 marginTop: 22,
                 color: "rgba(255,255,255,.72)",
