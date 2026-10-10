@@ -2,7 +2,8 @@
  * What tells iOS that this domain speaks for the sydHustle app.
  *
  * Without it, a payer coming back from the OPay app lands in Safari on
- * `/pay/return` and has to tap a button to get home. With it, iOS
+ * `/pay/return`, and a shared Skill link opens in the browser instead of
+ * sydHustle. With it, iOS
  * recognises the URL as belonging to the app and opens the app directly -
  * the page is still there and still correct, but nobody sees it.
  *
@@ -32,7 +33,7 @@ export function GET() {
         details: [
           {
             appID: `${TEAM_ID}.${BUNDLE_ID}`,
-            paths: ["/pay/return", "/pay/return/*"],
+            paths: ["/pay/return", "/pay/return/*", "/skill/*"],
           },
         ],
       },
