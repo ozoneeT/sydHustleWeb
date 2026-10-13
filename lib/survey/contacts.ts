@@ -2,6 +2,7 @@ import "server-only";
 
 import type { FullResponse, SurveyorWithCount } from "@/lib/survey/data";
 import { appUsageRoleLabels, label } from "@/lib/survey-options";
+import { formatContactPhone } from "@/lib/survey/phone";
 
 /**
  * One person we can actually reach before launch.
@@ -80,7 +81,7 @@ export function buildContacts(
       id: r.id,
       name: clean(r.name),
       email,
-      phone: clean(r.marketing_whatsapp),
+      phone: formatContactPhone(r.marketing_whatsapp),
       school: clean(r.school),
       primaryUse: label(appUsageRoleLabels, r.app_usage_role),
       primaryUseShort: PRIMARY_USE_SHORT[r.app_usage_role] ?? r.app_usage_role,

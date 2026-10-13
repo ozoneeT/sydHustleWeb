@@ -7,6 +7,7 @@ import {
   ChevronRight,
   Download,
   Mail,
+  Phone,
   Search,
   Users,
 } from "lucide-react";
@@ -17,6 +18,7 @@ import { cn } from "@/lib/utils";
 
 type FilterId =
   | "all"
+  | "phone"
   | "email"
   | "marketing"
   | "waitlist"
@@ -25,6 +27,7 @@ type FilterId =
 
 const FILTERS: { id: FilterId; label: string }[] = [
   { id: "all", label: "Everyone" },
+  { id: "phone", label: "Has phone" },
   { id: "email", label: "Has email" },
   { id: "marketing", label: "Marketing team" },
   { id: "waitlist", label: "Waitlist" },
@@ -36,6 +39,8 @@ const PAGE_SIZE = 50;
 
 function matchesFilter(c: SurveyContact, filter: FilterId): boolean {
   switch (filter) {
+    case "phone":
+      return Boolean(c.phone);
     case "email":
       return Boolean(c.email);
     case "marketing":
@@ -277,6 +282,7 @@ export function ContactsTable({ contacts }: { contacts: SurveyContact[] }) {
   const [filter, setFilter] = useState<FilterId>("all");
   const [page, setPage] = useState(1);
   const { copied: copiedEmails, copy: copyEmails } = useCopy(2200);
+  const { copied: copiedPhones, copy: copyPhones } = useCopy(2200);
 
   const q = query.trim().toLowerCase();
 
@@ -297,6 +303,23 @@ export function ContactsTable({ contacts }: { contacts: SurveyContact[] }) {
       if (seen.has(key)) continue;
       seen.add(key);
       out.push(email);
+    }
+    return out;
+  }, [filtered]);
+
+  const uniquePhones = useMemo(() => {
+    const seen = new Set<string>();
+    const out: string[] = [];
+    for (const c of filtered) {
+      if (!c.phone) continue;
+      const parts = c.phone.split(/,\s*/);
+      for (const p of parts) {
+        const cleaned = p.trim();
+        if (!cleaned) continue;
+        if (seen.has(cleaned)) continue;
+        seen.add(cleaned);
+        out.push(cleaned);
+      }
     }
     return out;
   }, [filtered]);
@@ -383,6 +406,26 @@ export function ContactsTable({ contacts }: { contacts: SurveyContact[] }) {
             <>
               <Mail className="h-4 w-4" />
               Copy {uniqueEmails.length} email{uniqueEmails.length === 1 ? "" : "s"}
+            </>
+          )}
+        </Button>
+
+        <Button
+          type="button"
+          size="sm"
+          variant={copiedPhones ? "default" : "secondary"}
+          disabled={uniquePhones.length === 0}
+          onClick={() => copyPhones(uniquePhones.join(", "))}
+        >
+          {copiedPhones ? (
+            <>
+              <Check className="h-4 w-4" />
+              {uniquePhones.length} copied
+            </>
+          ) : (
+            <>
+              <Phone className="h-4 w-4" />
+              Copy {uniquePhones.length} phone{uniquePhones.length === 1 ? "" : "s"}
             </>
           )}
         </Button>

@@ -13,6 +13,7 @@ import {
   uninstallOptions,
   yesNoLabels,
 } from "@/lib/survey-options";
+import { formatContactPhone } from "@/lib/survey/phone";
 
 function Field({
   title,
@@ -165,7 +166,7 @@ export function ResponseDetail({
 
       <Section title="Marketing team">
         <Field title="Would join marketing team" value={label(yesNoLabels, r.join_marketing_team)} />
-        <Field title="WhatsApp number" value={r.marketing_whatsapp} />
+        <Field title="WhatsApp number" value={formatContactPhone(r.marketing_whatsapp) ?? r.marketing_whatsapp} />
       </Section>
 
       {r.additional_feedback && (
