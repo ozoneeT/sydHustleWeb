@@ -23,8 +23,8 @@ export const metadata: Metadata = {
 
 /**
  * Two listings for one product, so the page declares both. Google reads
- * `MobileApplication` for the app pack; the `operatingSystem` split is
- * what keeps the two entries from collapsing into one.
+ * `MobileApplication` for the app pack; separate platform entries point
+ * visitors and crawlers to the corresponding live store listing.
  */
 const appJsonLd = [
   {
@@ -32,9 +32,10 @@ const appJsonLd = [
     "@type": "MobileApplication",
     name: SITE_NAME,
     operatingSystem: "iOS",
-    applicationCategory: "LifestyleApplication",
+    applicationCategory: "BusinessApplication",
     url: APP_STORE_URL,
     installUrl: APP_STORE_URL,
+    offers: { "@type": "Offer", price: 0, url: APP_STORE_URL },
     description: SITE_DESCRIPTION,
     image: absoluteUrl("/sydhustle-icon.webp"),
   },
@@ -43,9 +44,10 @@ const appJsonLd = [
     "@type": "MobileApplication",
     name: SITE_NAME,
     operatingSystem: "Android",
-    applicationCategory: "LifestyleApplication",
+    applicationCategory: "BusinessApplication",
     url: PLAY_STORE_URL,
     installUrl: PLAY_STORE_URL,
+    offers: { "@type": "Offer", price: 0, url: PLAY_STORE_URL },
     description: SITE_DESCRIPTION,
     image: absoluteUrl("/sydhustle-icon.webp"),
   },

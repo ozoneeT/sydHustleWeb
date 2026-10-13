@@ -2,7 +2,7 @@ export const SITE_URL = "https://www.sydhustle.com";
 export const SITE_NAME = "sydHustle";
 
 export const SITE_DESCRIPTION =
-  "Post a Hustle and get it done by someone nearby, or browse skilled Hustlers with real ratings. Money locks in escrow before work starts. Download sydHustle on iOS and Android.";
+  "Post a task and get it done by someone nearby, or find local work on sydHustle. Available free on the Apple App Store for iPhone and Google Play for Android.";
 
 /**
  * Where the app actually lives.

@@ -1,12 +1,9 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { motion, useReducedMotion, useTransform } from "framer-motion";
+import { motion, useMotionValue, useReducedMotion, useTransform } from "framer-motion";
 import { MapPin, ShieldCheck, Star } from "lucide-react";
-import { AppSimulator } from "@/components/home/AppSimulator";
-import { PhoneOverlays } from "@/components/home/PhoneOverlays";
-import { PhoneFrame, PhoneGlow } from "@/components/home/PhoneFrame";
-import { PINNED, useSectionProgress } from "@/components/home/useSectionProgress";
+import { PhoneFrame, PhoneGlow, PhoneScreen } from "@/components/home/PhoneFrame";
 import { StoreBadges } from "@/components/home/StoreBadges";
 
 /**
@@ -60,8 +57,8 @@ const ORBS = [
 ] as const;
 
 export function Hero() {
-  const ref = useRef<HTMLElement>(null);
-  const p = useSectionProgress(ref, PINNED);
+  // Lock the original hero artwork to its opening frame; the page itself scrolls normally.
+  const p = useMotionValue(0);
 
   /* How far this section scrolls before the sticky stage releases, and
      where the device sits at each end of that travel.
@@ -188,7 +185,7 @@ export function Hero() {
   const settle = useTransform(p, [0.08, 0.3], [0, 1]);
 
   return (
-    <section ref={ref} className="relative h-[700vh]">
+    <section className="relative h-[100svh]">
       {/* `--phone-w` is declared on `.marketing` in globals.css, where
           the reference's 1920px step can apply to it. Measured off the
           reference: the device opens 3.68× its resting width with its
@@ -206,7 +203,7 @@ export function Hero() {
         <style>{`[data-enter]{opacity:1!important;transform:none!important}`}</style>
       </noscript>
 
-      <div className="sticky top-0 flex h-[100svh] items-center justify-center overflow-hidden">
+      <div className="relative flex h-[100svh] items-center justify-center overflow-hidden">
         {/* The halo. Sized and placed against the device's top edge. */}
         <motion.div
           aria-hidden
@@ -314,8 +311,12 @@ export function Hero() {
           className="w-full will-change-transform"
         >
           <PhoneGlow settle={settle} />
-          <PhoneFrame overlay={<PhoneOverlays p={p} />}>
-            <AppSimulator p={p} />
+          <PhoneFrame>
+            <PhoneScreen
+              src="/app/home.webp"
+              alt="sydHustle app home screen"
+              preload
+            />
             <motion.div
               aria-hidden
               style={{ opacity: scrimOpacity }}

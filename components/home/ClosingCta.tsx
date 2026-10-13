@@ -2,6 +2,7 @@
 
 import { motion } from "framer-motion";
 import { StoreBadges } from "@/components/home/StoreBadges";
+import { APP_STORE_URL, PLAY_STORE_URL } from "@/lib/site";
 
 /**
  * The last screen before the footer.
@@ -28,7 +29,15 @@ export function ClosingCta() {
           Welcome to the <span className="text-[#0b7a6e]">Hustle.</span>
         </h2>
         <p className="mx-auto mt-5 max-w-[32rem] text-balance text-[length:var(--fs-lead)] leading-[1.45] text-[#3f524e]">
-          Free to download. Post your first Hustle in under a minute.
+          sydHustle is free to download on the{" "}
+          <a className="underline underline-offset-4" href={APP_STORE_URL}>
+            Apple App Store for iPhone
+          </a>{" "}
+          and{" "}
+          <a className="underline underline-offset-4" href={PLAY_STORE_URL}>
+            Google Play for Android
+          </a>
+          . Post your first Hustle in under a minute.
         </p>
         <StoreBadges className="mt-9 flex-col justify-center gap-3 sm:flex-row" />
       </motion.div>

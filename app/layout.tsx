@@ -70,7 +70,7 @@ export const metadata: Metadata = {
   },
   openGraph: {
     type: "website",
-    locale: "en_AU",
+    locale: "en_NG",
     url: SITE_URL,
     siteName: SITE_NAME,
     title: `${SITE_NAME}: Get it done by someone nearby`,

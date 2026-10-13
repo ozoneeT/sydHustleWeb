@@ -26,7 +26,7 @@ export function Statement({
   const progress = useSectionProgress(ref, CROSSING);
 
   return (
-    <section className="relative px-6 pb-[6vh] pt-[26vh]">
+    <section className="relative bg-[#050506] px-6 pb-[6vh] pt-[14vh] md:z-10 md:-mt-[8vh] md:rounded-t-[2.5rem] md:border-t md:border-white/10 md:pt-[14vh] md:shadow-[0_-28px_80px_rgba(0,0,0,0.28)]">
       <div ref={ref} className="mx-auto max-w-[52rem]">
         <p className="t-h2 flex flex-wrap justify-center gap-x-[0.28em] gap-y-[0.1em] text-center">
           {words.map((word, i) => (

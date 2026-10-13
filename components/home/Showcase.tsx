@@ -56,8 +56,8 @@ export function Showcase() {
           <div className="order-1 mx-auto w-[min(62vw,268px)] md:order-2">
             <PhoneFrame className="levitate-a">
               <PhoneScreen
-                src="/app/skills.webp"
-                alt="The sydHustle Skills tab: barbers, hairstylists, tailors, electricians, house cleaning and plumbers, each with ratings and a starting price"
+                src="/app/skills-screen.webp"
+                alt="The sydHustle Skills screen showing skill categories and recommended nearby providers"
               />
             </PhoneFrame>
           </div>
