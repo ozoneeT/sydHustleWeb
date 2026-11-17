@@ -1,6 +1,7 @@
 import Link from "next/link";
 
 import { KycProvidersForm } from "@/components/console/KycProvidersForm";
+import { NotificationProvidersForm } from "@/components/console/NotificationProvidersForm";
 import { PaymentProvidersForm } from "@/components/console/PaymentProvidersForm";
 import { ProviderFees } from "@/components/console/ProviderFees";
 import { Card } from "@/components/ui/card";
@@ -87,6 +88,12 @@ export default async function PaymentsPage() {
       </div>
 
       <KycProvidersForm bvn={settings.bvn_provider} nin={settings.nin_provider} />
+
+      <div>
+        <h2 className="text-lg font-semibold">Email and SMS</h2>
+        <p className="max-w-3xl text-sm text-muted-foreground">Choose providers independently. Set provider credentials in Supabase function secrets before switching.</p>
+      </div>
+      <NotificationProvidersForm email={settings.email_provider} sms={settings.sms_provider} />
 
       {/* What WE charge, next to what the providers charge us. The two
           are read together constantly - a rate is set by looking at the

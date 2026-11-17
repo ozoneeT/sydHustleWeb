@@ -51,6 +51,8 @@ export type ConsoleStats = {
 };
 
 export type PlatformSettings = {
+  email_provider: "resend" | "zapiack";
+  sms_provider: "twilio" | "zapiack";
   withdrawal_cut_percent: number;
   /** Flat naira on top of the percentage, and the ceiling on the two
    * together. Null cap means uncapped. Zero everywhere means free. */
@@ -98,7 +100,7 @@ export async function getPlatformSettings(): Promise<PlatformSettings> {
   const { data, error } = await supabase
     .from("platform_settings")
     .select(
-      "withdrawal_cut_percent, withdrawal_fee_flat, withdrawal_fee_cap, deposit_fee_percent, deposit_fee_flat, deposit_fee_cap, escrow_cut_percent, escrow_cut_applies_to, sms_weekly_price, sms_monthly_price, sms_weekly_cap, sms_monthly_cap, stamp_duty_amount, stamp_duty_threshold, apple_commission_percent, google_commission_percent, funding_provider, payout_provider, nin_provider, bvn_provider, updated_at"
+      "withdrawal_cut_percent, withdrawal_fee_flat, withdrawal_fee_cap, deposit_fee_percent, deposit_fee_flat, deposit_fee_cap, escrow_cut_percent, escrow_cut_applies_to, sms_weekly_price, sms_monthly_price, sms_weekly_cap, sms_monthly_cap, stamp_duty_amount, stamp_duty_threshold, apple_commission_percent, google_commission_percent, funding_provider, payout_provider, nin_provider, bvn_provider, email_provider, sms_provider, updated_at"
     )
     .eq("id", 1)
     .single();

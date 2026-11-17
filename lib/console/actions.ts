@@ -202,6 +202,34 @@ export async function updateKycProviders(
   return { error: null, saved: true };
 }
 
+const notificationProvidersSchema = z.object({
+  email_provider: z.enum(["resend", "zapiack"]),
+  sms_provider: z.enum(["twilio", "zapiack"]),
+});
+
+export type NotificationProvidersState = { error: string | null; saved: boolean };
+
+export async function updateNotificationProviders(
+  _prev: NotificationProvidersState,
+  formData: FormData
+): Promise<NotificationProvidersState> {
+  await requireConsole("payments");
+  const parsed = notificationProvidersSchema.safeParse({
+    email_provider: formData.get("email_provider"),
+    sms_provider: formData.get("sms_provider"),
+  });
+  if (!parsed.success) return { error: "Choose an email and SMS provider.", saved: false };
+
+  const supabase = createServerSupabaseClient();
+  const { error } = await supabase
+    .from("platform_settings")
+    .update({ ...parsed.data, updated_at: new Date().toISOString() })
+    .eq("id", 1);
+  if (error) return { error: error.message, saved: false };
+  revalidatePath("/console/payments");
+  return { error: null, saved: true };
+}
+
 const costSchema = z
   .object({
     id: z.string().uuid().optional(),
